@@ -3016,3 +3016,212 @@ textarea {
     align-items: stretch;
   }
 }
+
+@media (max-width: 480px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .mvp-sidebar,
+  .sidebar {
+    position: static;
+    min-height: auto;
+    height: auto;
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .mvp-brand,
+  .sidebar-brand,
+  .mvp-user,
+  .sidebar-footer {
+    padding-inline: 6px;
+  }
+
+  .mvp-nav-group,
+  .sidebar-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .mvp-nav-button,
+  .nav-button {
+    min-height: 44px;
+    padding: 8px 6px;
+    border-left: 0;
+    border-radius: var(--radius-sm);
+    justify-content: center;
+    text-align: center;
+    font-size: 0.74rem;
+  }
+
+  .mvp-nav-button--active,
+  .nav-button--active {
+    border-left: 0;
+    box-shadow: inset 0 -2px 0 var(--primary-400);
+  }
+
+  .mvp-main,
+  .workspace-main,
+  .auth-shell,
+  .auth-shell--mvp {
+    padding: 14px;
+  }
+
+  .mvp-page-header,
+  .mvp-detail-head,
+  .workspace-header,
+  .surface-head,
+  .mvp-card-head,
+  .document-panel-head {
+    gap: 8px;
+  }
+
+  .mvp-metrics,
+  .mvp-metrics--compact,
+  .metrics-grid,
+  .workspace-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mvp-metric,
+  .workspace-kpi {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .mvp-metric strong,
+  .workspace-kpi strong {
+    font-size: clamp(1.2rem, 8vw, 2rem);
+  }
+
+  .mvp-grid,
+  .mvp-grid--dashboard,
+  .section-grid,
+  .split-grid,
+  .tenant-summary-grid,
+  .detail-grid,
+  .tenant-detail-grid,
+  .mvp-chat-layout,
+  .form-grid,
+  .inline-form {
+    grid-template-columns: 1fr;
+  }
+
+  .mvp-card,
+  .mvp-card--wide,
+  .surface,
+  .surface--wide {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+
+  .mvp-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mvp-table,
+  .industrial-table {
+    min-width: 560px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button,
+  .primary-button,
+  .secondary-button,
+  .text-button,
+  .locale-button {
+    min-height: 44px;
+  }
+
+  .mvp-info-row,
+  .mvp-list-row,
+  .list-row,
+  .comment-meta,
+  .document-row,
+  .document-actions,
+  .workspace-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mvp-info-row strong,
+  .mvp-list-aside,
+  .list-aside {
+    text-align: left;
+    justify-items: start;
+  }
+
+  .tenant-channel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mvp-nav-button,
+.nav-button,
+.primary-button,
+.secondary-button,
+.text-button,
+.locale-button,
+.mvp-list-button,
+.mvp-table tbody tr,
+.industrial-table tbody tr {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mvp-table tbody tr:hover,
+.industrial-table tbody tr:hover {
+  background: var(--primary-50);
+}
+
+.mvp-table-wrap::-webkit-scrollbar,
+.mvp-main::-webkit-scrollbar,
+.workspace-main::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.mvp-table-wrap::-webkit-scrollbar-thumb,
+.mvp-main::-webkit-scrollbar-thumb,
+.workspace-main::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+  border-radius: 999px;
+}
+
+.mvp-table-wrap::-webkit-scrollbar-track,
+.mvp-main::-webkit-scrollbar-track,
+.workspace-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media print {
+  .mvp-sidebar,
+  .sidebar,
+  .mvp-topbar,
+  .workspace-header,
+  .document-overlay {
+    display: none !important;
+  }
+
+  .mvp-shell,
+  .workspace-shell {
+    display: block !important;
+  }
+
+  .mvp-main,
+  .workspace-main {
+    padding: 0 !important;
+  }
+}
