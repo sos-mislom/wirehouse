@@ -1048,7 +1048,7 @@ const getImportApprovalStatusLabel = (status: string, locale: Locale) => {
 };
 
 const App = () => {
-  const [locale, setLocale] = useState<Locale>("ru");
+  const locale: Locale = "ru";
   const [session, setSession] = useState<{ token: string; user: SessionUser } | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -3862,22 +3862,6 @@ const App = () => {
               </div>
             </div>
 
-            <div className="locale-switcher" role="group" aria-label={t.localeLabel}>
-              <button
-                className={locale === "ru" ? "locale-button locale-button--active" : "locale-button"}
-                onClick={() => setLocale("ru")}
-                type="button"
-              >
-                RU
-              </button>
-              <button
-                className={locale === "en" ? "locale-button locale-button--active" : "locale-button"}
-                onClick={() => setLocale("en")}
-                type="button"
-              >
-                EN
-              </button>
-            </div>
           </div>
 
           <div className="login-title">
@@ -8308,25 +8292,6 @@ const App = () => {
           </div>
         </div>
 
-        <div className="sidebar-locale">
-          <div className="locale-switcher" role="group" aria-label={t.localeLabel}>
-            <button
-              className={locale === "ru" ? "locale-button locale-button--active" : "locale-button"}
-              onClick={() => setLocale("ru")}
-              type="button"
-            >
-              RU
-            </button>
-            <button
-              className={locale === "en" ? "locale-button locale-button--active" : "locale-button"}
-              onClick={() => setLocale("en")}
-              type="button"
-            >
-              EN
-            </button>
-          </div>
-        </div>
-
         <div className="mvp-nav-group">
           {managerPrimaryNav.map((screen) => (
             <button
@@ -8467,25 +8432,6 @@ const App = () => {
         <div className="sidebar-brand">
           <strong>{productBrand.name}</strong>
           <span>{productBrand.subtitle}</span>
-        </div>
-
-        <div className="sidebar-locale">
-          <div className="locale-switcher" role="group" aria-label={t.localeLabel}>
-            <button
-              className={locale === "ru" ? "locale-button locale-button--active" : "locale-button"}
-              onClick={() => setLocale("ru")}
-              type="button"
-            >
-              RU
-            </button>
-            <button
-              className={locale === "en" ? "locale-button locale-button--active" : "locale-button"}
-              onClick={() => setLocale("en")}
-              type="button"
-            >
-              EN
-            </button>
-          </div>
         </div>
 
         <nav className="sidebar-nav">
