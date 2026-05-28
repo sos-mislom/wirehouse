@@ -164,6 +164,7 @@ export class WarehouseDatabase {
     this.data = this.load();
     if (this.demoSeedEnabled) {
       this.ensureSeedData();
+      this.ensureRichDemoData();
       this.ensureDemoBackfill();
       this.ensureTicketOperationsBackfill();
       this.ensureBillingBackfill();
@@ -761,6 +762,485 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.data.users.push(...users);
     this.data.tickets.push(...tickets);
     this.data.ticket_comments.push(...ticketComments);
+    this.save();
+  }
+
+  ensureRichDemoData() {
+    if (this.data.tenants.length > 4) {
+      return;
+    }
+
+    const timestamp = nowIso();
+    const propA = this.data.properties[0];
+    const propB = this.data.properties[1];
+    if (!propA || !propB) {
+      return;
+    }
+
+    const manager = this.data.users.find((user) => user.role === "manager");
+    const worker = this.data.users.find((user) => user.role === "worker");
+    if (!manager || !worker) {
+      return;
+    }
+
+    const extraTenants = [
+      {
+        id: createId(),
+        name: "ООО СеверФарм",
+        inn: "6678903456",
+        contact_name: "Марина Соколова",
+        phone: "+79990000003",
+        email: "severfarm@demo.local",
+        risk_level: "low",
+        status: "active",
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        name: "ООО МетизКомплект",
+        inn: "6678904567",
+        contact_name: "Дмитрий Кузнецов",
+        phone: "+79990000004",
+        email: "metiz@demo.local",
+        risk_level: "high",
+        status: "active",
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        name: "ООО Урал Ритейл Резерв",
+        inn: "6678905678",
+        contact_name: "Елена Новикова",
+        phone: "+79990000005",
+        email: "uralretail@demo.local",
+        risk_level: "medium",
+        status: "active",
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        name: "ИП Волков А.С.",
+        inn: "667890678901",
+        contact_name: "Андрей Волков",
+        phone: "+79990000006",
+        email: "volkov@demo.local",
+        risk_level: "low",
+        status: "active",
+        created_at: timestamp,
+        updated_at: timestamp
+      }
+    ];
+    this.data.tenants.push(...extraTenants);
+
+    const extraUnits = [
+      {
+        id: createId(),
+        property_id: propA.id,
+        number: "A-104",
+        floor: 1,
+        area: 2200,
+        type: "warm",
+        status: "occupied",
+        ceiling_height: 12,
+        temperature_regime: "+18",
+        has_ramp: 1,
+        has_gate: 1,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        property_id: propB.id,
+        number: "ЮТ-1.1",
+        floor: 1,
+        area: 1600,
+        type: "warm",
+        status: "occupied",
+        ceiling_height: 10,
+        temperature_regime: "+16",
+        has_ramp: 1,
+        has_gate: 1,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        property_id: propB.id,
+        number: "ЮТ-1.2",
+        floor: 1,
+        area: 1100,
+        type: "cold",
+        status: "occupied",
+        ceiling_height: 8,
+        temperature_regime: "+5",
+        has_ramp: 1,
+        has_gate: 0,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        property_id: propB.id,
+        number: "ЮТ-1.3",
+        floor: 1,
+        area: 800,
+        type: "warm",
+        status: "vacant",
+        ceiling_height: 9,
+        temperature_regime: "+18",
+        has_ramp: 0,
+        has_gate: 1,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        property_id: propB.id,
+        number: "ЮТ-ОФ-1",
+        floor: 2,
+        area: 300,
+        type: "office",
+        status: "vacant",
+        ceiling_height: 3,
+        temperature_regime: "+22",
+        has_ramp: 0,
+        has_gate: 0,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        property_id: propB.id,
+        number: "ЮТ-ОФ-2",
+        floor: 2,
+        area: 450,
+        type: "office",
+        status: "occupied",
+        ceiling_height: 3,
+        temperature_regime: "+22",
+        has_ramp: 0,
+        has_gate: 0,
+        created_at: timestamp,
+        updated_at: timestamp
+      }
+    ];
+    this.data.units.push(...extraUnits);
+
+    const extraLeases = [
+      {
+        id: createId(),
+        tenant_id: extraTenants[0].id,
+        unit_id: extraUnits[1].id,
+        contract_number: "SK-2026-003",
+        stage: "active",
+        start_date: "2025-06-01",
+        end_date: "2027-05-31",
+        rate_per_sqm: 1100,
+        deposit: 350000,
+        indexation_pct: 5,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        tenant_id: extraTenants[1].id,
+        unit_id: extraUnits[5].id,
+        contract_number: "SK-2026-004",
+        stage: "sent",
+        start_date: "2026-06-01",
+        end_date: "2028-05-31",
+        rate_per_sqm: 850,
+        deposit: 200000,
+        indexation_pct: 4,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        tenant_id: extraTenants[2].id,
+        unit_id: extraUnits[2].id,
+        contract_number: "SK-2026-005",
+        stage: "active",
+        start_date: "2025-03-01",
+        end_date: "2026-08-31",
+        rate_per_sqm: 950,
+        deposit: 180000,
+        indexation_pct: 3,
+        created_at: timestamp,
+        updated_at: timestamp
+      },
+      {
+        id: createId(),
+        tenant_id: extraTenants[3].id,
+        unit_id: extraUnits[0].id,
+        contract_number: "SK-2026-006",
+        stage: "draft",
+        start_date: "2026-07-01",
+        end_date: "2028-06-30",
+        rate_per_sqm: 1300,
+        deposit: 400000,
+        indexation_pct: 5,
+        created_at: timestamp,
+        updated_at: timestamp
+      }
+    ];
+    this.data.leases.push(...extraLeases);
+
+    for (const unit of extraUnits) {
+      if (this.data.leases.some((lease) => lease.unit_id === unit.id && activeLeaseStages.has(lease.stage))) {
+        unit.status = "occupied";
+      }
+    }
+
+    const extraUsers = [
+      {
+        id: createId(),
+        email: null,
+        phone: extraTenants[0].phone,
+        password_hash: null,
+        full_name: extraTenants[0].contact_name,
+        role: "tenant",
+        property_id: propB.id,
+        tenant_id: extraTenants[0].id,
+        is_active: 1,
+        created_at: timestamp,
+        last_login_at: null
+      },
+      {
+        id: createId(),
+        email: null,
+        phone: extraTenants[2].phone,
+        password_hash: null,
+        full_name: extraTenants[2].contact_name,
+        role: "tenant",
+        property_id: propB.id,
+        tenant_id: extraTenants[2].id,
+        is_active: 1,
+        created_at: timestamp,
+        last_login_at: null
+      },
+      {
+        id: createId(),
+        email: "worker2@skladkontur.local",
+        phone: null,
+        password_hash: hashPassword("worker123"),
+        full_name: "Сергей Климов",
+        role: "worker",
+        property_id: propB.id,
+        tenant_id: null,
+        is_active: 1,
+        created_at: timestamp,
+        last_login_at: null
+      },
+      {
+        id: createId(),
+        email: "manager2@skladkontur.local",
+        phone: null,
+        password_hash: hashPassword("manager123"),
+        full_name: "Максим Лебедев",
+        role: "manager",
+        property_id: propB.id,
+        tenant_id: null,
+        is_active: 1,
+        created_at: timestamp,
+        last_login_at: null
+      }
+    ];
+    this.data.users.push(...extraUsers);
+
+    const worker2 = extraUsers[2];
+    const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
+    const ticketNumber = (offset) => `SD-${new Date().getFullYear()}-${String(this.data.tickets.length + offset).padStart(4, "0")}`;
+    const extraTickets = [
+      {
+        id: createId(),
+        number: this.buildTicketNumber(),
+        unit_id: extraUnits[1].id,
+        property_id: propB.id,
+        tenant_id: extraTenants[0].id,
+        created_by: extraUsers[0].id,
+        assigned_to: worker2.id,
+        category: "gates_ramps",
+        priority: "high",
+        status: "new",
+        source_channel: "web",
+        title: "Проверить автоматику доковых ворот",
+        description: "На воротах 4 и 5 периодически не срабатывает концевик закрытия после вечерней отгрузки.",
+        created_at: ago(0),
+        updated_at: ago(0),
+        resolved_at: null,
+        closed_at: null
+      },
+      {
+        id: createId(),
+        number: ticketNumber(4),
+        unit_id: extraUnits[2].id,
+        property_id: propB.id,
+        tenant_id: extraTenants[2].id,
+        created_by: extraUsers[1].id,
+        assigned_to: null,
+        category: "heating",
+        priority: "urgent",
+        status: "new",
+        source_channel: "web",
+        title: "Нарушение температурного режима в холодильной камере",
+        description: "Температура в секции ЮТ-1.2 поднялась до +12°C при норме +5°C. Риск порчи продукции.",
+        created_at: ago(0),
+        updated_at: ago(0),
+        resolved_at: null,
+        closed_at: null
+      },
+      {
+        id: createId(),
+        number: ticketNumber(5),
+        unit_id: extraUnits[5].id,
+        property_id: propB.id,
+        tenant_id: extraTenants[1].id,
+        created_by: extraUsers[3].id,
+        assigned_to: worker2.id,
+        category: "electrical",
+        priority: "urgent",
+        status: "accepted",
+        source_channel: "web",
+        title: "Выпустить временные пропуска для подрядчика",
+        description: "Подрядчик ООО ЭлектроМонтаж приезжает завтра для замены щита. Нужны пропуска на 3 человека.",
+        created_at: ago(0),
+        updated_at: ago(0),
+        resolved_at: null,
+        closed_at: null
+      },
+      {
+        id: createId(),
+        number: ticketNumber(6),
+        unit_id: extraUnits[0].id,
+        property_id: propA.id,
+        tenant_id: extraTenants[3].id,
+        created_by: manager.id,
+        assigned_to: worker.id,
+        category: "territory",
+        priority: "medium",
+        status: "in_progress",
+        source_channel: "web",
+        title: "Подготовить склад 6500 м² к показу",
+        description: "Потенциальный арендатор ИП Волков А.С. приедет на осмотр. Нужно навести порядок, проверить освещение и ворота.",
+        created_at: ago(1),
+        updated_at: ago(0),
+        resolved_at: null,
+        closed_at: null
+      },
+      {
+        id: createId(),
+        number: ticketNumber(7),
+        unit_id: this.data.units[0].id,
+        property_id: propA.id,
+        tenant_id: this.data.tenants[0].id,
+        created_by: this.data.users[3]?.id ?? manager.id,
+        assigned_to: worker.id,
+        category: "plumbing",
+        priority: "high",
+        status: "completed",
+        source_channel: "web",
+        title: "Протечка в зоне разгрузки A-101",
+        description: "Обнаружена течь в районе разгрузочного дока. Вода скапливается у стеллажей.",
+        created_at: ago(3),
+        updated_at: ago(1),
+        resolved_at: ago(1),
+        closed_at: null
+      },
+      {
+        id: createId(),
+        number: ticketNumber(8),
+        unit_id: this.data.units[1].id,
+        property_id: propA.id,
+        tenant_id: this.data.tenants[0].id,
+        created_by: this.data.users[3]?.id ?? manager.id,
+        assigned_to: worker.id,
+        category: "security",
+        priority: "medium",
+        status: "closed",
+        source_channel: "web",
+        title: "Камера наблюдения у входа в A-102 не работает",
+        description: "Камера №7 у входа в морозильную секцию не передаёт изображение уже 2 дня.",
+        created_at: ago(7),
+        updated_at: ago(5),
+        resolved_at: ago(5),
+        closed_at: ago(4)
+      },
+      {
+        id: createId(),
+        number: ticketNumber(9),
+        unit_id: extraUnits[1].id,
+        property_id: propB.id,
+        tenant_id: extraTenants[0].id,
+        created_by: extraUsers[0].id,
+        assigned_to: worker2.id,
+        category: "ventilation",
+        priority: "low",
+        status: "closed",
+        source_channel: "web",
+        title: "Шум вентиляции в секции ЮТ-1.1",
+        description: "Гудит вентиляционная установка, мешает работать. Просим осмотреть.",
+        created_at: ago(14),
+        updated_at: ago(10),
+        resolved_at: ago(10),
+        closed_at: ago(9)
+      },
+      {
+        id: createId(),
+        number: ticketNumber(10),
+        unit_id: extraUnits[0].id,
+        property_id: propA.id,
+        tenant_id: extraTenants[3].id,
+        created_by: manager.id,
+        assigned_to: worker.id,
+        category: "loading_equipment",
+        priority: "medium",
+        status: "rejected",
+        source_channel: "web",
+        title: "Запрос на установку дополнительной рампы",
+        description: "Арендатор просит установить вторую рампу. Передано в отдел развития.",
+        created_at: ago(20),
+        updated_at: ago(18),
+        resolved_at: null,
+        closed_at: null
+      }
+    ];
+    this.data.tickets.push(...extraTickets);
+
+    this.data.ticket_comments.push(
+      {
+        id: createId(),
+        ticket_id: extraTickets[0].id,
+        author_id: extraUsers[0].id,
+        content: "Проблема повторяется на пиковых отгрузках после 18:00, просим проверить до конца смены.",
+        created_at: ago(0)
+      },
+      {
+        id: createId(),
+        ticket_id: extraTickets[0].id,
+        author_id: worker2.id,
+        content: "Взял в работу. Сначала проверю датчик положения и журнал ошибок контроллера.",
+        created_at: ago(0)
+      },
+      {
+        id: createId(),
+        ticket_id: extraTickets[3].id,
+        author_id: worker.id,
+        content: "Территория убрана, освещение проверено. Осталось проверить ворота — закончу до 16:00.",
+        created_at: ago(0)
+      },
+      {
+        id: createId(),
+        ticket_id: extraTickets[4].id,
+        author_id: worker.id,
+        content: "Течь устранена: заменена прокладка на соединении трубы. Просушка территории до утра.",
+        created_at: ago(1)
+      }
+    );
+
     this.save();
   }
 
