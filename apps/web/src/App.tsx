@@ -1260,6 +1260,7 @@ const App = () => {
       : canManagePortfolio
         ? [...navSections]
         : navSections.filter((item) => item !== "admin");
+  const activeWorkspaceSection = visibleSections.includes(selectedSection) ? selectedSection : (visibleSections[0] ?? "service");
 
   const selectedTicket = useMemo(
     () => tickets.find((ticket) => ticket.id === selectedTicketId) ?? null,
@@ -1614,7 +1615,7 @@ const App = () => {
     })[0] ?? null;
   }, [selectedChatTicketId, selectedChatTickets]);
 
-  const sectionTitle = session ? t.sectionHeads[selectedSection] : "";
+  const sectionTitle = session ? t.sectionHeads[activeWorkspaceSection] : "";
 
   const handlePropertySelect = (propertyId: string, nextSection?: Section) => {
     if (nextSection && nextSection !== selectedSection) {
@@ -4948,7 +4949,7 @@ const App = () => {
                   {ticket.number} · {ticket.propertyName ?? "—"} · {ticket.unitNumber ?? "—"}
                 </p>
                 <small>
-                  {ticket.tenantName ?? t.hints.noData} · {formatDate(ticket.updatedAt, locale)}
+                  {isWorker ? formatDate(ticket.updatedAt, locale) : `${ticket.tenantName ?? t.hints.noData} · ${formatDate(ticket.updatedAt, locale)}`}
                 </small>
               </button>
             ))
@@ -8364,13 +8365,6 @@ const App = () => {
             meta: `${openTicketCount} ${t.metrics.openTickets.toLowerCase()}`,
             tone: openTicketCount > 0 ? "warning" : "success",
             onClick: () => setSelectedSection("service")
-          },
-          {
-            id: "portfolio",
-            label: locale === "ru" ? "Объект" : "Property",
-            meta: selectedProperty?.name ?? productBrand.name,
-            tone: "neutral",
-            onClick: () => setSelectedSection("portfolio")
           }
         ]
       : [
@@ -8412,23 +8406,23 @@ const App = () => {
   };
 
   const renderSection = () => {
-    if (selectedSection === "overview") {
+    if (activeWorkspaceSection === "overview") {
       return renderOverview();
     }
 
-    if (selectedSection === "portfolio") {
+    if (activeWorkspaceSection === "portfolio") {
       return renderPortfolio();
     }
 
-    if (selectedSection === "leases") {
+    if (activeWorkspaceSection === "leases") {
       return renderLeases();
     }
 
-    if (selectedSection === "service") {
+    if (activeWorkspaceSection === "service") {
       return renderService();
     }
 
-    if (selectedSection === "chat") {
+    if (activeWorkspaceSection === "chat") {
       return isTenant ? renderTenantChat() : renderService();
     }
 
@@ -8473,7 +8467,7 @@ const App = () => {
         <nav className="sidebar-nav">
           {visibleSections.map((section) => (
             <button
-              className={selectedSection === section ? "nav-button nav-button--active" : "nav-button"}
+              className={activeWorkspaceSection === section ? "nav-button nav-button--active" : "nav-button"}
               key={section}
               onClick={() => setSelectedSection(section)}
               type="button"
