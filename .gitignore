@@ -1,0 +1,34 @@
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+
+# Local secrets and runtime state. Commit .env.example only.
+.env
+.env.local
+.env.*.local
+*.local.env
+
+# Generated app artifacts.
+apps/*/dist/
+apps/*/build/
+apps/*/node_modules/
+apps/android/capacitor.config.json
+packages/*/dist/
+services/*/dist/
+
+# Runtime data and uploaded files.
+apps/api/data/
+documents/
+ticket-attachments/
+backups/
+
+# Local deploy/test artifacts.
+.deploy/
+.deploy-*/
+.tmp-*/
+*.zip
+*.log
+
+infra/deploy/keys/

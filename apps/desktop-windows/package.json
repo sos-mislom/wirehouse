@@ -1,0 +1,58 @@
+{
+  "name": "@warehouse/desktop-windows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "build:web": "cd ../.. && npm --workspace apps/web run build && node ./apps/desktop-windows/scripts/sync-web-build.mjs",
+    "desktop:start": "npm run build:web && electron .",
+    "desktop:dist:win": "npm run build:web && electron-builder --win nsis portable --x64",
+    "desktop:release:win": "node ../../scripts/check-release-env.mjs windows && npm run build:web && electron-builder --win nsis portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^37.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.warehouse.platform.desktop",
+    "productName": "sklad kontur",
+    "asarUnpack": [
+      "electron/bin/**"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": true,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "artifactName": "Warehouse-Platform-${version}-win-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "Warehouse-Platform-${version}-win-${arch}-portable.${ext}"
+    }
+  }
+}

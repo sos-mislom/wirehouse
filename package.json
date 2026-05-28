@@ -1,0 +1,29 @@
+{
+  "name": "warehouse-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@11.6.1",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm --workspace apps/api run dev",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:desktop": "npm --workspace apps/desktop-windows run desktop:start",
+    "dev:android": "npm --workspace apps/android run android:sync",
+    "dev:telegram": "npm --workspace services/telegram-notifier run dev",
+    "dev:vk": "npm --workspace services/vk-notifier run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "desktop:dist:win": "npm --workspace apps/desktop-windows run desktop:dist:win",
+    "desktop:release:win": "npm --workspace apps/desktop-windows run desktop:release:win",
+    "android:release": "npm --workspace apps/android run android:release",
+    "android:sync": "npm --workspace apps/android run android:sync",
+    "backup:postgres": "node scripts/backup-postgres.mjs"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}
