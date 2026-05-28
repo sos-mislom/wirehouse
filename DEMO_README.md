@@ -16,6 +16,7 @@ Important demo settings:
 - `TENANT_OTP_CODE=1234`: fixed tenant login code for demo.
 - `ALLOW_OTP_WITHOUT_DELIVERY=true`: tenant OTP works even without real Telegram/VK delivery.
 - `FILE_STORAGE_DRIVER=local`: files are stored locally for demo.
+- Real Telegram/VK delivery is enabled by tokens plus a bound chat/user ID. For standalone notifier services, set `TELEGRAM_DEFAULT_CHAT_ID` or `VK_DEFAULT_USER_ID` only for local delivery tests.
 
 Do not commit `.env`. It is intentionally ignored.
 
