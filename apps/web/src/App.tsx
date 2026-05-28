@@ -559,7 +559,7 @@ const runtimeApiBase =
     ? "http://127.0.0.1:3001"
     : "");
 
-const navSections = ["overview", "portfolio", "leases", "service", "admin"] as const;
+const navSections = ["overview", "portfolio", "leases", "service", "chat", "admin"] as const;
 type Section = (typeof navSections)[number];
 type TicketFilter = "all" | (typeof ticketStatusOptions)[number];
 type AdminPanel = "property" | "tenant" | "unit" | "lease";
@@ -1009,23 +1009,42 @@ const priorityWeight: Record<string, number> = {
   low: 1
 };
 
-const getSlaState = (ticket: Ticket | null) => {
+const getSlaState = (ticket: Ticket | null, locale: Locale) => {
   if (!ticket?.slaDueAt) {
     return { tone: "info", label: "SLA" };
   }
 
   if (["resolved", "closed"].includes(ticket.status)) {
-    return { tone: "success", label: "SLA closed" };
+    return { tone: "success", label: locale === "ru" ? "SLA закрыт" : "SLA closed" };
   }
 
   const minutesLeft = Math.round((new Date(ticket.slaDueAt).getTime() - Date.now()) / 60000);
+  const hours = Math.max(1, Math.abs(minutesLeft < 0 ? Math.floor(minutesLeft / 60) : Math.ceil(minutesLeft / 60)));
   if (minutesLeft < 0) {
-    return { tone: "critical", label: `${Math.abs(Math.floor(minutesLeft / 60))}h overdue` };
+    return { tone: "critical", label: locale === "ru" ? `Просрочено ${hours}ч` : `${hours}h overdue` };
   }
   if (minutesLeft <= 120) {
-    return { tone: "warning", label: `${Math.ceil(minutesLeft / 60)}h left` };
+    return { tone: "warning", label: locale === "ru" ? `Осталось ${hours}ч` : `${hours}h left` };
   }
-  return { tone: "info", label: `${Math.ceil(minutesLeft / 60)}h left` };
+  return { tone: "info", label: locale === "ru" ? `Осталось ${hours}ч` : `${hours}h left` };
+};
+
+const getTicketStatusLabel = (status: string, locale: Locale) => {
+  const labels = copy[locale].ticketStatuses as Record<string, string>;
+  return labels[status] ?? status;
+};
+
+const getImportApprovalStatusLabel = (status: string, locale: Locale) => {
+  if (status === "pending") {
+    return locale === "ru" ? "ожидает" : "pending";
+  }
+  if (status === "approved") {
+    return locale === "ru" ? "подтверждён" : "approved";
+  }
+  if (status === "rejected") {
+    return locale === "ru" ? "отклонён" : "rejected";
+  }
+  return status;
 };
 
 const App = () => {
@@ -1042,6 +1061,7 @@ const App = () => {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedUnitId, setSelectedUnitId] = useState("");
   const [selectedTicketId, setSelectedTicketId] = useState("");
+  const [selectedChatTicketId, setSelectedChatTicketId] = useState("");
   const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([]);
   const [billingReconciliation, setBillingReconciliation] = useState<BillingReconciliation | null>(null);
   const [selectedBillingInvoiceId, setSelectedBillingInvoiceId] = useState("");
@@ -1236,7 +1256,7 @@ const App = () => {
   const visibleSections: Section[] = isWorker
     ? ["service"]
     : isTenant
-      ? ["leases", "service"]
+      ? ["leases", "service", "chat"]
       : canManagePortfolio
         ? [...navSections]
         : navSections.filter((item) => item !== "admin");
@@ -1579,6 +1599,11 @@ const App = () => {
       return null;
     }
 
+    const explicitTicket = selectedChatTickets.find((ticket) => ticket.id === selectedChatTicketId);
+    if (explicitTicket) {
+      return explicitTicket;
+    }
+
     return [...selectedChatTickets].sort((left, right) => {
       const openDelta = Number(isOpenTicket(right.status)) - Number(isOpenTicket(left.status));
       if (openDelta !== 0) {
@@ -1587,7 +1612,7 @@ const App = () => {
 
       return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
     })[0] ?? null;
-  }, [selectedChatTickets]);
+  }, [selectedChatTicketId, selectedChatTickets]);
 
   const sectionTitle = session ? t.sectionHeads[selectedSection] : "";
 
@@ -1891,6 +1916,17 @@ const App = () => {
   }, [chatThreads, selectedChatTenantId]);
 
   useEffect(() => {
+    if (!selectedChatTickets.length) {
+      setSelectedChatTicketId("");
+      return;
+    }
+
+    if (!selectedChatTickets.some((ticket) => ticket.id === selectedChatTicketId)) {
+      setSelectedChatTicketId(selectedChatTargetTicket?.id ?? selectedChatTickets[0].id);
+    }
+  }, [selectedChatTargetTicket?.id, selectedChatTicketId, selectedChatTickets]);
+
+  useEffect(() => {
     if (!selectedTicket) {
       setTicketStatusDraft("new");
       setTicketAssigneeDraft("");
@@ -2009,7 +2045,7 @@ const App = () => {
   }, [tenantDetail?.tenant.id, tenantDetail?.units]);
 
   useEffect(() => {
-    if (!isManagerShell || !session || !selectedChatTenantId || !selectedChatTickets.length) {
+    if (!(isManagerShell || isTenant) || !session || !selectedChatTenantId || !selectedChatTickets.length) {
       setChatMessages([]);
       return;
     }
@@ -2045,7 +2081,9 @@ const App = () => {
             sourceChannel: comment.sourceChannel,
             content: comment.content,
             createdAt: comment.createdAt,
-            direction: comment.authorRole === "tenant" ? "incoming" : "outgoing"
+            direction: isTenant
+              ? comment.authorRole === "tenant" ? "outgoing" : "incoming"
+              : comment.authorRole === "tenant" ? "incoming" : "outgoing"
           }))
         );
 
@@ -2060,7 +2098,7 @@ const App = () => {
                 sourceChannel: ticket.sourceChannel,
                 content: ticket.description,
                 createdAt: ticket.createdAt,
-                direction: "incoming" as const
+                direction: isTenant ? "outgoing" as const : "incoming" as const
               }))
             : [];
 
@@ -2087,7 +2125,7 @@ const App = () => {
     return () => {
       isCancelled = true;
     };
-  }, [isManagerShell, selectedChatTenantId, selectedChatTicketIdsKey, selectedChatTickets, session]);
+  }, [isManagerShell, isTenant, selectedChatTenantId, selectedChatTicketIdsKey, selectedChatTickets, session]);
 
   const applyWorkspaceData = (
     nextOverview: Overview,
@@ -3229,7 +3267,7 @@ const App = () => {
   );
 
   const renderTicketOperationsBlock = (ticket: Ticket) => {
-    const slaState = getSlaState(ticket);
+    const slaState = getSlaState(ticket, locale);
     const completedCount = ticket.checklistItems.filter((item) => item.completed).length;
 
     return (
@@ -5034,14 +5072,19 @@ const App = () => {
           <div className="notification-stack">
             {overview.notifications.length > 0 ? (
               overview.notifications.map((item) => (
-                <div className={`notification-card notification-card--${item.tone}`} key={item.id}>
+                <button
+                  className={`notification-card notification-card--${item.tone}`}
+                  key={item.id}
+                  onClick={() => void openNotification(item)}
+                  type="button"
+                >
                   <div className="notification-card-top">
                     <span className="notification-dot" />
                     <strong>{item.title}</strong>
                   </div>
                   <p>{item.message}</p>
                   <small>{formatDateTime(item.createdAt, locale)}</small>
-                </div>
+                </button>
               ))
             ) : (
               <div className="empty-state">{ui.noNotifications}</div>
@@ -5519,7 +5562,6 @@ const App = () => {
               </div>
               <div className="list-aside">
                 <span>{member.assignedTicketCount}</span>
-                <small>{member.shift}</small>
               </div>
             </div>
           ))}
@@ -6741,7 +6783,9 @@ const App = () => {
                   <div className="comment-card" key={event.id}>
                     <div className="comment-meta">
                       <strong>
-                        {event.fromStatus ? `${event.fromStatus} → ${event.toStatus}` : event.toStatus}
+                        {event.fromStatus
+                          ? `${getTicketStatusLabel(event.fromStatus, locale)} → ${getTicketStatusLabel(event.toStatus, locale)}`
+                          : getTicketStatusLabel(event.toStatus, locale)}
                       </strong>
                       <span>{formatDateTime(event.createdAt, locale)}</span>
                     </div>
@@ -6858,6 +6902,15 @@ const App = () => {
           </div>
 
           <form className="mvp-chat-form" onSubmit={handleChatSubmit}>
+            {selectedChatTickets.length > 1 ? (
+              <select onChange={(event) => setSelectedChatTicketId(event.target.value)} value={selectedChatTargetTicket?.id ?? ""}>
+                {selectedChatTickets.map((ticket) => (
+                  <option key={ticket.id} value={ticket.id}>
+                    {ticket.propertyName ?? "—"} · {ticket.unitNumber ?? "—"} · {ticket.number}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <textarea
               name="content"
               onChange={handleFieldChange(setChatDraft)}
@@ -6875,6 +6928,102 @@ const App = () => {
           </form>
         </article>
       </div>
+    </section>
+  );
+
+  const renderTenantChat = () => (
+    <section className="section-grid">
+      <article className="surface">
+        <div className="surface-head">
+          <div>
+            <div className="section-label">{t.nav.chat}</div>
+            <h3>{locale === "ru" ? "Диалог по заявкам" : "Ticket chat"}</h3>
+          </div>
+        </div>
+        <div className="stack-list">
+          {selectedChatTickets.length > 0 ? (
+            selectedChatTickets.map((ticket) => (
+              <button
+                className={selectedChatTargetTicket?.id === ticket.id ? "list-row table-row-active" : "list-row"}
+                key={ticket.id}
+                onClick={() => setSelectedChatTicketId(ticket.id)}
+                type="button"
+              >
+                <div>
+                  <strong>{ticket.number} · {ticket.title}</strong>
+                  <p>{ticket.propertyName ?? "—"} · {ticket.unitNumber ?? "—"}</p>
+                </div>
+                <div className="list-aside">
+                  <span className={`status-pill status-pill--${ticket.status}`}>
+                    {getTicketStatusLabel(ticket.status, locale)}
+                  </span>
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="empty-state">{t.hints.ticketEmpty}</div>
+          )}
+        </div>
+      </article>
+
+      <article className="surface surface--wide">
+        <div className="surface-head">
+          <div>
+            <div className="section-label">{selectedChatTargetTicket?.number ?? t.nav.chat}</div>
+            <h3>{selectedChatTargetTicket?.title ?? t.nav.chat}</h3>
+          </div>
+          <small>{selectedChatTargetTicket?.propertyName ?? "—"} · {selectedChatTargetTicket?.unitNumber ?? "—"}</small>
+        </div>
+
+        <div className="mvp-chat-body">
+          {(() => {
+            const visibleMessages = selectedChatTargetTicket
+              ? chatMessages.filter((message) => message.ticketId === selectedChatTargetTicket.id)
+              : chatMessages;
+
+            if (chatBusy) {
+              return <div className="empty-state">{t.loading}</div>;
+            }
+
+            if (visibleMessages.length === 0) {
+              return <div className="empty-state">{managerUi.emptyChat}</div>;
+            }
+
+            return visibleMessages.map((message) => (
+              <div
+                className={message.direction === "incoming" ? "mvp-chat-message" : "mvp-chat-message mvp-chat-message--outgoing"}
+                key={message.id}
+              >
+                <strong>
+                  {message.ticketNumber}
+                  <span className={`channel-pill channel-pill--${message.sourceChannel}`}>
+                    {formatChannel(message.sourceChannel, locale)}
+                  </span>
+                </strong>
+                <p>{message.content}</p>
+                <small>{message.authorName} · {formatDateTime(message.createdAt, locale)}</small>
+              </div>
+            ));
+          })()}
+        </div>
+
+        <form className="mvp-chat-form" onSubmit={handleChatSubmit}>
+          <textarea
+            name="content"
+            onChange={handleFieldChange(setChatDraft)}
+            placeholder={managerUi.chatPlaceholder}
+            rows={3}
+            value={chatDraft.content}
+          />
+          <button
+            className="primary-button"
+            disabled={busyAction === "chat-submit" || !selectedChatTargetTicket}
+            type="submit"
+          >
+            {managerUi.send}
+          </button>
+        </form>
+      </article>
     </section>
   );
 
@@ -7718,17 +7867,7 @@ const App = () => {
                     <strong>{approval.fileName}</strong>
                     <p>
                       {approval.templateId} · {approval.mode} · {approval.rowCount} {locale === "ru" ? "строк" : "rows"} ·{" "}
-                      {approval.status === "pending"
-                        ? locale === "ru"
-                          ? "ожидает подтверждения"
-                          : "pending approval"
-                        : approval.status === "approved"
-                          ? locale === "ru"
-                            ? "подтвержден"
-                            : "approved"
-                          : locale === "ru"
-                            ? "отклонен"
-                            : "rejected"}
+                      {getImportApprovalStatusLabel(approval.status, locale)}
                     </p>
                     <small>
                       {approval.requestedByName ?? "—"} · {formatDateTime(approval.createdAt, locale)}
@@ -7756,7 +7895,7 @@ const App = () => {
                       </>
                     ) : (
                       <span className={`status-pill status-pill--${approval.status === "approved" ? "success" : approval.status === "rejected" ? "critical" : "warning"}`}>
-                        {approval.status}
+                        {getImportApprovalStatusLabel(approval.status, locale)}
                       </span>
                     )}
                   </div>
@@ -7953,38 +8092,6 @@ const App = () => {
               </button>
             </form>
           ) : null}
-        </article>
-
-        <article className="mvp-card mvp-card--wide">
-          <div className="mvp-card-head">
-            <div>
-              <div className="section-label">{locale === "ru" ? "Прод" : "Production"}</div>
-              <h3>{locale === "ru" ? "Готовность контура" : "Readiness"}</h3>
-            </div>
-            {systemReadiness ? (
-              <span className={`status-pill status-pill--${systemReadiness.status === "ready" ? "success" : "warning"}`}>
-                {systemReadiness.status === "ready" ? (locale === "ru" ? "готов" : "ready") : (locale === "ru" ? "внимание" : "attention")}
-              </span>
-            ) : null}
-          </div>
-          {systemReadiness ? (
-            <div className="mvp-stack">
-              {systemReadiness.checks.map((check) => (
-                <div className="mvp-list-row" key={check.id}>
-                  <div>
-                    <strong>{check.label}</strong>
-                    <p>{check.message}</p>
-                  </div>
-                  <div className="mvp-list-aside">
-                    <span className={`status-pill status-pill--${check.ok ? "success" : "warning"}`}>{check.status}</span>
-                  </div>
-                </div>
-              ))}
-              <small>{locale === "ru" ? "Проверено" : "Checked"}: {formatDateTime(systemReadiness.generatedAt, locale)}</small>
-            </div>
-          ) : (
-            <div className="empty-state">{t.loading}</div>
-          )}
         </article>
       </div>
     </section>
@@ -8319,6 +8426,10 @@ const App = () => {
 
     if (selectedSection === "service") {
       return renderService();
+    }
+
+    if (selectedSection === "chat") {
+      return isTenant ? renderTenantChat() : renderService();
     }
 
     if (canManagePortfolio) {

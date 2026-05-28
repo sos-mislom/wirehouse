@@ -56,6 +56,7 @@ export const copy = {
       portfolio: "Площади",
       leases: "Договоры",
       service: "Заявки",
+      chat: "Чат",
       admin: "Управление"
     },
     sectionHeads: {
@@ -63,6 +64,7 @@ export const copy = {
       portfolio: "Реестр площадей и параметры фонда",
       leases: "Сроки, стадии и точки пролонгации",
       service: "Очередь заявок, статусы и коммуникация",
+      chat: "Диалог с управляющей командой по связанным заявкам",
       admin: "Операции по справочникам и договорам"
     },
     scopeByRole: {
@@ -260,6 +262,7 @@ export const copy = {
       portfolio: "Portfolio",
       leases: "Leases",
       service: "Service Desk",
+      chat: "Chat",
       admin: "Admin"
     },
     sectionHeads: {
@@ -267,6 +270,7 @@ export const copy = {
       portfolio: "Unit registry and building condition",
       leases: "Terms, stages, and renewal points",
       service: "Ticket queue, status flow, and collaboration",
+      chat: "Conversation with the operations team by linked tickets",
       admin: "Master data and lease operations"
     },
     scopeByRole: {

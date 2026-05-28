@@ -583,6 +583,17 @@ const notificationToneWeights = {
   info: 2,
   success: 1
 };
+const statusLabels = {
+  new: "Новая",
+  accepted: "Принята",
+  in_progress: "В работе",
+  completed: "Выполнена",
+  waiting_tenant: "Ожидает арендатора",
+  resolved: "Решена",
+  closed: "Закрыта",
+  rejected: "Отклонена"
+};
+const translateStatus = (status) => statusLabels[status] ?? status;
 const roleWeights = {
   admin: 0,
   manager: 1,
@@ -3133,7 +3144,7 @@ const buildTenantNotes = (tenant, tickets) => {
     title: index === 0 ? "Операционная коммуникация" : "Сервисное наблюдение",
     authorName: ticket.createdByName ?? tenant.contactName,
     createdAt: ticket.updatedAt,
-    content: `${ticket.title}. Статус: ${ticket.status}. Канал: ${ticket.sourceChannel}.`
+    content: `${ticket.title}. Статус: ${translateStatus(ticket.status)}. Канал: ${ticket.sourceChannel}.`
   }));
 
   return [
@@ -5919,7 +5930,7 @@ const server = http.createServer(async (request, response) => {
             ticket: updatedTicket,
             type: "ticket_updated",
             title: `${updatedTicket.number} · ${updatedTicket.title}`,
-            message: `Статус: ${updatedTicket.status}. Ответственный: ${updatedTicket.assignedToName ?? "не назначен"}`,
+            message: `Статус: ${translateStatus(updatedTicket.status)}. Ответственный: ${updatedTicket.assignedToName ?? "не назначен"}`,
             tone: ["resolved", "closed"].includes(updatedTicket.status) ? "success" : "info",
             actor: user
           });
