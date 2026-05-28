@@ -772,9 +772,27 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
 
     const timestamp = nowIso();
     const propA = this.data.properties[0];
-    const propB = this.data.properties[1];
-    if (!propA || !propB) {
+    if (!propA) {
       return;
+    }
+
+    let propB =
+      this.data.properties.find((property) => property.name === "Логистический парк Восток") ??
+      this.data.properties[1] ??
+      null;
+    if (!propB) {
+      propB = {
+        id: createId(),
+        name: "Логистический парк Восток",
+        address: "Екатеринбург, Логистический проезд, 7",
+        total_area: 18000,
+        rentable_area: 15000,
+        warehouse_class: "B+",
+        description: "Объект под mixed-use хранение.",
+        created_at: timestamp,
+        updated_at: timestamp
+      };
+      this.data.properties.push(propB);
     }
 
     const manager = this.data.users.find((user) => user.role === "manager");
