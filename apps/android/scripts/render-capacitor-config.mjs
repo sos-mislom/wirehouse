@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = path.join(rootDir, "capacitor.config.json");
 const remoteUrl = String(process.env.WAREHOUSE_APP_REMOTE_URL || "").trim();
+const appId = String(process.env.WAREHOUSE_ANDROID_APP_ID || "ru.skladkontur.app").trim();
+const appName = String(process.env.WAREHOUSE_ANDROID_APP_NAME || "sklad kontur").trim();
 
 const config = {
-  appId: "com.warehouse.platform",
-  appName: "Warehouse Platform",
+  appId,
+  appName,
   webDir: "../web/dist",
   bundledWebRuntime: false
 };

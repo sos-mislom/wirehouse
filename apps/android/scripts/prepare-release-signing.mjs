@@ -17,6 +17,11 @@ const keystorePassword = process.env.ANDROID_KEYSTORE_PASSWORD;
 const keyAlias = process.env.ANDROID_KEY_ALIAS;
 const keyPassword = process.env.ANDROID_KEY_PASSWORD;
 
+if (!fs.existsSync(keystorePath)) {
+  console.error(`Android release keystore does not exist: ${keystorePath}`);
+  process.exit(1);
+}
+
 fs.writeFileSync(
   propertiesPath,
   [

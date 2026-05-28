@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(__dirname, "../../..");
 const defaultDbPath = path.resolve(__dirname, "../data/warehouse-data.json");
 
 const loadEnvFile = (filePath) => {
@@ -58,18 +59,36 @@ const toJsonObject = (value) => {
   }
 };
 
+const resolveWorkspacePath = (value, fallback) => {
+  const candidate = String(value ?? fallback ?? "").trim();
+
+  if (!candidate) {
+    return "";
+  }
+
+  return path.isAbsolute(candidate) ? candidate : path.resolve(workspaceRoot, candidate);
+};
+
+const resolvedDbPath = resolveWorkspacePath(process.env.WAREHOUSE_DB_PATH, defaultDbPath);
+const resolvedDocumentsPath = resolveWorkspacePath(
+  process.env.WAREHOUSE_DOCUMENTS_PATH,
+  path.resolve(path.dirname(resolvedDbPath), "documents")
+);
+const resolvedTicketAttachmentsPath = resolveWorkspacePath(
+  process.env.WAREHOUSE_TICKET_ATTACHMENTS_PATH,
+  path.resolve(path.dirname(resolvedDbPath), "ticket-attachments")
+);
+
 export const config = {
   host: process.env.API_HOST ?? "0.0.0.0",
   port: toNumber(process.env.API_PORT, 3001),
-  dbPath: process.env.WAREHOUSE_DB_PATH ?? defaultDbPath,
+  dbPath: resolvedDbPath,
   databaseUrl: process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "",
   redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
   redisCliBin: process.env.REDIS_CLI_BIN ?? "redis-cli",
   psqlBin: process.env.PSQL_BIN ?? "psql",
-  documentStoragePath: process.env.WAREHOUSE_DOCUMENTS_PATH ?? path.resolve(path.dirname(process.env.WAREHOUSE_DB_PATH ?? defaultDbPath), "documents"),
-  ticketAttachmentStoragePath:
-    process.env.WAREHOUSE_TICKET_ATTACHMENTS_PATH ??
-    path.resolve(path.dirname(process.env.WAREHOUSE_DB_PATH ?? defaultDbPath), "ticket-attachments"),
+  documentStoragePath: resolvedDocumentsPath,
+  ticketAttachmentStoragePath: resolvedTicketAttachmentsPath,
   fileStorageDriver: process.env.FILE_STORAGE_DRIVER ?? "local",
   s3Endpoint: process.env.S3_ENDPOINT ?? "",
   s3Region: process.env.S3_REGION ?? "ru-central1",

@@ -13,8 +13,11 @@ coverage/
 # Generated app artifacts.
 apps/*/dist/
 apps/*/build/
+apps/*/release/
 apps/*/node_modules/
+apps/android/android/
 apps/android/capacitor.config.json
+apps/android/keystore.properties
 packages/*/dist/
 services/*/dist/
 

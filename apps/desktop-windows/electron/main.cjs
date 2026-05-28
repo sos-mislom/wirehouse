@@ -5,6 +5,7 @@ let mainWindow = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    title: "sklad kontur",
     width: 1440,
     height: 960,
     minWidth: 1200,

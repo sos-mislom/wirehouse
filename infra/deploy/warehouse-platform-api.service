@@ -1,12 +1,12 @@
 [Unit]
-Description=Warehouse Platform API
+Description=sklad kontur API
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/warehouse-platform/api
 EnvironmentFile=/etc/warehouse-platform/warehouse-platform-api.env
-ExecStart=/opt/node-v18.20.8-linux-x64-glibc-217/bin/node /opt/warehouse-platform/api/src/index.js
+ExecStart=/usr/bin/node /opt/warehouse-platform/api/src/index.js
 Restart=always
 RestartSec=5
 User=root

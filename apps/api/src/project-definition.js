@@ -24,11 +24,11 @@ export const solutionContour = {
     },
     {
       id: "telegram-notifier",
-      purpose: "Deferred notification adapter and future Telegram bot entry point"
+      purpose: "Telegram notification adapter and tenant/worker bot entry point"
     },
     {
       id: "vk-notifier",
-      purpose: "Deferred notification adapter and future VK bot entry point"
+      purpose: "VK notification adapter and tenant/worker bot entry point"
     }
   ],
   visualizationSurfaces: [
@@ -50,4 +50,3 @@ export const erFindings = [
 export const openQuestions = [
   "Are floor plans or BIM/CAD sources available for digital twin views?"
 ];
-

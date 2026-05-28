@@ -8,7 +8,7 @@
     "android:add": "npx cap add android",
     "android:sync": "node ./scripts/render-capacitor-config.mjs && npm run build:web && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:release": "node ../../scripts/check-release-env.mjs android && node ./scripts/render-capacitor-config.mjs && npm run build:web && npx cap sync android && node ./scripts/prepare-release-signing.mjs && node ./scripts/build-release.mjs"
+    "android:release": "node ../../scripts/check-release-env.mjs android && node ./scripts/render-capacitor-config.mjs && node ./scripts/ensure-android-project.mjs && npm run build:web && npx cap sync android && node ./scripts/prepare-release-signing.mjs && node ./scripts/build-release.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

@@ -49,10 +49,10 @@
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": false,
-      "artifactName": "Warehouse-Platform-${version}-win-${arch}-setup.${ext}"
+      "artifactName": "sklad-kontur-${version}-win-${arch}-setup.${ext}"
     },
     "portable": {
-      "artifactName": "Warehouse-Platform-${version}-win-${arch}-portable.${ext}"
+      "artifactName": "sklad-kontur-${version}-win-${arch}-portable.${ext}"
     }
   }
 }
