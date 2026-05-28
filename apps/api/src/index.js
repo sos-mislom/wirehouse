@@ -846,6 +846,105 @@ const sendVkText = async ({ userId, message, keyboard = null }) => {
     throw new Error(payload.error.error_msg ?? "VK send failed");
   }
 };
+const downloadUrlBuffer = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`File download failed: ${response.status}`);
+  }
+
+  return {
+    content: Buffer.from(await response.arrayBuffer()),
+    mimeType: response.headers.get("content-type") ?? "application/octet-stream"
+  };
+};
+const extractTelegramMedia = (message) => {
+  const photo =
+    Array.isArray(message?.photo) && message.photo.length > 0
+      ? [...message.photo].sort((left, right) => Number(right.file_size ?? 0) - Number(left.file_size ?? 0))[0]
+      : null;
+  if (photo?.file_id) {
+    return {
+      fileId: photo.file_id,
+      fileName: `telegram-photo-${photo.file_unique_id ?? photo.file_id}.jpg`,
+      mimeType: "image/jpeg",
+      note: message.caption ?? ""
+    };
+  }
+
+  if (message?.video?.file_id) {
+    return {
+      fileId: message.video.file_id,
+      fileName: message.video.file_name ?? `telegram-video-${message.video.file_unique_id ?? message.video.file_id}.mp4`,
+      mimeType: message.video.mime_type ?? "video/mp4",
+      note: message.caption ?? ""
+    };
+  }
+
+  if (message?.document?.file_id) {
+    return {
+      fileId: message.document.file_id,
+      fileName: message.document.file_name ?? `telegram-document-${message.document.file_unique_id ?? message.document.file_id}`,
+      mimeType: message.document.mime_type ?? "application/octet-stream",
+      note: message.caption ?? ""
+    };
+  }
+
+  return null;
+};
+const downloadTelegramMedia = async (media) => {
+  if (!config.telegramBotToken) {
+    throw new Error("Telegram bot token is not configured");
+  }
+
+  const metadataResponse = await fetch(
+    `https://api.telegram.org/bot${config.telegramBotToken}/getFile?file_id=${encodeURIComponent(media.fileId)}`
+  );
+  const metadata = await metadataResponse.json();
+  if (!metadataResponse.ok || !metadata.ok || !metadata.result?.file_path) {
+    throw new Error(metadata.description ?? "Telegram file metadata failed");
+  }
+
+  const downloaded = await downloadUrlBuffer(
+    `https://api.telegram.org/file/bot${config.telegramBotToken}/${metadata.result.file_path}`
+  );
+  return {
+    content: downloaded.content,
+    mimeType: media.mimeType || downloaded.mimeType,
+    fileName: media.fileName || path.basename(metadata.result.file_path),
+    note: media.note ?? ""
+  };
+};
+const extractVkMedia = (message) => {
+  const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+  const photoAttachment = attachments.find((attachment) => attachment.type === "photo" && attachment.photo?.sizes?.length);
+  if (photoAttachment) {
+    const size = [...photoAttachment.photo.sizes].sort(
+      (left, right) => Number((right.width ?? 0) * (right.height ?? 0)) - Number((left.width ?? 0) * (left.height ?? 0))
+    )[0];
+    if (size?.url) {
+      return {
+        downloadUrl: size.url,
+        fileName: `vk-photo-${photoAttachment.photo.id ?? Date.now()}.jpg`,
+        mimeType: "image/jpeg",
+        note: message.text ?? ""
+      };
+    }
+  }
+
+  const docAttachment = attachments.find((attachment) => attachment.type === "doc" && attachment.doc?.url);
+  if (docAttachment) {
+    return {
+      downloadUrl: docAttachment.doc.url,
+      fileName: docAttachment.doc.title ?? `vk-document-${docAttachment.doc.id ?? Date.now()}.${docAttachment.doc.ext ?? "bin"}`,
+      mimeType: "application/octet-stream",
+      note: message.text ?? ""
+    };
+  }
+
+  return null;
+};
+const isCompletionText = (value) =>
+  /(^|\s)(готово|готов|завершено|завершил|выполнено|сделано|закрыть|закрыл)(\s|$)/i.test(String(value ?? ""));
 const sendWhatsAppOtp = async ({ phone, code }) => {
   const payload = await fetchJson(
     `https://graph.facebook.com/v20.0/${config.whatsappPhoneNumberId}/messages`,
@@ -3383,10 +3482,40 @@ const handleTelegramWebhook = async (request, response) => {
     return;
   }
 
+  const media = extractTelegramMedia(message);
+  if (media) {
+    const binding = db.getOtpBindingByRecipient("telegram", chatId);
+    if (binding) {
+      try {
+        const result = await handleBotMediaMessage({
+          channel: "telegram",
+          binding,
+          media
+        });
+        ok(response, { success: true, ...result });
+      } catch (error) {
+        ok(response, { success: false, error: error instanceof Error ? error.message : "Attachment failed" });
+      }
+      return;
+    }
+  }
+
   const phone = parseTelegramPhone(message);
   if (!phone) {
     const binding = db.getOtpBindingByRecipient("telegram", chatId);
     if (binding && message?.text && !String(message.text).startsWith("/")) {
+      const completed = await handleBotWorkerTextCommand({
+        channel: "telegram",
+        binding,
+        text: String(message.text)
+      });
+      if (completed) {
+        if (config.telegramBotToken) {
+          await sendTelegramText({ chatId, text: "Заявка завершена. Комментарий сохранён в карточке." });
+        }
+        ok(response, { success: true, completed: true });
+        return;
+      }
       if (/^(сменить объект|выбрать объект|\/object|\/objects)$/i.test(String(message.text).trim())) {
         const user = binding.user_id ? db.getUserById(binding.user_id) : null;
         const contexts = buildTenantChatContexts(user);
@@ -3522,6 +3651,176 @@ const createCrossChannelTenantMessage = async ({ channel, binding, text }) => {
     sourceChannel: channel,
     content: text
   });
+};
+const resolveBotTicketTarget = async ({ channel, binding }) => {
+  const user = binding.user_id ? db.getUserById(binding.user_id) : null;
+  if (!user) {
+    return { user: null, ticket: null };
+  }
+
+  if (user.role === "tenant" && user.tenant_id) {
+    const contexts = buildTenantChatContexts(user);
+    if (contexts.length === 0) {
+      return { user, ticket: null };
+    }
+
+    let context = getSelectedChatContext({
+      channel,
+      recipientId: binding.recipient_id,
+      contexts
+    });
+    if (!context && contexts.length === 1) {
+      context = contexts[0];
+      setSelectedChatContext({ channel, recipientId: binding.recipient_id, context });
+    }
+    if (!context && contexts.length > 1) {
+      await sendChatContextChoice({ channel, recipientId: binding.recipient_id, contexts });
+      return { user, ticket: null, needsContext: true };
+    }
+
+    const scopedTickets = db
+      .listTickets()
+      .filter((ticket) => ticket.tenant_id === user.tenant_id && ticket.unit_id === context.unitId)
+      .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime());
+    let ticket = scopedTickets.find((item) => isOpenTicket(item.status)) ?? scopedTickets[0] ?? null;
+    if (!ticket) {
+      const lease = db.listLeases().find((item) => item.id === context.leaseId);
+      if (!lease) {
+        return { user, ticket: null };
+      }
+      const unit = db.getUnit(lease.unit_id);
+      ticket = db.createTicket({
+        unitId: lease.unit_id,
+        tenantId: user.tenant_id,
+        propertyId: unit?.property_id,
+        createdBy: user.id,
+        category: "other",
+        priority: "low",
+        status: "new",
+        sourceChannel: channel,
+        title: channel === "telegram" ? "Вложение из Telegram" : "Вложение из VK",
+        description: context.label
+      });
+    }
+    return { user, ticket };
+  }
+
+  if (user.role === "worker") {
+    const tickets = db
+      .listTickets()
+      .filter((ticket) => ticket.assigned_to === user.id)
+      .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime());
+    return {
+      user,
+      ticket: tickets.find((ticket) => isOpenTicket(ticket.status)) ?? tickets[0] ?? null
+    };
+  }
+
+  return { user, ticket: null };
+};
+const persistBotTicketAttachment = async ({ ticket, user, channel, fileName, mimeType, content, note }) => {
+  if (!ticket || !user) {
+    return null;
+  }
+  if (content.length === 0) {
+    throw new Error("Empty file");
+  }
+  if (content.length > 100 * 1024 * 1024) {
+    throw new Error("File is too large");
+  }
+
+  const safeFileName = sanitizeFilename(fileName);
+  const extension = path.extname(safeFileName);
+  const storedName = `${crypto.randomUUID()}${extension || ".bin"}`;
+  const filePath = ticketAttachmentPathFor(storedName);
+  if (!ensureTicketAttachmentWithinStorage(filePath)) {
+    throw new Error("Unsafe attachment path");
+  }
+
+  await fileStorage.put({
+    key: filePath,
+    content,
+    contentType: mimeType
+  });
+
+  try {
+    const attachment = db.createTicketAttachment({
+      ticketId: ticket.id,
+      fileName: safeFileName,
+      storedName,
+      mimeType,
+      mediaType: inferMediaType(mimeType),
+      sizeBytes: content.length,
+      note: note ?? "",
+      uploadedBy: user.id
+    });
+    const comment = db.createTicketComment({
+      ticketId: ticket.id,
+      authorId: user.id,
+      sourceChannel: channel,
+      content: note ? `Прикреплён файл: ${safeFileName}\n\n${note}` : `Прикреплён файл: ${safeFileName}`
+    });
+    return { attachment, comment };
+  } catch (error) {
+    await fileStorage.delete({ key: filePath });
+    throw error;
+  }
+};
+const handleBotMediaMessage = async ({ channel, binding, media }) => {
+  const { user, ticket, needsContext } = await resolveBotTicketTarget({ channel, binding });
+  if (!user || !ticket) {
+    return { attached: false, needsContext: Boolean(needsContext) };
+  }
+
+  const payload =
+    channel === "telegram"
+      ? await downloadTelegramMedia(media)
+      : {
+          ...(await downloadUrlBuffer(media.downloadUrl)),
+          fileName: media.fileName,
+          mimeType: media.mimeType,
+          note: media.note ?? ""
+        };
+  const result = await persistBotTicketAttachment({
+    ticket,
+    user,
+    channel,
+    fileName: payload.fileName,
+    mimeType: payload.mimeType,
+    content: payload.content,
+    note: payload.note
+  });
+
+  if (user.role === "worker" && isCompletionText(payload.note)) {
+    db.updateTicket(ticket.id, {
+      status: "completed",
+      updatedBy: user.id
+    });
+  }
+
+  return {
+    attached: true,
+    ticketId: ticket.id,
+    attachmentId: result?.attachment?.id ?? null
+  };
+};
+const handleBotWorkerTextCommand = async ({ channel, binding, text }) => {
+  const { user, ticket } = await resolveBotTicketTarget({ channel, binding });
+  if (!user || user.role !== "worker" || !ticket || !isCompletionText(text)) {
+    return false;
+  }
+
+  db.updateTicket(ticket.id, {
+    status: "completed",
+    updatedBy: user.id
+  });
+  db.createTicketComment({
+    ticketId: ticket.id,
+    authorId: user.id,
+    sourceChannel: channel,
+    content: text
+  });
+  return true;
 };
 const buildOutboundTicketMessage = ({ ticket, author, content }) =>
   [
@@ -3689,10 +3988,43 @@ const handleVkWebhook = async (request, response) => {
     response.end("ok");
     return;
   }
+
+  const vkMedia = extractVkMedia(message);
+  if (vkMedia && userId) {
+    const binding = db.getOtpBindingByRecipient("vk", userId);
+    if (binding) {
+      await handleBotMediaMessage({
+        channel: "vk",
+        binding,
+        media: vkMedia
+      });
+      response.writeHead(200, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Access-Control-Allow-Origin": "*"
+      });
+      response.end("ok");
+      return;
+    }
+  }
+
   const phone = parseTelegramPhone({ text: message.text });
   if (!phone) {
     const binding = userId ? db.getOtpBindingByRecipient("vk", userId) : null;
     if (binding && message.text) {
+      const completed = await handleBotWorkerTextCommand({
+        channel: "vk",
+        binding,
+        text: String(message.text)
+      });
+      if (completed) {
+        await sendVkText({ userId, message: "Заявка завершена. Комментарий сохранён в карточке." });
+        response.writeHead(200, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Access-Control-Allow-Origin": "*"
+        });
+        response.end("ok");
+        return;
+      }
       if (/^(сменить объект|выбрать объект|\/object|\/objects)$/i.test(String(message.text).trim())) {
         const user = binding.user_id ? db.getUserById(binding.user_id) : null;
         const contexts = buildTenantChatContexts(user);
