@@ -66,9 +66,9 @@ const buildMessageText = (body: DispatchBody) => {
 
 app.get("/health", async () => {
   return {
-    status: "ok",
+    status: hasToken ? "ok" : "not_configured",
     service: "vk-notifier",
-    mode: hasToken ? "active" : "dry-run"
+    configured: hasToken
   };
 });
 

@@ -21,9 +21,11 @@ export type TicketStatus =
   | "in_progress"
   | "completed"
   | "closed"
-  | "rejected";
+  | "rejected"
+  | "waiting_tenant"
+  | "resolved";
 
-export type TicketPriority = "critical" | "high" | "normal";
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
 
 export type TicketCategory =
   | "gates_ramps"
@@ -34,6 +36,11 @@ export type TicketCategory =
   | "territory"
   | "loading_equipment"
   | "ventilation"
+  | "maintenance"
+  | "billing"
+  | "access"
+  | "damage"
+  | "cleaning"
   | "other";
 
 export type TicketSource =
@@ -45,11 +52,11 @@ export type TicketSource =
   | "phone";
 
 export type InvoiceStatus =
-  | "pending"
   | "paid"
-  | "partially_paid"
+  | "partial"
+  | "late"
   | "overdue"
-  | "cancelled";
+  | "upcoming";
 
 export type NotificationChannel = "in_app" | "email" | "telegram" | "vk";
 export type VisualizationLayer =
@@ -64,6 +71,8 @@ export type NotificationEvent =
   | "ticket_assigned"
   | "ticket_completed"
   | "ticket_overdue"
+  | "ticket_updated"
+  | "ticket_comment_added"
   | "lease_expiring"
   | "payment_overdue";
 
@@ -83,6 +92,11 @@ export interface Unit {
   type: UnitType;
   status: UnitStatus;
   area: number;
+  floor?: number;
+  temperatureRegime?: string;
+  ceilingHeight?: number;
+  hasRamp?: boolean;
+  hasGate?: boolean;
   description?: string;
 }
 
@@ -108,7 +122,9 @@ export interface Lease {
 
 export interface Ticket {
   id: string;
+  number?: string;
   unitId: string;
+  propertyId?: string;
   tenantId: string;
   createdBy: string;
   assignedTo?: string;
@@ -118,6 +134,7 @@ export interface Ticket {
   source: TicketSource;
   title: string;
   description: string;
+  slaDueAt?: string;
 }
 
 export interface NotificationDispatchRequest {

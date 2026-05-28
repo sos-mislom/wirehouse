@@ -65,9 +65,9 @@ const buildMessageText = (body: DispatchBody) => {
 
 app.get("/health", async () => {
   return {
-    status: "ok",
+    status: hasToken ? "ok" : "not_configured",
     service: "telegram-notifier",
-    mode: hasToken ? "active" : "dry-run"
+    configured: hasToken
   };
 });
 
