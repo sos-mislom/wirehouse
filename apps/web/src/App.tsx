@@ -1615,7 +1615,31 @@ const App = () => {
     })[0] ?? null;
   }, [selectedChatTicketId, selectedChatTickets]);
 
-  const sectionTitle = session ? t.sectionHeads[activeWorkspaceSection] : "";
+  const sectionTitle = (() => {
+    if (!session) {
+      return "";
+    }
+
+    if (isWorker && activeWorkspaceSection === "service") {
+      return locale === "ru" ? "Мои заявки" : "My jobs";
+    }
+
+    if (isTenant) {
+      if (activeWorkspaceSection === "leases") {
+        return locale === "ru" ? "Договоры и оплаты" : "Leases and payments";
+      }
+
+      if (activeWorkspaceSection === "service") {
+        return locale === "ru" ? "Мои заявки" : "My tickets";
+      }
+
+      if (activeWorkspaceSection === "chat") {
+        return locale === "ru" ? "Чат с командой" : "Team chat";
+      }
+    }
+
+    return t.sectionHeads[activeWorkspaceSection];
+  })();
 
   const handlePropertySelect = (propertyId: string, nextSection?: Section) => {
     if (nextSection && nextSection !== selectedSection) {
@@ -8474,7 +8498,7 @@ const App = () => {
             >
               <span>{t.nav[section]}</span>
               {section === "service" ? <small>{openTicketCount}</small> : null}
-              {section === "leases" ? <small>{overview.expiringLeaseCount}</small> : null}
+              {section === "leases" ? <small>{isTenant ? overview.leases.length : overview.expiringLeaseCount}</small> : null}
             </button>
           ))}
         </nav>
