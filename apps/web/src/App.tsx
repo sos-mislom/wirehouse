@@ -973,6 +973,24 @@ const formatChannel = (value: string, locale: Locale) => {
   return locale === "ru" ? "Система" : "System";
 };
 
+const getChatRoleLabel = (role: string | null, locale: Locale, isTenantView: boolean) => {
+  if (role === "tenant") {
+    return isTenantView ? (locale === "ru" ? "Вы" : "You") : locale === "ru" ? "Арендатор" : "Tenant";
+  }
+  if (role === "worker") {
+    return locale === "ru" ? "Служба эксплуатации" : "Operations";
+  }
+  if (role === "manager" || role === "admin") {
+    return locale === "ru" ? "Управляющая команда" : "Management team";
+  }
+  return locale === "ru" ? "Система" : "System";
+};
+
+const supportedFileHint = (locale: Locale) =>
+  locale === "ru"
+    ? "Можно приложить фото, видео, PDF, DOC/DOCX, XLS/XLSX, JPG/PNG, TXT или CSV."
+    : "You can attach photos, videos, PDF, DOC/DOCX, XLS/XLSX, JPG/PNG, TXT, or CSV.";
+
 const formatFileSize = (value: number, locale: Locale) => {
   if (value < 1024) {
     return `${value} B`;
@@ -1326,16 +1344,41 @@ const App = () => {
       const occupiedArea = propertyUnits
         .filter((unit) => unit.status === "occupied")
         .reduce((total, unit) => total + unit.area, 0);
+      const maintenanceArea = propertyUnits
+        .filter((unit) => unit.status === "maintenance")
+        .reduce((total, unit) => total + unit.area, 0);
+      const vacantArea = propertyUnits
+        .filter((unit) => unit.status === "vacant")
+        .reduce((total, unit) => total + unit.area, 0);
+      const unallocatedArea = Math.max(0, property.rentableArea - occupiedArea - maintenanceArea - vacantArea);
+      const typeBreakdown = unitTypeOptions
+        .map((type) => ({
+          id: type,
+          label: t.unitTypes[type],
+          area: propertyUnits.filter((unit) => unit.type === type).reduce((total, unit) => total + unit.area, 0)
+        }))
+        .filter((item) => item.area > 0);
+      const statusBreakdown = [
+        { id: "occupied", label: t.unitStatuses.occupied, area: occupiedArea },
+        { id: "vacant", label: t.unitStatuses.vacant, area: vacantArea },
+        { id: "maintenance", label: t.unitStatuses.maintenance, area: maintenanceArea },
+        { id: "reserve", label: locale === "ru" ? "Резерв фонда" : "Fund reserve", area: unallocatedArea }
+      ].filter((item) => item.area > 0);
 
       return {
         ...property,
         unitCount: propertyUnits.length,
         occupiedArea,
+        maintenanceArea,
+        vacantArea,
+        unallocatedArea,
+        typeBreakdown,
+        statusBreakdown,
         occupancy:
           property.rentableArea > 0 ? Number(((occupiedArea / property.rentableArea) * 100).toFixed(1)) : 0
       };
     });
-  }, [overview]);
+  }, [locale, overview, t.unitStatuses, t.unitTypes]);
 
   const leaseWatch = useMemo(() => {
     if (!overview) {
@@ -1408,6 +1451,10 @@ const App = () => {
   const selectedProperty = useMemo(
     () => overview?.properties.find((item) => item.id === selectedPropertyId) ?? null,
     [overview, selectedPropertyId]
+  );
+  const selectedPropertySnapshot = useMemo(
+    () => propertySnapshots.find((item) => item.id === selectedPropertyId) ?? null,
+    [propertySnapshots, selectedPropertyId]
   );
   const selectedTenant = useMemo(
     () => overview?.tenants.find((item) => item.id === selectedTenantId) ?? null,
@@ -2798,11 +2845,13 @@ const App = () => {
     }
   };
 
-  const handleUpdateTicket = async (event: FormEvent) => {
-    event.preventDefault();
+  const updateSelectedTicket = async (draft: { status?: string; assignedTo?: string | null } = {}) => {
     if (!session || !selectedTicket) {
       return;
     }
+
+    const nextStatus = draft.status ?? ticketStatusDraft;
+    const nextAssignee = draft.assignedTo !== undefined ? draft.assignedTo : ticketAssigneeDraft || null;
 
     setBusyAction("ticket-update");
     setError("");
@@ -2810,7 +2859,7 @@ const App = () => {
     try {
       const reopening =
         ["resolved", "closed"].includes(selectedTicket.status) &&
-        !["resolved", "closed", "rejected"].includes(ticketStatusDraft);
+        !["resolved", "closed", "rejected"].includes(nextStatus);
       const reopenReason = reopening
         ? window.prompt(locale === "ru" ? "Причина переоткрытия заявки" : "Reopen reason")
         : "";
@@ -2824,9 +2873,9 @@ const App = () => {
         method: "PUT",
         token: session.token,
         body: {
-          status: ticketStatusDraft,
+          status: nextStatus,
           reopenReason,
-          ...(canAssignTickets ? { assignedTo: ticketAssigneeDraft || null } : {})
+          ...(canAssignTickets ? { assignedTo: nextAssignee } : {})
         }
       });
       setNotice(t.messages.statusUpdated);
@@ -3248,6 +3297,7 @@ const App = () => {
               locale
             )}
           </span>
+          <small className="attachment-hint">{supportedFileHint(locale)}</small>
         </div>
         <label className="secondary-button secondary-button--compact attachment-upload">
           {locale === "ru" ? "Прикрепить" : "Attach"}
@@ -4711,13 +4761,14 @@ const App = () => {
                 <span className="file-picker-name">{paymentProofFile ? paymentProofFile.name : (locale === "ru" ? "Файл не выбран" : "No file selected")}</span>
               </span>
               <input
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.csv"
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                 onChange={(event) => {
                   setPaymentProofFile(event.currentTarget.files?.[0] ?? null);
                   event.currentTarget.value = "";
                 }}
                 type="file"
               />
+              <small className="attachment-hint">{supportedFileHint(locale)}</small>
             </label>
             {paymentProofFile ? (
               <div className="file-picked-summary">
@@ -4992,10 +5043,18 @@ const App = () => {
             </div>
 
             {canUpdateTickets ? (
-              <form className="inline-form" onSubmit={handleUpdateTicket}>
+              <div className="inline-form">
                 <label>
                   <span>{t.fields.status}</span>
-                  <select onChange={(event) => setTicketStatusDraft(event.target.value)} value={ticketStatusDraft}>
+                  <select
+                    disabled={busyAction === "ticket-update"}
+                    onChange={(event) => {
+                      const nextStatus = event.target.value;
+                      setTicketStatusDraft(nextStatus);
+                      void updateSelectedTicket({ status: nextStatus });
+                    }}
+                    value={ticketStatusDraft}
+                  >
                     {(isWorker ? ticketStatusOptions.filter((status) => ["in_progress", "completed"].includes(status)) : ticketStatusOptions).map((status) => (
                       <option key={status} value={status}>
                         {t.ticketStatuses[status]}
@@ -5006,7 +5065,15 @@ const App = () => {
                 {canAssignTickets ? (
                   <label>
                     <span>{locale === "ru" ? "\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c" : "Assignee"}</span>
-                    <select onChange={(event) => setTicketAssigneeDraft(event.target.value)} value={ticketAssigneeDraft}>
+                    <select
+                      disabled={busyAction === "ticket-update"}
+                      onChange={(event) => {
+                        const nextAssignee = event.target.value;
+                        setTicketAssigneeDraft(nextAssignee);
+                        void updateSelectedTicket({ assignedTo: nextAssignee || null });
+                      }}
+                      value={ticketAssigneeDraft}
+                    >
                       <option value="">{locale === "ru" ? "\u041d\u0435 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d" : "Unassigned"}</option>
                       {ticketAssigneeOptions.map((member) => (
                         <option key={member.id} value={member.id}>
@@ -5016,10 +5083,10 @@ const App = () => {
                     </select>
                   </label>
                 ) : null}
-                <button className="secondary-button" disabled={busyAction === "ticket-update"} type="submit">
-                  {t.actions.updateStatus}
-                </button>
-              </form>
+                <small className="inline-save-hint">
+                  {busyAction === "ticket-update" ? (locale === "ru" ? "Сохраняем..." : "Saving...") : (locale === "ru" ? "Сохраняется сразу" : "Saves automatically")}
+                </small>
+              </div>
             ) : null}
             {isTenant && ["new", "accepted", "waiting_tenant"].includes(selectedTicket.status) ? (
               <button
@@ -6745,10 +6812,18 @@ const App = () => {
             </div>
 
             {canUpdateTickets ? (
-              <form className="inline-form" onSubmit={handleUpdateTicket}>
+              <div className="inline-form">
                 <label>
                   <span>{t.fields.status}</span>
-                  <select onChange={(event) => setTicketStatusDraft(event.target.value)} value={ticketStatusDraft}>
+                  <select
+                    disabled={busyAction === "ticket-update"}
+                    onChange={(event) => {
+                      const nextStatus = event.target.value;
+                      setTicketStatusDraft(nextStatus);
+                      void updateSelectedTicket({ status: nextStatus });
+                    }}
+                    value={ticketStatusDraft}
+                  >
                     {ticketStatusOptions.map((status) => (
                       <option key={status} value={status}>
                         {t.ticketStatuses[status]}
@@ -6759,7 +6834,15 @@ const App = () => {
                 {canAssignTickets ? (
                   <label>
                     <span>{locale === "ru" ? "\u0418\u0441\u043f\u043e\u043b\u043d\u0438\u0442\u0435\u043b\u044c" : "Assignee"}</span>
-                    <select onChange={(event) => setTicketAssigneeDraft(event.target.value)} value={ticketAssigneeDraft}>
+                    <select
+                      disabled={busyAction === "ticket-update"}
+                      onChange={(event) => {
+                        const nextAssignee = event.target.value;
+                        setTicketAssigneeDraft(nextAssignee);
+                        void updateSelectedTicket({ assignedTo: nextAssignee || null });
+                      }}
+                      value={ticketAssigneeDraft}
+                    >
                       <option value="">{locale === "ru" ? "\u041d\u0435 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d" : "Unassigned"}</option>
                       {ticketAssigneeOptions.map((member) => (
                         <option key={member.id} value={member.id}>
@@ -6769,10 +6852,10 @@ const App = () => {
                     </select>
                   </label>
                 ) : null}
-                <button className="secondary-button" disabled={busyAction === "ticket-update"} type="submit">
-                  {t.actions.updateStatus}
-                </button>
-              </form>
+                <small className="inline-save-hint">
+                  {busyAction === "ticket-update" ? (locale === "ru" ? "Сохраняем..." : "Saving...") : (locale === "ru" ? "Сохраняется сразу" : "Saves automatically")}
+                </small>
+              </div>
             ) : null}
           </article>
 
@@ -6896,13 +6979,13 @@ const App = () => {
                   key={message.id}
                 >
                   <strong>
-                    {message.ticketNumber}
+                    <span>{getChatRoleLabel(message.authorRole, locale, isTenant)}</span>
                     <span className={`channel-pill channel-pill--${message.sourceChannel}`}>
                       {formatChannel(message.sourceChannel, locale)}
                     </span>
                   </strong>
                   <p>{message.content}</p>
-                  <small>{message.authorName} · {formatDateTime(message.createdAt, locale)}</small>
+                  <small>{message.ticketNumber} · {formatDateTime(message.createdAt, locale)}</small>
                 </div>
               ))
             ) : (
@@ -7004,13 +7087,13 @@ const App = () => {
                 key={message.id}
               >
                 <strong>
-                  {message.ticketNumber}
+                  <span>{getChatRoleLabel(message.authorRole, locale, isTenant)}</span>
                   <span className={`channel-pill channel-pill--${message.sourceChannel}`}>
                     {formatChannel(message.sourceChannel, locale)}
                   </span>
                 </strong>
                 <p>{message.content}</p>
-                <small>{message.authorName} · {formatDateTime(message.createdAt, locale)}</small>
+                <small>{message.ticketNumber} · {formatDateTime(message.createdAt, locale)}</small>
               </div>
             ));
           })()}
@@ -7291,6 +7374,49 @@ const App = () => {
           </button>
         ))}
       </div>
+
+      {selectedPropertySnapshot ? (
+        <article className="mvp-card area-split-card selection-stage" key={`manager-area-split-${selectedPropertyId}`}>
+          <div className="mvp-card-head">
+            <div>
+              <div className="section-label">{locale === "ru" ? "Фонд" : "Fund"}</div>
+              <h3>{locale === "ru" ? "Деление площадей" : "Area split"}</h3>
+            </div>
+            <small>{formatArea(selectedPropertySnapshot.rentableArea, locale)}</small>
+          </div>
+          <div className="area-split-bar" aria-label={locale === "ru" ? "Деление площадей по статусам" : "Area split by status"}>
+            {selectedPropertySnapshot.statusBreakdown.map((item) => (
+              <span
+                className={`area-split-segment area-split-segment--${item.id}`}
+                key={item.id}
+                style={{ width: `${Math.max(2, (item.area / Math.max(1, selectedPropertySnapshot.rentableArea)) * 100)}%` }}
+                title={`${item.label}: ${formatArea(item.area, locale)}`}
+              />
+            ))}
+          </div>
+          <div className="area-split-grid">
+            {selectedPropertySnapshot.statusBreakdown.map((item) => (
+              <div className="area-split-item" key={item.id}>
+                <span className={`area-split-dot area-split-dot--${item.id}`} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>
+                    {formatArea(item.area, locale)} · {Math.round((item.area / Math.max(1, selectedPropertySnapshot.rentableArea)) * 100)}%
+                  </small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="area-type-grid">
+            {selectedPropertySnapshot.typeBreakdown.map((item) => (
+              <div className="area-type-chip" key={item.id}>
+                <span>{item.label}</span>
+                <strong>{formatArea(item.area, locale)}</strong>
+              </div>
+            ))}
+          </div>
+        </article>
+      ) : null}
 
       <div className="mvp-grid">
         <article className="surface surface--board selection-stage" key={`manager-objects-board-${selectedPropertyId}`}>
@@ -8142,7 +8268,7 @@ const App = () => {
                 </span>
               </span>
               <input
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt,.csv"
+                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
                 disabled={busyAction === `lease-document-upload-${documentPanelLease.id}`}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0] ?? null;
@@ -8151,6 +8277,7 @@ const App = () => {
                 }}
                 type="file"
               />
+              <small className="attachment-hint">{supportedFileHint(locale)}</small>
             </label>
           ) : null}
 

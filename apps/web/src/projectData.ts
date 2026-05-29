@@ -133,7 +133,6 @@ export const copy = {
       create: "Создать",
       delete: "Удалить",
       addComment: "Добавить комментарий",
-      updateStatus: "Обновить статус",
       confirmDelete: "Удалить запись?"
     },
     hints: {
@@ -339,7 +338,6 @@ export const copy = {
       create: "Create",
       delete: "Delete",
       addComment: "Add comment",
-      updateStatus: "Update status",
       confirmDelete: "Delete this record?"
     },
     hints: {

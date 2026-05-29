@@ -51,6 +51,7 @@
   --accent: var(--primary-500);
   --accent-soft: var(--primary-50);
   --accent-strong: var(--primary-700);
+  --focus-ring: oklch(0.78 0.08 180 / 0.35);
   --radius-xl: 16px;
   --radius-lg: 12px;
   --radius-md: 8px;
@@ -1264,6 +1265,89 @@ textarea {
   color: var(--ink-soft);
 }
 
+.area-split-card {
+  margin-bottom: 14px;
+}
+
+.area-split-bar {
+  display: flex;
+  min-height: 18px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+}
+
+.area-split-segment {
+  min-width: 10px;
+}
+
+.area-split-segment--occupied,
+.area-split-dot--occupied {
+  background: var(--primary-500);
+}
+
+.area-split-segment--vacant,
+.area-split-dot--vacant {
+  background: var(--success);
+}
+
+.area-split-segment--maintenance,
+.area-split-dot--maintenance {
+  background: var(--warning);
+}
+
+.area-split-segment--reserve,
+.area-split-dot--reserve {
+  background: var(--neutral-400);
+}
+
+.area-split-grid,
+.area-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.area-split-item,
+.area-type-chip {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.area-split-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.area-split-dot {
+  width: 10px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+}
+
+.area-split-item strong,
+.area-type-chip strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.area-split-item small,
+.area-type-chip span {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.area-type-chip {
+  display: grid;
+  gap: 4px;
+}
+
 .table-shell {
   overflow: auto;
   border-radius: 18px;
@@ -1467,8 +1551,15 @@ textarea {
 }
 
 .inline-form {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   align-items: end;
+}
+
+.inline-save-hint {
+  align-self: center;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .comment-block {
@@ -1512,9 +1603,16 @@ textarea {
 }
 
 .attachment-head span,
-.attachment-card small {
+.attachment-card small,
+.attachment-hint {
   color: var(--ink-muted);
   font-size: 0.82rem;
+}
+
+.attachment-hint {
+  display: block;
+  margin-top: 4px;
+  max-width: 520px;
 }
 
 .attachment-upload {
@@ -1630,6 +1728,56 @@ textarea {
 .checklist-item input {
   width: 18px;
   height: 18px;
+}
+
+.checkbox input,
+.checklist-item input {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.checkbox input::before,
+.checklist-item input::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: transform 0.15s ease;
+  clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 18%, 84% 4%, 38% 66%);
+  background: var(--surface);
+}
+
+.checkbox input:checked,
+.checklist-item input:checked {
+  border-color: var(--primary-500);
+  background: var(--primary-500);
+}
+
+.checkbox input:checked::before,
+.checklist-item input:checked::before {
+  transform: scale(1);
+}
+
+.checkbox input:focus-visible,
+.checklist-item input:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.checkbox input:disabled,
+.checklist-item input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .checklist-item span {
