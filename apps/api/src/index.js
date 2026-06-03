@@ -3212,47 +3212,6 @@ const hydrateTicketComment = (ticketId, commentId) =>
     .listTicketComments(ticketId)
     .map(normalizeTicketComment)
     .find((comment) => comment.id === commentId) ?? null;
-const buildTenantPayments = (tenant, leases, units, scopedTickets) => {
-  const monthlyRent = sumBy(
-    leases.filter((lease) => activeLeaseStages.has(lease.stage)),
-    (lease) => {
-      const unit = units.find((item) => item.id === lease.unitId);
-      return (unit?.area ?? 0) * lease.ratePerSqm;
-    }
-  );
-  const currentMonth = startOfMonth();
-  const billingPressure = scopedTickets.filter(
-    (ticket) => ticket.category === "billing" && isOpenTicket(ticket.status)
-  ).length;
-  const pattern =
-    tenant.riskLevel === "high"
-      ? ["paid", "late", "overdue", "upcoming"]
-      : tenant.riskLevel === "medium"
-        ? ["paid", "paid", "late", "upcoming"]
-        : ["paid", "paid", "paid", "upcoming"];
-
-  return [-2, -1, 0, 1].map((offset, index) => {
-    const periodDate = addMonths(currentMonth, offset);
-    const dueDate = new Date(periodDate.getFullYear(), periodDate.getMonth(), 10);
-    const status = pattern[index] ?? "upcoming";
-    const paidDate =
-      status === "paid"
-        ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate() + 1)
-        : status === "late"
-          ? new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate() + 5 + billingPressure)
-          : null;
-
-    return {
-      id: `payment-${tenant.id}-${offset}`,
-      period: `${formatMonthLabel(periodDate)} ${periodDate.getFullYear()}`,
-      amount: money(monthlyRent),
-      dueDate: toIsoDay(dueDate),
-      paidDate: paidDate ? toIsoDay(paidDate) : null,
-      status,
-      method: "Безналичный расчёт"
-    };
-  });
-};
 const buildTenantMeters = (units) =>
   units.map((unit, index) => ({
     id: `meter-${unit.id}`,
