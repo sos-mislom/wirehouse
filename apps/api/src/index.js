@@ -5451,6 +5451,43 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    const unitSplitMatch = pathname.match(/^\/api\/units\/([a-zA-Z0-9-]+)\/split$/);
+    if (unitSplitMatch) {
+      const user = requirePortfolioWriteAccess(request, response);
+      if (!user) {
+        return;
+      }
+
+      const unitId = unitSplitMatch[1];
+      if (!requireUnitScope(user, response, unitId)) {
+        return;
+      }
+
+      if (method === "POST") {
+        const body = await parseJsonBody(request);
+        const missing = validateRequired(body, ["number", "area"]);
+        if (missing) {
+          badRequest(response, `Missing field: ${missing}`);
+          return;
+        }
+
+        try {
+          const result = db.splitUnit(unitId, body);
+          if (!result) {
+            notFound(response);
+            return;
+          }
+          created(response, {
+            original: normalizeUnit(result.original),
+            item: normalizeUnit(result.created)
+          });
+        } catch (error) {
+          conflict(response, error.message);
+        }
+        return;
+      }
+    }
+
     const unitMatch = pathname.match(/^\/api\/units\/([a-zA-Z0-9-]+)$/);
     if (unitMatch) {
       const user = requirePortfolioWriteAccess(request, response);

@@ -1917,6 +1917,62 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     return clone(current);
   }
 
+  splitUnit(id, payload) {
+    const current = this.getById("units", id);
+    if (!current) {
+      return null;
+    }
+
+    if (this.countActiveLeasesForUnit(id) > 0 || current.status === "occupied") {
+      throw new Error("Occupied unit cannot be split without lease transfer");
+    }
+
+    const newNumber = String(payload.number ?? "").trim();
+    const splitArea = Number(payload.area);
+    if (!newNumber) {
+      throw new Error("New unit number is required");
+    }
+    if (!Number.isFinite(splitArea) || splitArea <= 0) {
+      throw new Error("Split area must be positive");
+    }
+    if (splitArea >= Number(current.area)) {
+      throw new Error("Split area must be less than current unit area");
+    }
+
+    this.ensureUnique(
+      this.data.units,
+      (unit) => unit.property_id === current.property_id && unit.number === newNumber,
+      "Unit number must be unique within the property"
+    );
+
+    const created = {
+      id: createId(),
+      property_id: current.property_id,
+      number: newNumber,
+      floor: current.floor,
+      area: splitArea,
+      type: current.type,
+      status: payload.status ?? current.status,
+      ceiling_height: current.ceiling_height,
+      temperature_regime: current.temperature_regime,
+      has_ramp: current.has_ramp,
+      has_gate: current.has_gate,
+      created_at: nowIso(),
+      updated_at: nowIso()
+    };
+
+    this.validateUnitPayload(created);
+    current.area = Number((Number(current.area) - splitArea).toFixed(2));
+    current.updated_at = nowIso();
+    this.validateUnitPayload(current);
+    this.data.units.push(created);
+    this.save();
+    return {
+      original: clone(current),
+      created: clone(created)
+    };
+  }
+
   deleteUnit(id) {
     const current = this.getById("units", id);
     if (!current) {

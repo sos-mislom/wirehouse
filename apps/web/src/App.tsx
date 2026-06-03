@@ -1180,6 +1180,10 @@ const App = () => {
     hasRamp: true,
     hasGate: true
   });
+  const [unitSplitForm, setUnitSplitForm] = useState({
+    number: "",
+    area: ""
+  });
   const [leaseForm, setLeaseForm] = useState({
     tenantId: "",
     unitId: "",
@@ -1915,6 +1919,13 @@ const App = () => {
       setSelectedUnitId(propertyScopedUnits[0].id);
     }
   }, [propertyScopedUnits, selectedUnitId]);
+
+  useEffect(() => {
+    setUnitSplitForm({
+      number: selectedUnit ? `${selectedUnit.number}-1` : "",
+      area: ""
+    });
+  }, [selectedUnit?.id, selectedUnit?.number]);
 
   useEffect(() => {
     if (!visibleSections.includes(selectedSection)) {
@@ -3667,6 +3678,39 @@ const App = () => {
       setNotice(locale === "ru" ? "Показание сохранено, переменная часть счета пересчитана" : "Reading saved and invoice variable charge recalculated");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Meter reading failed");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const handleUnitSplitSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !selectedUnit || !canManagePortfolio) {
+      return;
+    }
+
+    setBusyAction(`unit-split-${selectedUnit.id}`);
+    setError("");
+
+    try {
+      const result = await apiRequest<{ item: Unit; original: Unit }>(`/api/units/${selectedUnit.id}/split`, {
+        method: "POST",
+        token: session.token,
+        body: {
+          number: unitSplitForm.number,
+          area: unitSplitForm.area
+        }
+      });
+      await refreshWorkspace();
+      setSelectedUnitId(result.item.id);
+      setManagerScreen("unit-detail");
+      setNotice(
+        locale === "ru"
+          ? `Помещение разделено: создано ${result.item.number}, исходная площадь ${formatArea(result.original.area, locale)}`
+          : `Unit split: ${result.item.number} created`
+      );
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unit split failed");
     } finally {
       setBusyAction("");
     }
@@ -6799,6 +6843,68 @@ const App = () => {
               ) : null}
             </div>
           </article>
+
+          {canManagePortfolio ? (
+            <article className="mvp-card">
+              <div className="mvp-card-head">
+                <div>
+                  <div className="section-label">{locale === "ru" ? "Площади" : "Areas"}</div>
+                  <h3>{locale === "ru" ? "Разделить помещение" : "Split unit"}</h3>
+                </div>
+              </div>
+              {selectedUnit.status === "occupied" || selectedUnitLeases.some((lease) => ["signed", "active", "prolongation"].includes(lease.stage)) ? (
+                <div className="empty-state">
+                  {locale === "ru"
+                    ? "Помещение с активной арендой нельзя разделить без переноса договора."
+                    : "A unit with an active lease cannot be split without lease transfer."}
+                </div>
+              ) : (
+                <form className="mvp-form" onSubmit={handleUnitSplitSubmit}>
+                  <label>
+                    <span>{locale === "ru" ? "Номер новой площади" : "New unit number"}</span>
+                    <input
+                      name="number"
+                      onChange={handleFieldChange(setUnitSplitForm)}
+                      placeholder={`${selectedUnit.number}-1`}
+                      value={unitSplitForm.number}
+                    />
+                  </label>
+                  <label>
+                    <span>{locale === "ru" ? "Площадь новой части, м²" : "New part area, sqm"}</span>
+                    <input
+                      max={Math.max(1, selectedUnit.area - 1)}
+                      min="1"
+                      name="area"
+                      onChange={handleFieldChange(setUnitSplitForm)}
+                      placeholder={String(Math.floor(selectedUnit.area / 2))}
+                      type="number"
+                      value={unitSplitForm.area}
+                    />
+                  </label>
+                  <div className="mvp-info-row">
+                    <span>{locale === "ru" ? "Останется в исходной" : "Remaining in original"}</span>
+                    <strong>
+                      {Number(unitSplitForm.area) > 0 && Number(unitSplitForm.area) < selectedUnit.area
+                        ? formatArea(selectedUnit.area - Number(unitSplitForm.area), locale)
+                        : "—"}
+                    </strong>
+                  </div>
+                  <button
+                    className="primary-button"
+                    disabled={
+                      busyAction === `unit-split-${selectedUnit.id}` ||
+                      !unitSplitForm.number.trim() ||
+                      Number(unitSplitForm.area) <= 0 ||
+                      Number(unitSplitForm.area) >= selectedUnit.area
+                    }
+                    type="submit"
+                  >
+                    {busyAction === `unit-split-${selectedUnit.id}` ? (locale === "ru" ? "Разделяем..." : "Splitting...") : (locale === "ru" ? "Разделить" : "Split")}
+                  </button>
+                </form>
+              )}
+            </article>
+          ) : null}
 
           <article className="mvp-card">
             <div className="mvp-card-head">
