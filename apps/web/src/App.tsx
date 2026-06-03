@@ -196,6 +196,7 @@ type FinanceSummary = {
   opexRatio: number;
   noi: number;
   forecastQuarter: number;
+  forecastPeriodLabel?: string;
   series: FinancePoint[];
 };
 
@@ -4342,7 +4343,7 @@ const App = () => {
             <div className="metric-panel">
               <span>{ui.forecast}</span>
               <strong>{formatCompactMoney(overview.finance.forecastQuarter, locale)}</strong>
-              <small>{t.metrics.activeLeases}: {overview.totals.active_lease_count}</small>
+              <small>{overview.finance.forecastPeriodLabel ?? `${t.metrics.activeLeases}: ${overview.totals.active_lease_count}`}</small>
             </div>
           </div>
         </div>
@@ -5027,6 +5028,7 @@ const App = () => {
             <div className="summary-chip">
               <span>{ui.forecast}</span>
               <strong>{formatCompactMoney(overview.finance.forecastQuarter, locale)}</strong>
+              <small>{overview.finance.forecastPeriodLabel}</small>
             </div>
           </div>
         </article>
@@ -5959,7 +5961,7 @@ const App = () => {
         <article className="mvp-metric">
           <span>{ui.forecast}</span>
           <strong>{formatCompactMoney(overview.finance.forecastQuarter, locale)}</strong>
-          <small>{t.metrics.activeLeases}: {overview.totals.active_lease_count}</small>
+          <small>{overview.finance.forecastPeriodLabel ?? `${t.metrics.activeLeases}: ${overview.totals.active_lease_count}`}</small>
         </article>
       </div>
 

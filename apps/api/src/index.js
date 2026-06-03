@@ -1371,7 +1371,7 @@ const buildFinanceSummary = (scoped, scopedTickets) => {
   const expiringSoon = scoped.leases.filter(
     (lease) => activeLeaseStages.has(lease.stage) && daysUntilIso(lease.endDate) <= 60
   ).length;
-  const series = [-1, 0, 1].map((offset, index) => {
+  const series = [0, 1, 2].map((offset, index) => {
     const monthDate = addMonths(currentMonth, offset);
     const demandFactor = 1 - Math.max(0, expiringSoon - 1) * 0.015 + index * 0.01;
     const stressFactor = 1 + maintenanceUnits * 0.015 + openBillingTickets * 0.012;
@@ -1411,6 +1411,7 @@ const buildFinanceSummary = (scoped, scopedTickets) => {
     opexRatio,
     noi,
     forecastQuarter: money(sumBy(series, (entry) => entry.forecast)),
+    forecastPeriodLabel: `${series[0]?.label ?? ""}–${series[series.length - 1]?.label ?? ""}`,
     series
   };
 };
