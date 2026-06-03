@@ -358,7 +358,20 @@ const normalizeTenantNote = (record) => ({
   authorId: record.author_id ?? null,
   authorName: record.author_name ?? "Система",
   createdAt: record.created_at,
-  content: record.content
+  content: record.content,
+  attachments: Array.isArray(record.attachments) ? record.attachments.map(normalizeTenantNoteAttachment) : []
+});
+
+const normalizeTenantNoteAttachment = (record) => ({
+  id: record.id,
+  noteId: record.note_id,
+  tenantId: record.tenant_id,
+  fileName: record.file_name,
+  mimeType: record.mime_type,
+  sizeBytes: Number(record.size_bytes),
+  uploadedBy: record.uploaded_by,
+  uploadedByName: record.uploaded_by_name ?? null,
+  createdAt: record.created_at
 });
 
 const normalizeLease = (record) => ({
@@ -3253,7 +3266,8 @@ const buildTenantNotes = (tenant, tickets, manualNotes = []) => {
     title: index === 0 ? "Операционная коммуникация" : "Сервисное наблюдение",
     authorName: ticket.createdByName ?? tenant.contactName,
     createdAt: ticket.updatedAt,
-    content: `${ticket.title}. Статус: ${translateStatus(ticket.status)}. Канал: ${ticket.sourceChannel}.`
+    content: `${ticket.title}. Статус: ${translateStatus(ticket.status)}. Канал: ${ticket.sourceChannel}.`,
+    attachments: []
   }));
 
   return [
@@ -3263,7 +3277,8 @@ const buildTenantNotes = (tenant, tickets, manualNotes = []) => {
       title: "Контур пролонгации",
       authorName: "Система",
       createdAt: new Date().toISOString(),
-      content: `Для ${tenant.name} удерживаем единый трек по срокам договора, платёжной дисциплине и сервисной истории.`
+      content: `Для ${tenant.name} удерживаем единый трек по срокам договора, платёжной дисциплине и сервисной истории.`,
+      attachments: []
     },
     ...derivedNotes
   ].sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
@@ -5589,6 +5604,154 @@ const server = http.createServer(async (request, response) => {
         } catch (error) {
           badRequest(response, error.message);
         }
+        return;
+      }
+    }
+
+    const tenantNoteAttachmentsMatch = pathname.match(/^\/api\/tenant-notes\/([a-zA-Z0-9-]+)\/attachments$/);
+    if (tenantNoteAttachmentsMatch) {
+      const user = requireAuth(request, response);
+      if (!user) {
+        return;
+      }
+
+      const noteId = tenantNoteAttachmentsMatch[1];
+      const note = db.getTenantNote(noteId);
+      if (!note || !getTenantForUser(user, note.tenant_id)) {
+        notFound(response);
+        return;
+      }
+
+      if (method === "GET") {
+        ok(response, {
+          items: db.listTenantNoteAttachments(noteId).map(normalizeTenantNoteAttachment)
+        });
+        return;
+      }
+
+      if (method === "POST") {
+        if (!["admin", "manager"].includes(user.role)) {
+          forbidden(response);
+          return;
+        }
+
+        const body = await parseJsonBody(request);
+        const missing = validateRequired(body, ["fileName", "mimeType", "contentBase64"]);
+        if (missing) {
+          badRequest(response, `Missing field: ${missing}`);
+          return;
+        }
+
+        const fileName = sanitizeFilename(body.fileName);
+        const extension = path.extname(fileName);
+        const storedName = `tenant-note-${crypto.randomUUID()}${extension || ".bin"}`;
+        const filePath = documentPathFor(storedName);
+        if (!ensureDocumentWithinStorage(filePath)) {
+          forbidden(response);
+          return;
+        }
+
+        const content = Buffer.from(String(body.contentBase64), "base64");
+        if (content.length === 0) {
+          badRequest(response, "Empty file");
+          return;
+        }
+
+        if (content.length > 25 * 1024 * 1024) {
+          badRequest(response, "File is too large");
+          return;
+        }
+
+        const mimeType = String(body.mimeType || "application/octet-stream");
+        await fileStorage.put({
+          key: filePath,
+          content,
+          contentType: mimeType
+        });
+        try {
+          const createdRecord = db.createTenantNoteAttachment({
+            noteId,
+            fileName,
+            storedName,
+            mimeType,
+            sizeBytes: content.length,
+            uploadedBy: user.id
+          });
+          created(response, {
+            item: normalizeTenantNoteAttachment(createdRecord)
+          });
+        } catch (error) {
+          await fileStorage.delete({ key: filePath });
+          conflict(response, error.message);
+        }
+        return;
+      }
+    }
+
+    const tenantNoteAttachmentFileMatch = pathname.match(
+      /^\/api\/tenant-notes\/([a-zA-Z0-9-]+)\/attachments\/([a-zA-Z0-9-]+)$/
+    );
+    if (tenantNoteAttachmentFileMatch) {
+      const user = requireAuth(request, response);
+      if (!user) {
+        return;
+      }
+
+      const noteId = tenantNoteAttachmentFileMatch[1];
+      const attachmentId = tenantNoteAttachmentFileMatch[2];
+      const note = db.getTenantNote(noteId);
+      if (!note || !getTenantForUser(user, note.tenant_id)) {
+        notFound(response);
+        return;
+      }
+
+      const attachmentRecord = db.getTenantNoteAttachment(attachmentId);
+      if (!attachmentRecord || attachmentRecord.note_id !== noteId) {
+        notFound(response);
+        return;
+      }
+
+      const filePath = documentPathFor(attachmentRecord.stored_name);
+      if (!ensureDocumentWithinStorage(filePath)) {
+        forbidden(response);
+        return;
+      }
+
+      if (method === "GET") {
+        const content = await fileStorage.get({ key: filePath });
+        if (!content) {
+          notFound(response);
+          return;
+        }
+
+        const disposition = String(attachmentRecord.mime_type).startsWith("image/") ? "inline" : "attachment";
+        response.writeHead(200, {
+          "Content-Type": attachmentRecord.mime_type || "application/octet-stream",
+          "Content-Disposition": `${disposition}; filename="${encodeURIComponent(attachmentRecord.file_name)}"`,
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "Content-Disposition"
+        });
+        response.end(content);
+        return;
+      }
+
+      if (method === "DELETE") {
+        const canDeleteAttachment =
+          ["admin", "manager"].includes(user.role) || attachmentRecord.uploaded_by === user.id;
+        if (!canDeleteAttachment) {
+          forbidden(response);
+          return;
+        }
+
+        const deleted = db.deleteTenantNoteAttachment(attachmentId);
+        if (deleted.result.changes === 0) {
+          notFound(response);
+          return;
+        }
+        await fileStorage.delete({ key: filePath });
+        ok(response, {
+          success: true
+        });
         return;
       }
     }

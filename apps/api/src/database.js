@@ -75,6 +75,7 @@ const createEmptyData = () => ({
   ticket_comments: [],
   ticket_attachments: [],
   tenant_notes: [],
+  tenant_note_attachments: [],
   lease_documents: [],
   billing_invoices: [],
   billing_payments: [],
@@ -240,6 +241,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
           ticket_comments: ensureArray(state.ticket_comments),
           ticket_attachments: ensureArray(state.ticket_attachments),
           tenant_notes: ensureArray(state.tenant_notes),
+          tenant_note_attachments: ensureArray(state.tenant_note_attachments),
           lease_documents: ensureArray(state.lease_documents),
           billing_invoices: ensureArray(state.billing_invoices),
           billing_payments: ensureArray(state.billing_payments),
@@ -268,6 +270,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
             ticket_comments: ensureArray(raw.ticket_comments),
             ticket_attachments: ensureArray(raw.ticket_attachments),
             tenant_notes: ensureArray(raw.tenant_notes),
+            tenant_note_attachments: ensureArray(raw.tenant_note_attachments),
             lease_documents: ensureArray(raw.lease_documents),
             billing_invoices: ensureArray(raw.billing_invoices),
             billing_payments: ensureArray(raw.billing_payments),
@@ -306,6 +309,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
         ticket_comments: ensureArray(raw.ticket_comments),
         ticket_attachments: ensureArray(raw.ticket_attachments),
         tenant_notes: ensureArray(raw.tenant_notes),
+        tenant_note_attachments: ensureArray(raw.tenant_note_attachments),
         lease_documents: ensureArray(raw.lease_documents),
         billing_invoices: ensureArray(raw.billing_invoices),
         billing_payments: ensureArray(raw.billing_payments),
@@ -2091,6 +2095,10 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
         : ticket
     );
     this.data.leases = this.data.leases.filter((lease) => lease.tenant_id !== id);
+    const tenantNoteIds = new Set(this.data.tenant_notes.filter((note) => note.tenant_id === id).map((note) => note.id));
+    this.data.tenant_note_attachments = this.data.tenant_note_attachments.filter(
+      (attachment) => !tenantNoteIds.has(attachment.note_id)
+    );
     this.data.tenant_notes = this.data.tenant_notes.filter((note) => note.tenant_id !== id);
     this.data.tenants = this.data.tenants.filter((tenant) => tenant.id !== id);
     this.save();
@@ -2104,12 +2112,18 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
         const author = note.author_id ? this.getById("users", note.author_id) : null;
         return {
           ...note,
-          author_name: author?.full_name ?? note.author_name ?? "Система"
+          author_name: author?.full_name ?? note.author_name ?? "Система",
+          attachments: this.listTenantNoteAttachments(note.id)
         };
       })
       .sort(compareCreatedAtDesc);
 
     return clone(rows);
+  }
+
+  getTenantNote(id) {
+    const note = this.getById("tenant_notes", id);
+    return note ? clone(note) : null;
   }
 
   createTenantNote(payload) {
@@ -2134,8 +2148,79 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.save();
     return clone({
       ...record,
-      author_name: author?.full_name ?? "Система"
+      author_name: author?.full_name ?? "Система",
+      attachments: []
     });
+  }
+
+  listTenantNoteAttachments(noteId) {
+    const rows = this.data.tenant_note_attachments
+      .filter((attachment) => attachment.note_id === noteId)
+      .map((attachment) => {
+        const uploader = attachment.uploaded_by ? this.getById("users", attachment.uploaded_by) : null;
+        return {
+          ...attachment,
+          uploaded_by_name: uploader?.full_name ?? attachment.uploaded_by_name ?? null
+        };
+      })
+      .sort(compareCreatedAtDesc);
+
+    return clone(rows);
+  }
+
+  getTenantNoteAttachment(id) {
+    const attachment = this.getById("tenant_note_attachments", id);
+    return attachment ? clone(attachment) : null;
+  }
+
+  createTenantNoteAttachment(payload) {
+    const note = this.getTenantNote(payload.noteId);
+    if (!note) {
+      throw new Error("Tenant note not found");
+    }
+
+    const uploader = this.getById("users", payload.uploadedBy);
+    if (!uploader) {
+      throw new Error("Uploader not found");
+    }
+
+    const record = {
+      id: createId(),
+      note_id: payload.noteId,
+      tenant_id: note.tenant_id,
+      file_name: payload.fileName,
+      stored_name: payload.storedName,
+      mime_type: payload.mimeType,
+      size_bytes: Number(payload.sizeBytes),
+      uploaded_by: payload.uploadedBy,
+      uploaded_by_name: uploader.full_name,
+      created_at: nowIso()
+    };
+
+    this.data.tenant_note_attachments.push(record);
+    const currentNote = this.getById("tenant_notes", payload.noteId);
+    if (currentNote) {
+      currentNote.updated_at = nowIso();
+    }
+    this.save();
+    return clone(record);
+  }
+
+  deleteTenantNoteAttachment(id) {
+    const current = this.getById("tenant_note_attachments", id);
+    if (!current) {
+      return { result: createChangeResult(0), attachment: null };
+    }
+
+    this.data.tenant_note_attachments = this.data.tenant_note_attachments.filter(
+      (attachment) => attachment.id !== id
+    );
+    const note = this.getById("tenant_notes", current.note_id);
+    if (note) {
+      note.updated_at = nowIso();
+    }
+    this.save();
+    return { result: createChangeResult(1), attachment: clone(current) };
   }
 
   listLeases() {

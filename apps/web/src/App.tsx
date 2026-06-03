@@ -321,6 +321,19 @@ type TenantNote = {
   authorName: string;
   createdAt: string;
   content: string;
+  attachments: TenantNoteAttachment[];
+};
+
+type TenantNoteAttachment = {
+  id: string;
+  noteId: string;
+  tenantId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploadedByName: string | null;
+  createdAt: string;
 };
 
 type CommentDelivery = {
@@ -1192,6 +1205,8 @@ const App = () => {
     title: "",
     content: ""
   });
+  const [tenantNoteFile, setTenantNoteFile] = useState<File | null>(null);
+  const [expandedTenantNoteIds, setExpandedTenantNoteIds] = useState<Record<string, boolean>>({});
   const [chatDraft, setChatDraft] = useState({
     content: ""
   });
@@ -2108,6 +2123,15 @@ const App = () => {
 
     void loadTenantDetail();
   }, [overview, selectedTenantId, session]);
+
+  useEffect(() => {
+    setExpandedTenantNoteIds({});
+    setTenantNoteFile(null);
+    setTenantNoteForm({
+      title: "",
+      content: ""
+    });
+  }, [selectedTenantId]);
 
   useEffect(() => {
     if (!tenantDetail?.units.length) {
@@ -3658,7 +3682,7 @@ const App = () => {
     setError("");
 
     try {
-      await apiRequest(`/api/tenants/${tenantDetail.tenant.id}/notes`, {
+      const createdNote = await apiRequest<{ item: TenantNote }>(`/api/tenants/${tenantDetail.tenant.id}/notes`, {
         method: "POST",
         token: session.token,
         body: {
@@ -3666,6 +3690,19 @@ const App = () => {
           content: tenantNoteForm.content
         }
       });
+
+      if (tenantNoteFile) {
+        const buffer = await tenantNoteFile.arrayBuffer();
+        await apiRequest(`/api/tenant-notes/${createdNote.item.id}/attachments`, {
+          method: "POST",
+          token: session.token,
+          body: {
+            fileName: tenantNoteFile.name,
+            mimeType: tenantNoteFile.type || "application/octet-stream",
+            contentBase64: arrayBufferToBase64(buffer)
+          }
+        });
+      }
 
       const refreshedTenant = await apiRequest<TenantDetail>(`/api/tenants/${tenantDetail.tenant.id}/detail`, {
         token: session.token
@@ -3675,9 +3712,93 @@ const App = () => {
         title: "",
         content: ""
       });
+      setTenantNoteFile(null);
+      setExpandedTenantNoteIds((current) => ({
+        ...current,
+        [createdNote.item.id]: true
+      }));
       setNotice(locale === "ru" ? "Запись переговоров сохранена" : "Negotiation note saved");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Tenant note failed");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const refreshTenantDetailById = async (tenantId: string) => {
+    if (!session) {
+      return;
+    }
+
+    const refreshedTenant = await apiRequest<TenantDetail>(`/api/tenants/${tenantId}/detail`, {
+      token: session.token
+    });
+    setTenantDetail(refreshedTenant);
+  };
+
+  const toggleTenantNoteExpanded = (noteId: string) => {
+    setExpandedTenantNoteIds((current) => ({
+      ...current,
+      [noteId]: !current[noteId]
+    }));
+  };
+
+  const uploadTenantNoteAttachment = async (noteId: string, file: File | null) => {
+    if (!session || !tenantDetail || !file) {
+      return;
+    }
+
+    setBusyAction(`tenant-note-attachment-${noteId}`);
+    setError("");
+
+    try {
+      const buffer = await file.arrayBuffer();
+      await apiRequest(`/api/tenant-notes/${noteId}/attachments`, {
+        method: "POST",
+        token: session.token,
+        body: {
+          fileName: file.name,
+          mimeType: file.type || "application/octet-stream",
+          contentBase64: arrayBufferToBase64(buffer)
+        }
+      });
+      await refreshTenantDetailById(tenantDetail.tenant.id);
+      setExpandedTenantNoteIds((current) => ({
+        ...current,
+        [noteId]: true
+      }));
+      setNotice(locale === "ru" ? "Файл прикреплён" : "File attached");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Tenant note attachment failed");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const openTenantNoteAttachment = (noteId: string, attachment: TenantNoteAttachment) =>
+    openAuthenticatedFile(`/api/tenant-notes/${noteId}/attachments/${attachment.id}`);
+
+  const deleteTenantNoteAttachment = async (noteId: string, attachmentId: string) => {
+    if (!session || !tenantDetail) {
+      return;
+    }
+
+    setBusyAction(`tenant-note-attachment-delete-${attachmentId}`);
+    setError("");
+
+    try {
+      await apiRequest(`/api/tenant-notes/${noteId}/attachments/${attachmentId}`, {
+        method: "DELETE",
+        token: session.token
+      });
+      await refreshTenantDetailById(tenantDetail.tenant.id);
+      setExpandedTenantNoteIds((current) => ({
+        ...current,
+        [noteId]: true
+      }));
+      setNotice(t.messages.deleted);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Tenant note attachment delete failed");
     } finally {
       setBusyAction("");
     }
@@ -6292,6 +6413,35 @@ const App = () => {
                         value={tenantNoteForm.content}
                       />
                     </label>
+                    <label className={tenantNoteFile ? "document-upload document-upload--ready" : "document-upload"}>
+                      <span>{locale === "ru" ? "Файл к переговорам" : "Negotiation file"}</span>
+                      <span className="file-picker-control">
+                        <span className="file-picker-button">
+                          {tenantNoteFile ? (locale === "ru" ? "Заменить файл" : "Replace file") : (locale === "ru" ? "Прикрепить файл" : "Attach file")}
+                        </span>
+                        <span className="file-picker-name">
+                          {tenantNoteFile ? tenantNoteFile.name : (locale === "ru" ? "Файл не выбран" : "No file selected")}
+                        </span>
+                      </span>
+                      <input
+                        accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                        onChange={(event) => {
+                          setTenantNoteFile(event.currentTarget.files?.[0] ?? null);
+                          event.currentTarget.value = "";
+                        }}
+                        type="file"
+                      />
+                      <small className="attachment-hint">{supportedFileHint(locale)}</small>
+                    </label>
+                    {tenantNoteFile ? (
+                      <div className="file-picked-summary">
+                        <span>{getFileKind(tenantNoteFile.name)}</span>
+                        <strong>{tenantNoteFile.name}</strong>
+                        <button className="text-button" onClick={() => setTenantNoteFile(null)} type="button">
+                          {t.actions.delete}
+                        </button>
+                      </div>
+                    ) : null}
                     <button
                       className="primary-button"
                       disabled={busyAction === "tenant-note" || !tenantNoteForm.title.trim() || !tenantNoteForm.content.trim()}
@@ -6302,13 +6452,77 @@ const App = () => {
                   </form>
                 ) : null}
                 {tenantDetail.notes.length > 0 ? (
-                  tenantDetail.notes.map((note) => (
-                    <article className="mvp-card" key={note.id}>
-                      <strong>{note.title}</strong>
-                      <p>{note.content}</p>
-                      <small>{note.authorName} · {formatDateTime(note.createdAt, locale)}</small>
-                    </article>
-                  ))
+                  tenantDetail.notes.map((note) => {
+                    const isExpanded = Boolean(expandedTenantNoteIds[note.id]);
+                    const isManualNote = !note.id.startsWith("note-");
+                    const noteAttachments = note.attachments ?? [];
+                    const shortContent =
+                      note.content.length > 170 ? `${note.content.slice(0, 170).trim()}...` : note.content;
+
+                    return (
+                      <article className="mvp-card tenant-note-card" key={note.id}>
+                        <div className="tenant-note-top">
+                          <div>
+                            <strong>{note.title}</strong>
+                            <small>{note.authorName} · {formatDateTime(note.createdAt, locale)}</small>
+                          </div>
+                          <button className="secondary-button secondary-button--compact" onClick={() => toggleTenantNoteExpanded(note.id)} type="button">
+                            {isExpanded ? (locale === "ru" ? "Свернуть" : "Collapse") : (locale === "ru" ? "Развернуть" : "Expand")}
+                          </button>
+                        </div>
+                        <p>{isExpanded ? note.content : shortContent}</p>
+                        {!isExpanded && noteAttachments.length > 0 ? (
+                          <small className="attachment-hint">
+                            {noteAttachments.length} {locale === "ru" ? "файл." : "files"}
+                          </small>
+                        ) : null}
+                        {isExpanded ? (
+                          <div className="tenant-note-expanded">
+                            {noteAttachments.length > 0 ? (
+                              <div className="attachment-grid">
+                                {noteAttachments.map((attachment) => (
+                                  <article className="attachment-card" key={attachment.id}>
+                                    <button className="attachment-preview" onClick={() => void openTenantNoteAttachment(note.id, attachment)} type="button">
+                                      <span>{getFileKind(attachment.fileName)}</span>
+                                    </button>
+                                    <div>
+                                      <strong>{attachment.fileName}</strong>
+                                      <small>
+                                        {formatFileSize(attachment.sizeBytes, locale)} · {formatDateTime(attachment.createdAt, locale)}
+                                      </small>
+                                      <small>{attachment.uploadedByName ?? "—"}</small>
+                                    </div>
+                                    {canManagePortfolio ? (
+                                      <button className="text-button" onClick={() => void deleteTenantNoteAttachment(note.id, attachment.id)} type="button">
+                                        {t.actions.delete}
+                                      </button>
+                                    ) : null}
+                                  </article>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="empty-state">{locale === "ru" ? "Файлы к записи не прикреплены." : "No files attached to this note."}</div>
+                            )}
+                            {canManagePortfolio && isManualNote ? (
+                              <label className="secondary-button secondary-button--compact attachment-upload tenant-note-upload">
+                                {busyAction === `tenant-note-attachment-${note.id}` ? (locale === "ru" ? "Загружаем..." : "Uploading...") : (locale === "ru" ? "Прикрепить файл" : "Attach file")}
+                                <input
+                                  accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                                  disabled={busyAction === `tenant-note-attachment-${note.id}`}
+                                  onChange={(event) => {
+                                    const file = event.currentTarget.files?.[0] ?? null;
+                                    event.currentTarget.value = "";
+                                    void uploadTenantNoteAttachment(note.id, file);
+                                  }}
+                                  type="file"
+                                />
+                              </label>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </article>
+                    );
+                  })
                 ) : (
                   <div className="mvp-card"><div className="empty-state">{t.hints.noData}</div></div>
                 )}

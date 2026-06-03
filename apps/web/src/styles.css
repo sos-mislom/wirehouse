@@ -2456,6 +2456,48 @@ textarea {
   max-width: 100%;
 }
 
+.tenant-note-card {
+  display: grid;
+  gap: 12px;
+}
+
+.tenant-note-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tenant-note-top > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tenant-note-top strong {
+  overflow-wrap: anywhere;
+}
+
+.tenant-note-top small {
+  color: var(--ink-muted);
+}
+
+.tenant-note-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tenant-note-expanded {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tenant-note-upload {
+  width: max-content;
+}
+
 .mvp-card--wide {
   grid-column: span 2;
 }
