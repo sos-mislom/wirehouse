@@ -1319,11 +1319,39 @@ const buildLeaseRevenueRows = (scoped) => {
 const buildFinanceSummary = (scoped, scopedTickets) => {
   const tenantIds = new Set(scoped.tenants.map((tenant) => tenant.id));
   const invoices = db.listBillingInvoices().filter((invoice) => tenantIds.has(invoice.tenant_id));
-  const currentPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const today = new Date();
+  const currentPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const currentInvoices = invoices.filter((invoice) => invoice.period === currentPeriod);
   const billedMonthly = sumBy(currentInvoices, (invoice) => invoice.total_amount);
   const collectedMonthly = sumBy(currentInvoices, (invoice) => invoice.paid_amount);
-  const collectionRate = billedMonthly > 0 ? roundMetric((collectedMonthly / billedMonthly) * 100) : 0;
+  const isDueOrTouched = (invoice) => {
+    const dueTime = new Date(invoice.due_date).getTime();
+    return (
+      Number(invoice.paid_amount ?? 0) > 0 ||
+      invoice.status !== "upcoming" ||
+      (Number.isFinite(dueTime) && dueTime <= today.getTime())
+    );
+  };
+  const currentCollectibleInvoices = currentInvoices.filter(isDueOrTouched);
+  const fallbackPeriod =
+    [...new Set(invoices.map((invoice) => invoice.period))]
+      .filter((period) => period < currentPeriod)
+      .sort((left, right) => right.localeCompare(left))[0] ?? currentPeriod;
+  const collectionBaseInvoices =
+    currentCollectibleInvoices.length > 0
+      ? currentCollectibleInvoices
+      : invoices.filter((invoice) => invoice.period === fallbackPeriod);
+  const collectionBilled = sumBy(collectionBaseInvoices, (invoice) => invoice.total_amount);
+  const collectionPaid = sumBy(collectionBaseInvoices, (invoice) => invoice.paid_amount);
+  const collectionRate = collectionBilled > 0 ? roundMetric((collectionPaid / collectionBilled) * 100) : 0;
+  const collectionPeriodLabel =
+    collectionBaseInvoices.length > 0
+      ? formatMonthLabel(new Date(`${collectionBaseInvoices[0].period}-01`))
+      : formatMonthLabel(today);
+  const effectiveCollectedMonthly =
+    currentCollectibleInvoices.length > 0
+      ? collectedMonthly
+      : money(billedMonthly * Math.max(0.82, Math.min(1.01, collectionRate / 100 || 0.92)));
   const maintenanceUnits = scoped.units.filter((unit) => unit.status === "maintenance").length;
   const urgentTickets = scopedTickets.filter(
     (ticket) => isOpenTicket(ticket.status) && priorityWeights[ticket.priority] >= 3
@@ -1337,7 +1365,7 @@ const buildFinanceSummary = (scoped, scopedTickets) => {
     sumBy(invoices.filter((invoice) => ["late", "overdue"].includes(invoice.status)), (invoice) => Math.max(0, invoice.total_amount - invoice.paid_amount)) +
       openBillingTickets * 42000
   );
-  const noi = money(collectedMonthly - opexActual);
+  const noi = money(effectiveCollectedMonthly - opexActual);
   const opexRatio = budgetOpex > 0 ? roundMetric((opexActual / budgetOpex) * 100) : 0;
   const currentMonth = startOfMonth();
   const expiringSoon = scoped.leases.filter(
@@ -1351,10 +1379,13 @@ const buildFinanceSummary = (scoped, scopedTickets) => {
     const periodInvoices = invoices.filter((invoice) => invoice.period === period);
     const periodBilled = sumBy(periodInvoices, (invoice) => invoice.total_amount);
     const periodCollected = sumBy(periodInvoices, (invoice) => invoice.paid_amount);
+    const periodCollectibleInvoices = periodInvoices.filter(isDueOrTouched);
+    const shouldUseActualCollection = period < currentPeriod || periodCollectibleInvoices.length > 0;
     const billed = periodBilled > 0 ? money(periodBilled) : money(billedMonthly * (0.98 + index * 0.015));
-    const collected = periodBilled > 0
-      ? money(periodCollected)
-      : money(billed * Math.max(0.82, Math.min(1.01, (collectionRate / 100 || 0.92) * demandFactor)));
+    const collected =
+      periodBilled > 0 && shouldUseActualCollection
+        ? money(periodCollected)
+        : money(billed * Math.max(0.82, Math.min(1.01, (collectionRate / 100 || 0.92) * demandFactor)));
     const forecast = money(collected - budgetOpex * stressFactor);
 
     return {
@@ -1368,6 +1399,14 @@ const buildFinanceSummary = (scoped, scopedTickets) => {
 
   return {
     collectionRate,
+    collectionPeriod: collectionBaseInvoices[0]?.period ?? currentPeriod,
+    collectionPeriodLabel,
+    collectionBasis:
+      currentCollectibleInvoices.length > 0
+        ? "current_due"
+        : fallbackPeriod < currentPeriod
+          ? "last_closed"
+          : "forecast",
     arrearsAmount,
     opexRatio,
     noi,

@@ -726,6 +726,13 @@ textarea {
   font-size: 1.2rem;
 }
 
+.workspace-kpi small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
 .section-copy {
   margin-top: 10px;
   max-width: 64ch;
@@ -983,6 +990,13 @@ textarea {
   display: block;
   margin-top: 8px;
   font-size: 1.15rem;
+}
+
+.summary-chip small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
 }
 
 .notification-stack,

@@ -189,6 +189,9 @@ type FinancePoint = {
 
 type FinanceSummary = {
   collectionRate: number;
+  collectionPeriod?: string;
+  collectionPeriodLabel?: string;
+  collectionBasis?: "current_due" | "last_closed" | "forecast";
   arrearsAmount: number;
   opexRatio: number;
   noi: number;
@@ -1076,6 +1079,17 @@ const getImportApprovalStatusLabel = (status: string, locale: Locale) => {
     return locale === "ru" ? "отклонён" : "rejected";
   }
   return status;
+};
+
+const getCollectionBasisLabel = (finance: FinanceSummary, locale: Locale) => {
+  const period = finance.collectionPeriodLabel ?? finance.collectionPeriod ?? "";
+  if (finance.collectionBasis === "current_due") {
+    return locale === "ru" ? `${period} · к оплате` : `${period} · due`;
+  }
+  if (finance.collectionBasis === "last_closed") {
+    return locale === "ru" ? `${period} · закрытый период` : `${period} · closed period`;
+  }
+  return locale === "ru" ? `${period} · прогноз` : `${period} · forecast`;
 };
 
 const App = () => {
@@ -4308,7 +4322,7 @@ const App = () => {
             <div className="metric-panel">
               <span>{ui.collectionRate}</span>
               <strong>{overview.finance.collectionRate}%</strong>
-              <small>{formatCompactMoney(overview.finance.forecastQuarter, locale)}</small>
+              <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
             </div>
             <div className="metric-panel metric-panel--alert">
               <span>{ui.arrears}</span>
@@ -5000,6 +5014,7 @@ const App = () => {
             <div className="summary-chip">
               <span>{ui.collectionRate}</span>
               <strong>{overview.finance.collectionRate}%</strong>
+              <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
             </div>
             <div className="summary-chip">
               <span>{ui.arrears}</span>
@@ -5924,7 +5939,7 @@ const App = () => {
         <article className="mvp-metric">
           <span>{ui.collectionRate}</span>
           <strong>{overview.finance.collectionRate}%</strong>
-          <small>{formatCompactMoney(overview.finance.forecastQuarter, locale)}</small>
+          <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
         </article>
         <article className="mvp-metric">
           <span>{ui.arrears}</span>
@@ -8997,6 +9012,7 @@ const App = () => {
                 <div className="workspace-kpi">
                   <span>{isTenant ? t.nav.leases : ui.collectionRate}</span>
                   <strong>{isTenant ? overview.leases.length : `${overview.finance.collectionRate}%`}</strong>
+                  {!isTenant ? <small>{getCollectionBasisLabel(overview.finance, locale)}</small> : null}
                 </div>
               ) : null}
               <div className="workspace-kpi">
