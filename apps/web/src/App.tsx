@@ -1188,6 +1188,10 @@ const App = () => {
   const [commentForm, setCommentForm] = useState({
     content: ""
   });
+  const [tenantNoteForm, setTenantNoteForm] = useState({
+    title: "",
+    content: ""
+  });
   const [chatDraft, setChatDraft] = useState({
     content: ""
   });
@@ -3639,6 +3643,41 @@ const App = () => {
       setNotice(locale === "ru" ? "Показание сохранено, переменная часть счета пересчитана" : "Reading saved and invoice variable charge recalculated");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Meter reading failed");
+    } finally {
+      setBusyAction("");
+    }
+  };
+
+  const handleTenantNoteSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !tenantDetail || !canManagePortfolio) {
+      return;
+    }
+
+    setBusyAction("tenant-note");
+    setError("");
+
+    try {
+      await apiRequest(`/api/tenants/${tenantDetail.tenant.id}/notes`, {
+        method: "POST",
+        token: session.token,
+        body: {
+          title: tenantNoteForm.title,
+          content: tenantNoteForm.content
+        }
+      });
+
+      const refreshedTenant = await apiRequest<TenantDetail>(`/api/tenants/${tenantDetail.tenant.id}/detail`, {
+        token: session.token
+      });
+      setTenantDetail(refreshedTenant);
+      setTenantNoteForm({
+        title: "",
+        content: ""
+      });
+      setNotice(locale === "ru" ? "Запись переговоров сохранена" : "Negotiation note saved");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Tenant note failed");
     } finally {
       setBusyAction("");
     }
@@ -6226,13 +6265,53 @@ const App = () => {
 
             {tenantDetailTab === "notes" ? (
               <div className="mvp-stack">
-                {tenantDetail.notes.map((note) => (
-                  <article className="mvp-card" key={note.id}>
-                    <strong>{note.title}</strong>
-                    <p>{note.content}</p>
-                    <small>{note.authorName} · {formatDateTime(note.createdAt, locale)}</small>
-                  </article>
-                ))}
+                {canManagePortfolio ? (
+                  <form className="mvp-card mvp-form" onSubmit={handleTenantNoteSubmit}>
+                    <div className="mvp-card-head">
+                      <div>
+                        <div className="section-label">{ui.notes}</div>
+                        <h3>{locale === "ru" ? "Добавить запись переговоров" : "Add negotiation note"}</h3>
+                      </div>
+                    </div>
+                    <label>
+                      <span>{locale === "ru" ? "Тема" : "Subject"}</span>
+                      <input
+                        name="title"
+                        onChange={handleFieldChange(setTenantNoteForm)}
+                        placeholder={locale === "ru" ? "Например: условия пролонгации" : "For example: renewal terms"}
+                        value={tenantNoteForm.title}
+                      />
+                    </label>
+                    <label>
+                      <span>{locale === "ru" ? "Что обсудили" : "Discussion summary"}</span>
+                      <textarea
+                        name="content"
+                        onChange={handleFieldChange(setTenantNoteForm)}
+                        placeholder={locale === "ru" ? "Фиксируйте договоренности, риски, следующий шаг и ответственного." : "Capture agreements, risks, next step, and owner."}
+                        rows={4}
+                        value={tenantNoteForm.content}
+                      />
+                    </label>
+                    <button
+                      className="primary-button"
+                      disabled={busyAction === "tenant-note" || !tenantNoteForm.title.trim() || !tenantNoteForm.content.trim()}
+                      type="submit"
+                    >
+                      {busyAction === "tenant-note" ? (locale === "ru" ? "Сохраняем..." : "Saving...") : t.actions.save}
+                    </button>
+                  </form>
+                ) : null}
+                {tenantDetail.notes.length > 0 ? (
+                  tenantDetail.notes.map((note) => (
+                    <article className="mvp-card" key={note.id}>
+                      <strong>{note.title}</strong>
+                      <p>{note.content}</p>
+                      <small>{note.authorName} · {formatDateTime(note.createdAt, locale)}</small>
+                    </article>
+                  ))
+                ) : (
+                  <div className="mvp-card"><div className="empty-state">{t.hints.noData}</div></div>
+                )}
               </div>
             ) : null}
 

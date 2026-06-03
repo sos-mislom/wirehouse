@@ -74,6 +74,7 @@ const createEmptyData = () => ({
   ticket_history: [],
   ticket_comments: [],
   ticket_attachments: [],
+  tenant_notes: [],
   lease_documents: [],
   billing_invoices: [],
   billing_payments: [],
@@ -238,6 +239,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
           ticket_history: ensureArray(state.ticket_history),
           ticket_comments: ensureArray(state.ticket_comments),
           ticket_attachments: ensureArray(state.ticket_attachments),
+          tenant_notes: ensureArray(state.tenant_notes),
           lease_documents: ensureArray(state.lease_documents),
           billing_invoices: ensureArray(state.billing_invoices),
           billing_payments: ensureArray(state.billing_payments),
@@ -265,6 +267,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
             ticket_history: ensureArray(raw.ticket_history),
             ticket_comments: ensureArray(raw.ticket_comments),
             ticket_attachments: ensureArray(raw.ticket_attachments),
+            tenant_notes: ensureArray(raw.tenant_notes),
             lease_documents: ensureArray(raw.lease_documents),
             billing_invoices: ensureArray(raw.billing_invoices),
             billing_payments: ensureArray(raw.billing_payments),
@@ -302,6 +305,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
         ticket_history: ensureArray(raw.ticket_history),
         ticket_comments: ensureArray(raw.ticket_comments),
         ticket_attachments: ensureArray(raw.ticket_attachments),
+        tenant_notes: ensureArray(raw.tenant_notes),
         lease_documents: ensureArray(raw.lease_documents),
         billing_invoices: ensureArray(raw.billing_invoices),
         billing_payments: ensureArray(raw.billing_payments),
@@ -2087,9 +2091,51 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
         : ticket
     );
     this.data.leases = this.data.leases.filter((lease) => lease.tenant_id !== id);
+    this.data.tenant_notes = this.data.tenant_notes.filter((note) => note.tenant_id !== id);
     this.data.tenants = this.data.tenants.filter((tenant) => tenant.id !== id);
     this.save();
     return createChangeResult(1);
+  }
+
+  listTenantNotes(tenantId) {
+    const rows = this.data.tenant_notes
+      .filter((note) => note.tenant_id === tenantId)
+      .map((note) => {
+        const author = note.author_id ? this.getById("users", note.author_id) : null;
+        return {
+          ...note,
+          author_name: author?.full_name ?? note.author_name ?? "Система"
+        };
+      })
+      .sort(compareCreatedAtDesc);
+
+    return clone(rows);
+  }
+
+  createTenantNote(payload) {
+    this.requireTenant(payload.tenantId);
+    const author = payload.authorId ? this.getById("users", payload.authorId) : null;
+    const record = {
+      id: createId(),
+      tenant_id: payload.tenantId,
+      title: String(payload.title ?? "").trim(),
+      content: String(payload.content ?? "").trim(),
+      author_id: payload.authorId ?? null,
+      author_name: author?.full_name ?? null,
+      created_at: nowIso(),
+      updated_at: nowIso()
+    };
+
+    if (!record.title || !record.content) {
+      throw new Error("Tenant note title and content are required");
+    }
+
+    this.data.tenant_notes.push(record);
+    this.save();
+    return clone({
+      ...record,
+      author_name: author?.full_name ?? "Система"
+    });
   }
 
   listLeases() {

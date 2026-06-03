@@ -351,6 +351,16 @@ const normalizeTenant = (record) => ({
   updatedAt: record.updated_at
 });
 
+const normalizeTenantNote = (record) => ({
+  id: record.id,
+  tenantId: record.tenant_id,
+  title: record.title,
+  authorId: record.author_id ?? null,
+  authorName: record.author_name ?? "Система",
+  createdAt: record.created_at,
+  content: record.content
+});
+
 const normalizeLease = (record) => ({
   id: record.id,
   tenantId: record.tenant_id,
@@ -3237,7 +3247,7 @@ const buildTenantLedgerMeters = (tenant) =>
     updatedAt: reading.recorded_at,
     status: reading.status
   }));
-const buildTenantNotes = (tenant, tickets) => {
+const buildTenantNotes = (tenant, tickets, manualNotes = []) => {
   const derivedNotes = tickets.slice(0, 2).map((ticket, index) => ({
     id: `note-ticket-${ticket.id}`,
     title: index === 0 ? "Операционная коммуникация" : "Сервисное наблюдение",
@@ -3247,6 +3257,7 @@ const buildTenantNotes = (tenant, tickets) => {
   }));
 
   return [
+    ...manualNotes,
     {
       id: `note-renewal-${tenant.id}`,
       title: "Контур пролонгации",
@@ -3255,7 +3266,7 @@ const buildTenantNotes = (tenant, tickets) => {
       content: `Для ${tenant.name} удерживаем единый трек по срокам договора, платёжной дисциплине и сервисной истории.`
     },
     ...derivedNotes
-  ];
+  ].sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)));
 };
 const buildTenantRisks = (tenant, leases, tickets) => {
   const activeLeases = leases.filter((lease) => activeLeaseStages.has(lease.stage));
@@ -4112,6 +4123,7 @@ const buildTenantDetailResponse = (user, tenantId) => {
   const unitIds = new Set(leases.map((lease) => lease.unitId));
   const units = scoped.units.filter((unit) => unitIds.has(unit.id));
   const tickets = getScopedTickets(user).filter((ticket) => ticket.tenantId === tenant.id);
+  const manualNotes = db.listTenantNotes(tenant.id).map(normalizeTenantNote);
   const payments = buildTenantLedgerPayments(tenant);
   const openTicketCount = tickets.filter((ticket) => isOpenTicket(ticket.status)).length;
   const monthlyRent = sumBy(
@@ -4150,7 +4162,7 @@ const buildTenantDetailResponse = (user, tenantId) => {
     tickets,
     payments,
     meters: buildTenantLedgerMeters(tenant),
-    notes: buildTenantNotes(tenant, tickets),
+    notes: buildTenantNotes(tenant, tickets, manualNotes),
     risks: buildTenantRisks(tenant, leases, tickets)
   };
 };
@@ -5538,6 +5550,45 @@ const server = http.createServer(async (request, response) => {
 
       if (method === "GET") {
         ok(response, buildTenantDetailResponse(user, tenantId));
+        return;
+      }
+    }
+
+    const tenantNotesMatch = pathname.match(/^\/api\/tenants\/([a-zA-Z0-9-]+)\/notes$/);
+    if (tenantNotesMatch) {
+      const user = requirePortfolioWriteAccess(request, response);
+      if (!user) {
+        return;
+      }
+
+      const tenantId = tenantNotesMatch[1];
+      const tenant = getTenantForUser(user, tenantId);
+      if (!tenant) {
+        notFound(response);
+        return;
+      }
+
+      if (method === "POST") {
+        const body = await parseJsonBody(request);
+        const missing = validateRequired(body, ["title", "content"]);
+        if (missing) {
+          badRequest(response, `Missing field: ${missing}`);
+          return;
+        }
+
+        try {
+          const createdRecord = db.createTenantNote({
+            tenantId,
+            title: body.title,
+            content: body.content,
+            authorId: user.id
+          });
+          created(response, {
+            item: normalizeTenantNote(createdRecord)
+          });
+        } catch (error) {
+          badRequest(response, error.message);
+        }
         return;
       }
     }
