@@ -1,0 +1,7 @@
+[Unit]
+Description=Wirehouse PostgreSQL and uploads backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/opt/wirehouse/backup.sh

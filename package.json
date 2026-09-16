@@ -21,9 +21,16 @@
     "desktop:release:win": "npm --workspace apps/desktop-windows run desktop:release:win",
     "android:release": "npm --workspace apps/android run android:release",
     "android:sync": "npm --workspace apps/android run android:sync",
-    "backup:postgres": "node scripts/backup-postgres.mjs"
+    "backup:postgres": "node scripts/backup-postgres.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc -p apps/web/tsconfig.json --noEmit",
+    "test:browser": "node tests/browser.mjs",
+    "check": "npm run typecheck && npm test && npm run build:web"
   },
   "overrides": {
     "uuid": "11.1.1"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }

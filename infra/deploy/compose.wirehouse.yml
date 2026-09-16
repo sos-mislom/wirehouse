@@ -1,0 +1,46 @@
+name: wirehouse
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wirehouse
+      POSTGRES_USER: wirehouse
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    volumes:
+      - wirehouse_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U wirehouse -d wirehouse]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 384m
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+  api:
+    image: wirehouse-api:${RELEASE_TAG:?Set RELEASE_TAG}
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+    ports:
+      - 127.0.0.1:18044:3001
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://wirehouse:${DB_PASSWORD}@db:5432/wirehouse
+      ENABLE_DEMO_SEED: "false"
+      ALLOW_OTP_WITHOUT_DELIVERY: "false"
+      REDIS_URL: ""
+      NOTIFICATION_CHANNELS: in_app
+    volumes:
+      - wirehouse_uploads:/data
+    mem_limit: 768m
+    init: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+volumes:
+  wirehouse_postgres:
+  wirehouse_uploads:

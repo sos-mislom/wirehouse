@@ -1,7 +1,13 @@
+import { ForecastChart } from "./ForecastChart";
+import { ResponsiveTable } from "./ResponsiveTable";
+import { isOpenTicket, isCriticalTicket, slaState, MAX_ATTACHMENT_BYTES } from "../../../packages/contracts/src/domain.js";
+import { initialRoute, useBrowserNavigation } from "./navigation";
+import { Operations, TicketOperations, TenantServices, UnitStructure, WorkerMeters, type OperationsData } from "./Operations";
 import {
   startTransition,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type Dispatch,
@@ -47,6 +53,9 @@ type Property = {
 type Unit = {
   id: string;
   propertyId: string;
+  building: string;
+  entrance: string;
+  photoUrl: string;
   number: string;
   floor: number;
   area: number;
@@ -73,6 +82,7 @@ type Tenant = {
   riskLevel: string;
   status: string;
   leaseCount: number;
+  paymentDiscipline?: number;
 };
 
 type Lease = {
@@ -107,6 +117,11 @@ type LeaseDocument = {
 const documentCategoryOptions = ["lease", "appendix", "invoice", "act", "payment", "receipt", "other"] as const;
 
 type Ticket = {
+  equipmentId?: string | null;
+  serviceId?: string | null;
+  leaseId?: string | null;
+  maintenancePlanId?: string | null;
+  workLogs?: Array<{id: string; description: string; hours: number; materialCost: number; cost: number; createdByName: string}>;
   id: string;
   number: string;
   unitId: string;
@@ -188,6 +203,8 @@ type FinancePoint = {
 };
 
 type FinanceSummary = {
+  collectionBilled: number;
+  collectionPaid: number;
   collectionRate: number;
   collectionPeriod?: string;
   collectionPeriodLabel?: string;
@@ -498,6 +515,7 @@ type Overview = {
 };
 
 type ManagerScreen =
+  | "operations"
   | "dashboard"
   | "tenants"
   | "tenant-detail"
@@ -599,7 +617,7 @@ const industrialCopy = {
     collectionRate: "Сбор платежей",
     arrears: "Просрочка",
     noi: "NOI",
-    opex: "OPEX vs бюджет",
+    opex: "Доля операционных расходов",
     forecast: "Прогноз 3 мес.",
     monthlyRent: "Мес. поток",
     paymentDiscipline: "Платёжная дисциплина",
@@ -694,12 +712,13 @@ const managerPrimaryNav = [
   "notifications"
 ] as const satisfies readonly ManagerScreen[];
 
-const managerSecondaryNav = ["objects", "staff", "import", "profile"] as const satisfies readonly ManagerScreen[];
+const managerSecondaryNav = ["operations", "objects", "staff", "import", "profile"] as const satisfies readonly ManagerScreen[];
 
 const managerCopy = {
   ru: {
     shellRole: "Менеджерский контур",
     nav: {
+      operations: "Эксплуатация",
       dashboard: "Дашборд",
       tenants: "Арендаторы",
       units: "Помещения",
@@ -743,7 +762,7 @@ const managerCopy = {
       dashboard: "Операционная сводка по объекту, платежам и сервису.",
       tenants: "Реестр арендаторов с переходом в детальную карточку.",
       tenantDetail: "Договоры, платежи, заметки, риски и заявки в одном месте.",
-      tenantAdd: "Добавление арендатора без перехода в отдельную админ-панель.",
+      tenantAdd: "Добавление арендатора с контактами и реквизитами.",
       objects: "Карта объекта, фонд и оперативное перевыделение по площадям.",
       propertyAdd: "Создание нового объекта в том же контуре работы менеджера.",
       objectLaunch: "Пошаговый запуск: объект, помещение, арендатор и первый договор.",
@@ -799,6 +818,7 @@ const managerCopy = {
   en: {
     shellRole: "Manager contour",
     nav: {
+      operations: "Эксплуатация",
       dashboard: "Dashboard",
       tenants: "Tenants",
       units: "Units",
@@ -1036,7 +1056,7 @@ const formatDeliveryNotice = (baseMessage: string, delivery: CommentDelivery | u
   return locale === "ru" ? `${baseMessage}. Отправлено: ${channels}` : `${baseMessage}. Sent to: ${channels}`;
 };
 
-const isOpenTicket = (status: string) => !["completed", "resolved", "closed", "rejected"].includes(status);
+
 const priorityWeight: Record<string, number> = {
   urgent: 4,
   high: 3,
@@ -1045,28 +1065,16 @@ const priorityWeight: Record<string, number> = {
 };
 
 const getSlaState = (ticket: Ticket | null, locale: Locale) => {
-  if (!ticket?.slaDueAt) {
-    return { tone: "info", label: "SLA" };
-  }
-
-  if (["resolved", "closed"].includes(ticket.status)) {
-    return { tone: "success", label: locale === "ru" ? "SLA закрыт" : "SLA closed" };
-  }
-
-  const minutesLeft = Math.round((new Date(ticket.slaDueAt).getTime() - Date.now()) / 60000);
-  const hours = Math.max(1, Math.abs(minutesLeft < 0 ? Math.floor(minutesLeft / 60) : Math.ceil(minutesLeft / 60)));
-  if (minutesLeft < 0) {
-    return { tone: "critical", label: locale === "ru" ? `Просрочено ${hours}ч` : `${hours}h overdue` };
-  }
-  if (minutesLeft <= 120) {
-    return { tone: "warning", label: locale === "ru" ? `Осталось ${hours}ч` : `${hours}h left` };
-  }
-  return { tone: "info", label: locale === "ru" ? `Осталось ${hours}ч` : `${hours}h left` };
+  const value = slaState(ticket);
+  if (value.state === "none") return { tone: "info", label: "Срок не задан" };
+  if (value.state === "finished") return { tone: "success", label: "Завершена · отсчёт остановлен" };
+  if (value.state === "overdue") return { tone: "critical", label: `Просрочено ${value.hours} ч` };
+  return { tone: value.state === "warning" ? "warning" : "info", label: `Осталось ${value.hours} ч` };
 };
 
-const getTicketStatusLabel = (status: string, locale: Locale) => {
+const getTicketStatusLabel = (status: string | null, locale: Locale) => {
   const labels = copy[locale].ticketStatuses as Record<string, string>;
-  return labels[status] ?? status;
+  return status ? labels[status] ?? status : "—";
 };
 
 const getImportApprovalStatusLabel = (status: string, locale: Locale) => {
@@ -1082,37 +1090,52 @@ const getImportApprovalStatusLabel = (status: string, locale: Locale) => {
   return status;
 };
 
-const getCollectionBasisLabel = (finance: FinanceSummary, locale: Locale) => {
-  const period = finance.collectionPeriodLabel ?? finance.collectionPeriod ?? "";
-  if (finance.collectionBasis === "current_due") {
-    return locale === "ru" ? `${period} · к оплате` : `${period} · due`;
-  }
-  if (finance.collectionBasis === "last_closed") {
-    return locale === "ru" ? `${period} · закрытый период` : `${period} · closed period`;
-  }
-  return locale === "ru" ? `${period} · прогноз` : `${period} · forecast`;
-};
+const getCollectionBasisLabel = (finance: FinanceSummary, locale: Locale) => `${formatCompactMoney(finance.collectionPaid, locale)} / ${formatCompactMoney(finance.collectionBilled, locale)}`;
+const paymentMethodLabel = (method: string) => ({ bank_transfer: "Банковский перевод", invoice: "Счёт", cash: "Наличные", card: "Карта" }[method] ?? method);
+const reconciliationLabel = (status: string) => ({ matched: "Сверено", overpaid: "Переплата", partial: "Частичная оплата", overdue: "Просрочено", unpaid: "Ожидается оплата" }[status] ?? status);
+const countLabel = (count: number, forms: string[]) => `${count} ${forms[count % 100 >= 11 && count % 100 <= 14 ? 2 : count % 10 === 1 ? 0 : count % 10 >= 2 && count % 10 <= 4 ? 1 : 2]}`;
 
 const App = () => {
   const locale: Locale = "ru";
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileMenuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const menu = document.getElementById("workspace-navigation");
+    (menu?.querySelector("button") as HTMLButtonElement | null)?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setMobileNavOpen(false); mobileMenuButton.current?.focus(); }
+      if (event.key === "Tab" && menu) {
+        const items = Array.from(menu.querySelectorAll<HTMLButtonElement>("button:not([disabled]), a[href]"));
+        const first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => { document.body.style.overflow = oldOverflow; document.removeEventListener("keydown", closeOnEscape); };
+  }, [mobileNavOpen]);
+
   const [session, setSession] = useState<{ token: string; user: SessionUser } | null>(null);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [ticketComments, setTicketComments] = useState<TicketComment[]>([]);
   const [ticketAttachments, setTicketAttachments] = useState<TicketAttachment[]>([]);
   const [checklistTemplates, setChecklistTemplates] = useState<ChecklistTemplate[]>([]);
-  const [selectedSection, setSelectedSection] = useState<Section>("overview");
-  const [managerScreen, setManagerScreen] = useState<ManagerScreen>("dashboard");
-  const [selectedPropertyId, setSelectedPropertyId] = useState("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
-  const [selectedUnitId, setSelectedUnitId] = useState("");
-  const [selectedTicketId, setSelectedTicketId] = useState("");
+  const [selectedSection, setSelectedSection] = useState<Section>((initialRoute.section as Section) || "overview");
+  const [managerScreen, setManagerScreen] = useState<ManagerScreen>((initialRoute.screen as ManagerScreen) || "dashboard");
+  const [selectedPropertyId, setSelectedPropertyId] = useState(initialRoute.property || "");
+  const [selectedTenantId, setSelectedTenantId] = useState(initialRoute.tenant || "");
+  const [selectedUnitId, setSelectedUnitId] = useState(initialRoute.unit || "");
+  const [selectedTicketId, setSelectedTicketId] = useState(initialRoute.ticket || "");
   const [selectedChatTicketId, setSelectedChatTicketId] = useState("");
   const [billingInvoices, setBillingInvoices] = useState<BillingInvoice[]>([]);
   const [billingReconciliation, setBillingReconciliation] = useState<BillingReconciliation | null>(null);
   const [selectedBillingInvoiceId, setSelectedBillingInvoiceId] = useState("");
   const [tenantDetail, setTenantDetail] = useState<TenantDetail | null>(null);
-  const [tenantDetailTab, setTenantDetailTab] = useState<TenantDetailTab>("info");
+  const [tenantDetailTab, setTenantDetailTab] = useState<TenantDetailTab>((initialRoute.tab as TenantDetailTab) || "info");
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>("all");
   const [ticketHistory, setTicketHistory] = useState<TicketHistoryEvent[]>([]);
   const [tenantSearch, setTenantSearch] = useState("");
@@ -1126,10 +1149,10 @@ const App = () => {
   const [ticketAssigneeDraft, setTicketAssigneeDraft] = useState("");
   const [adminPanel, setAdminPanel] = useState<AdminPanel>("property");
   const [editingAdmin, setEditingAdmin] = useState<Record<AdminPanel, string | null>>({
-    property: null,
-    tenant: null,
-    unit: null,
-    lease: null
+    property: initialRoute.editProperty || null,
+    tenant: initialRoute.editTenant || null,
+    unit: initialRoute.editUnit || null,
+    lease: initialRoute.editLease || null
   });
   const [bootstrapping, setBootstrapping] = useState(true);
   const [authMode, setAuthMode] = useState<"staff" | "tenant">("staff");
@@ -1144,6 +1167,41 @@ const App = () => {
   const [selectedChatTenantId, setSelectedChatTenantId] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatBusy, setChatBusy] = useState(false);
+
+  useEffect(() => { setMobileNavOpen(false); }, [managerScreen, selectedSection]);
+  const editReturnScreen = useRef<ManagerScreen>((initialRoute.returnScreen as ManagerScreen) || "dashboard");
+  const [operations, setOperations] = useState<OperationsData | null>(null);
+  const [ticketView, setTicketView] = useState<"board" | "table">("board");
+  useBrowserNavigation({ screen: managerScreen, section: selectedSection, property: selectedPropertyId, tenant: selectedTenantId, unit: selectedUnitId, ticket: selectedTicketId, tab: tenantDetailTab, editProperty: editingAdmin.property || "", editTenant: editingAdmin.tenant || "", editUnit: editingAdmin.unit || "", editLease: editingAdmin.lease || "", returnScreen: editReturnScreen.current }, route => {
+    setManagerScreen((route.screen as ManagerScreen) || "dashboard");
+    setSelectedSection((route.section as Section) || "overview");
+    setSelectedPropertyId(route.property || ""); setSelectedTenantId(route.tenant || "");
+    setSelectedUnitId(route.unit || ""); setSelectedTicketId(route.ticket || "");
+    setTenantDetailTab((route.tab as TenantDetailTab) || "info");
+    setEditingAdmin({property:route.editProperty || null, tenant:route.editTenant || null, unit:route.editUnit || null, lease:route.editLease || null});
+    editReturnScreen.current = (route.returnScreen as ManagerScreen) || "dashboard";
+  }, Boolean(session && overview));
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    apiRequest<OperationsData>("/api/operations", { token: session.token }).then(data => { if (!cancelled) setOperations(data); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [session?.token, overview]);
+
+  const hydratedEdit = useRef("");
+  useEffect(() => {
+    if (!overview || !managerScreen.endsWith("-add")) { hydratedEdit.current = ""; return; }
+    const panel = managerScreen.split("-")[0] as AdminPanel;
+    const id = editingAdmin[panel];
+    if (!id || hydratedEdit.current === `${panel}:${id}`) return;
+    const record = panel === "property" ? overview.properties.find(r => r.id === id) : panel === "tenant" ? overview.tenants.find(r => r.id === id) : panel === "unit" ? overview.units.find(r => r.id === id) : overview.leases.find(r => r.id === id);
+    if (!record) return;
+    hydratedEdit.current = `${panel}:${id}`;
+    if (panel === "property") startEditProperty(record as Property);
+    else if (panel === "tenant") startEditTenant(record as Tenant);
+    else if (panel === "unit") startEditUnit(record as Unit);
+    else startEditLease(record as Lease);
+  }, [overview, managerScreen, editingAdmin]);
 
   const [staffForm, setStaffForm] = useState({
     email: "",
@@ -1185,6 +1243,9 @@ const App = () => {
   });
   const [unitForm, setUnitForm] = useState({
     propertyId: "",
+    building: "",
+    entrance: "",
+    photoUrl: "",
     number: "",
     floor: "1",
     area: "",
@@ -1439,7 +1500,7 @@ const App = () => {
         return {
           ...property,
           openTicketCount: propertyTickets.length,
-          urgentTicketCount: propertyTickets.filter((ticket) => priorityWeight[ticket.priority] >= 3).length
+          urgentTicketCount: propertyTickets.filter(isCriticalTicket).length
         };
       })
       .sort((left, right) => {
@@ -1522,7 +1583,7 @@ const App = () => {
         [...tenantLeases].sort((left, right) => new Date(left.endDate).getTime() - new Date(right.endDate).getTime())[0]
           ?.endDate ?? null;
       const tenantTickets = tickets.filter((ticket) => ticket.tenantId === tenant.id);
-      const paymentDiscipline = tenant.riskLevel === "high" ? 89 : tenant.riskLevel === "medium" ? 94.5 : 98.5;
+      const paymentDiscipline = tenant.paymentDiscipline ?? 0;
 
       return {
         ...tenant,
@@ -1745,11 +1806,16 @@ const App = () => {
     }
   };
   const openTenantDetail = (tenantId: string) => {
+    const lease = overview?.leases.find(l => l.tenantId === tenantId);
+    const unit = overview?.units.find(u => u.id === lease?.unitId);
+    if (unit) setSelectedPropertyId(unit.propertyId);
     setSelectedTenantId(tenantId);
     setTenantDetailTab("info");
     setManagerScreen("tenant-detail");
   };
   const openUnitDetail = (unitId: string) => {
+    const unit = overview?.units.find(u => u.id === unitId);
+    if (unit) setSelectedPropertyId(unit.propertyId);
     setSelectedUnitId(unitId);
     setManagerScreen("unit-detail");
   };
@@ -1830,7 +1896,7 @@ const App = () => {
         : current
     );
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       unread.map((item) =>
         apiRequest(`/api/notifications/${item.id}/read`, {
           method: "POST",
@@ -1838,6 +1904,7 @@ const App = () => {
         })
       )
     );
+    if (results.some(result => result.status === "rejected")) { setError("Часть уведомлений не удалось отметить. Попробуйте ещё раз."); await refreshWorkspace(); }
   };
 
   useEffect(() => {
@@ -1875,24 +1942,7 @@ const App = () => {
       })
       .catch(() => {
         if (!cancelled) {
-          setTenantOnboarding({
-            channels: [
-              {
-                id: "telegram",
-                label: "Telegram",
-                url: "https://t.me/warehousecontourbot",
-                enabled: true,
-                instruction: ""
-              },
-              {
-                id: "vk",
-                label: "VK",
-                url: "https://vk.com/club239116063",
-                enabled: true,
-                instruction: ""
-              }
-            ]
-          });
+          setTenantOnboarding({ channels: [] });
         }
       });
 
@@ -1902,7 +1952,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (!overview?.properties.length) {
+    if (!overview) return;
+    if (!overview.properties.length) {
       setSelectedPropertyId("");
       return;
     }
@@ -1913,6 +1964,7 @@ const App = () => {
   }, [overview, selectedPropertyId]);
 
   useEffect(() => {
+    if (!overview) return;
     if (!propertyScopedTenantRows.length) {
       setSelectedTenantId("");
       setTenantDetail(null);
@@ -1925,6 +1977,7 @@ const App = () => {
   }, [propertyScopedTenantRows, selectedTenantId]);
 
   useEffect(() => {
+    if (!overview) return;
     if (!propertyScopedUnits.length) {
       setSelectedUnitId("");
       return;
@@ -1988,9 +2041,7 @@ const App = () => {
 
   useEffect(() => {
     const editingLease = overview?.leases.find((lease) => lease.id === editingAdmin.lease) ?? null;
-    const availableLeaseUnits = (overview?.units ?? []).filter(
-      (unit) => !unit.leaseStage || unit.leaseStage === "terminated" || unit.id === editingLease?.unitId
-    );
+    const availableLeaseUnits = overview?.units ?? [];
 
     if (availableLeaseUnits.length && !availableLeaseUnits.some((unit) => unit.id === leaseForm.unitId)) {
       setLeaseForm((current) => ({
@@ -2010,6 +2061,7 @@ const App = () => {
   }, [ticketForm.unitId, ticketUnits]);
 
   useEffect(() => {
+    if (!overview) return;
     if (!tickets.length) {
       setSelectedTicketId("");
       return;
@@ -2197,7 +2249,7 @@ const App = () => {
           return;
         }
 
-        const flattened = commentCollections.flatMap(({ ticket, items }) =>
+        const flattened: ChatMessage[] = commentCollections.flatMap(({ ticket, items }) =>
           items.map((comment) => ({
             id: comment.id,
             ticketId: ticket.id,
@@ -2208,8 +2260,8 @@ const App = () => {
             content: comment.content,
             createdAt: comment.createdAt,
             direction: isTenant
-              ? comment.authorRole === "tenant" ? "outgoing" : "incoming"
-              : comment.authorRole === "tenant" ? "incoming" : "outgoing"
+              ? comment.authorRole === "tenant" ? "outgoing" as const : "incoming" as const
+              : comment.authorRole === "tenant" ? "incoming" as const : "outgoing" as const
           }))
         );
 
@@ -2563,6 +2615,7 @@ const App = () => {
   const resetUnitForm = () =>
     setUnitForm((current) => ({
       ...current,
+      building: "", entrance: "", photoUrl: "",
       number: "",
       floor: "1",
       area: "",
@@ -2613,6 +2666,7 @@ const App = () => {
     });
 
   const cancelAdminEdit = (panel: AdminPanel) => {
+    if (editingAdmin[panel] && isManagerShell && managerScreen.endsWith("-add")) setManagerScreen(editReturnScreen.current);
     setEditingAdmin((current) => ({
       ...current,
       [panel]: null
@@ -2669,6 +2723,9 @@ const App = () => {
     }));
     setUnitForm({
       propertyId: unit.propertyId,
+      building: unit.building ?? "",
+      entrance: unit.entrance ?? "",
+      photoUrl: unit.photoUrl ?? "",
       number: unit.number,
       floor: String(unit.floor),
       area: String(unit.area),
@@ -2701,21 +2758,25 @@ const App = () => {
   };
 
   const openManagerPropertyEdit = (property: Property) => {
+    editReturnScreen.current = managerScreen;
     startEditProperty(property);
     setManagerScreen("property-add");
   };
 
   const openManagerTenantEdit = (tenant: Tenant) => {
+    editReturnScreen.current = managerScreen;
     startEditTenant(tenant);
     setManagerScreen("tenant-add");
   };
 
   const openManagerUnitEdit = (unit: Unit) => {
+    editReturnScreen.current = managerScreen;
     startEditUnit(unit);
     setManagerScreen("unit-add");
   };
 
   const openManagerLeaseEdit = (lease: Lease) => {
+    editReturnScreen.current = managerScreen;
     startEditLease(lease);
     setManagerScreen("lease-add");
   };
@@ -3043,6 +3104,7 @@ const App = () => {
       return;
     }
 
+    if (file.size > MAX_ATTACHMENT_BYTES) { setError("Максимальный размер файла — 100 МБ"); return; }
     setBusyAction(`ticket-attachment-upload-${ticketId}`);
     setError("");
 
@@ -3060,7 +3122,7 @@ const App = () => {
       });
       await reloadTicketAttachments(ticketId);
       await refreshWorkspace(ticketId);
-      setNotice(locale === "ru" ? "Р¤Р°Р№Р» РїСЂРёРєСЂРµРїР»РµРЅ" : "File attached");
+      setNotice(locale === "ru" ? "Файл прикреплён" : "File attached");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Attachment upload failed");
     } finally {
@@ -3145,7 +3207,15 @@ const App = () => {
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (/^(application\/pdf|image\/(png|jpeg|gif|webp)|audio\/[\w.+-]+|video\/[\w.+-]+)$/.test(blob.type)) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        const encoded = response.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1];
+        try { link.download = encoded ? decodeURIComponent(encoded) : "document"; } catch { link.download = "document"; }
+        link.click();
+      }
       window.setTimeout(() => window.URL.revokeObjectURL(url), 30000);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Document open failed");
@@ -3194,7 +3264,7 @@ const App = () => {
           contentBase64: arrayBufferToBase64(buffer)
         }
       });
-      const lease = documentPanelLease ?? overview.leases.find((item) => item.id === leaseId);
+      const lease = documentPanelLease ?? overview?.leases.find((item) => item.id === leaseId);
       if (lease) {
         await loadLeaseDocuments(lease);
       }
@@ -3222,7 +3292,7 @@ const App = () => {
         method: "DELETE",
         token: session.token
       });
-      const lease = documentPanelLease ?? overview.leases.find((item) => item.id === leaseId);
+      const lease = documentPanelLease ?? overview?.leases.find((item) => item.id === leaseId);
       if (lease) {
         await loadLeaseDocuments(lease);
       }
@@ -3289,7 +3359,15 @@ const App = () => {
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (/^(application\/pdf|image\/(png|jpeg|gif|webp)|audio\/[\w.+-]+|video\/[\w.+-]+)$/.test(blob.type)) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        const link = document.createElement("a");
+        link.href = url;
+        const encoded = response.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1];
+        try { link.download = encoded ? decodeURIComponent(encoded) : "document"; } catch { link.download = "document"; }
+        link.click();
+      }
       window.setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "File open failed");
@@ -3351,7 +3429,7 @@ const App = () => {
               locale
             )}
           </span>
-          <small className="attachment-hint">{supportedFileHint(locale)}</small>
+          <small className="attachment-hint">{supportedFileHint(locale)} · до 100 МБ на файл</small>
         </div>
         <label className="secondary-button secondary-button--compact attachment-upload">
           {locale === "ru" ? "Прикрепить" : "Attach"}
@@ -3382,7 +3460,7 @@ const App = () => {
                 <small>{item.uploadedByName ?? "—"}</small>
               </div>
               {session && (["admin", "manager"].includes(session.user.role) || item.uploadedBy === session.user.id) ? (
-                <button className="text-button" onClick={() => void deleteTicketAttachment(ticket.id, item.id)} type="button">
+                <button className="text-button text-button--danger" onClick={() => void deleteTicketAttachment(ticket.id, item.id)} type="button">
                   {t.actions.delete}
                 </button>
               ) : null}
@@ -3401,6 +3479,7 @@ const App = () => {
 
     return (
       <div className="ticket-ops">
+        {!isManagerShell && session && overview ? <TicketOperations token={session.token} ticket={ticket} overview={overview} operations={operations} onRefresh={refreshWorkspace} onUnit={() => setSelectedSection("portfolio")} onTenant={() => setSelectedSection("leases")} onTicket={openTicketDetail} tickets={tickets} readOnly={isTenant} canEditLinks={false} /> : null}
         <div className="ticket-ops-summary">
           <span className={`status-pill status-pill--${slaState.tone}`}>{slaState.label}</span>
           <strong>{ticket.slaDueAt ? formatDateTime(ticket.slaDueAt, locale) : "—"}</strong>
@@ -4154,8 +4233,8 @@ const App = () => {
             </button>
           </div>
 
-          {error ? <div className="banner banner--error">{error}</div> : null}
-          {notice ? <div className="banner banner--notice">{notice}</div> : null}
+          {error ? <div className="banner banner--error" role="alert">{error}</div> : null}
+          {notice ? <div className="banner banner--notice" role="status">{notice}</div> : null}
 
           {authMode === "staff" ? (
             <>
@@ -4164,7 +4243,7 @@ const App = () => {
                   <label>
                     <span>{t.auth.email}</span>
                     <input
-                      name="email"
+                      name="email" type="email" autoComplete="username" required
                       onChange={handleFieldChange(setStaffForm)}
                       placeholder="name@company.ru"
                       value={staffForm.email}
@@ -4173,7 +4252,7 @@ const App = () => {
                   <label>
                     <span>{t.auth.password}</span>
                     <input
-                      name="password"
+                      name="password" autoComplete="current-password" required
                       onChange={handleFieldChange(setStaffForm)}
                       type="password"
                       value={staffForm.password}
@@ -4253,8 +4332,8 @@ const App = () => {
             <>
               <div className="tenant-onboarding">
                 <div>
-                  <strong>{t.auth.tenantFirstTimeTitle}</strong>
-                  <p>{t.auth.tenantFirstTimeText}</p>
+                  <strong>{tenantOnboarding?.channels.some(channel => channel.enabled) ? t.auth.tenantFirstTimeTitle : "Вход по телефону пока недоступен"}</strong>
+                  <p>{tenantOnboarding?.channels.some(channel => channel.enabled) ? t.auth.tenantFirstTimeText : "Используйте вкладку «По паролю». Доступ выдаёт управляющий объектом."}</p>
                 </div>
                 <div className="tenant-channel-grid">
                   {(tenantOnboarding?.channels ?? []).map((channel) =>
@@ -4307,10 +4386,10 @@ const App = () => {
 
   const renderOverview = () => (
     <section className="section-grid overview-grid">
+      {isTenant ? <TenantServices data={operations} /> : null}
       <article className="surface surface--hero surface--wide">
         <div className="industrial-hero">
           <div className="industrial-hero-copy">
-            <div className="section-label">{ui.overviewTag}</div>
             <h2>{sectionTitle}</h2>
           </div>
 
@@ -4318,12 +4397,12 @@ const App = () => {
             <div className="metric-panel">
               <span>{t.metrics.occupancy}</span>
               <strong>{overview.occupancyRate}%</strong>
-              <small>{formatArea(overview.totals.occupied_area, locale)}</small>
+              <small title="Занятая / общая арендопригодная площадь">{formatArea(overview.totals.occupied_area, locale)} / {formatArea(overview.totals.total_rentable_area, locale)}</small>
             </div>
             <div className="metric-panel">
-              <span>{ui.collectionRate}</span>
+              <span>{ui.collectionRate} · {overview.finance.collectionPeriodLabel}</span>
               <strong>{overview.finance.collectionRate}%</strong>
-              <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
+              <small title="Фактически оплачено / начислено за указанный месяц">{getCollectionBasisLabel(overview.finance, locale)}</small>
             </div>
             <div className="metric-panel metric-panel--alert">
               <span>{ui.arrears}</span>
@@ -4333,7 +4412,7 @@ const App = () => {
             <div className="metric-panel">
               <span>{t.metrics.openTickets}</span>
               <strong>{openTicketCount}</strong>
-              <small>{focusTickets.length} {ui.urgent.toLowerCase()}</small>
+              <small>{serviceTickets.filter(isCriticalTicket).length} {ui.urgent.toLowerCase()}</small>
             </div>
             <div className="metric-panel">
               <span>{ui.noi}</span>
@@ -4353,30 +4432,13 @@ const App = () => {
         <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.finance}</div>
-            <h3>{ui.cashflow}</h3>
+            <h3>{ui.cashflow}</h3><p className="field-hint">План начислений минус внесённые расходы. Будущая оплата не гарантирована.</p>
           </div>
         </div>
-        <div className="finance-chart">
-          {overview.finance.series.map((point) => (
-            <div className="finance-bar" key={point.id}>
-              <div className="finance-bar-track">
-                <span className="finance-bar-fill finance-bar-fill--billed" style={{ height: `${Math.max(14, point.billed / 180000)}px` }} />
-                <span
-                  className="finance-bar-fill finance-bar-fill--forecast"
-                  style={{ height: `${Math.max(14, point.forecast / 180000)}px` }}
-                />
-                <div className="finance-value">
-                  <strong>{formatCompactMoney(point.forecast, locale)}</strong>
-                  <span>{point.label}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ForecastChart series={overview.finance.series} />
         <div className="summary-strip">
           <div className="summary-chip">
-            <span>{ui.collectionRate}</span>
+            <span>{ui.collectionRate} · {overview.finance.collectionPeriodLabel}</span>
             <strong>{overview.finance.collectionRate}%</strong>
           </div>
           <div className="summary-chip">
@@ -4398,7 +4460,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.notifications}</div>
             <h3>{ui.notifications}</h3>
           </div>
         </div>
@@ -4416,7 +4477,7 @@ const App = () => {
                   <strong>{item.title}</strong>
                 </div>
                 <p>{item.message}</p>
-                <small>{formatDateTime(item.createdAt, locale)}</small>
+                <small>{formatDateTime(item.createdAt, locale)} · {item.unread ? "Не прочитано" : "Прочитано"}</small>
               </button>
             ))
           ) : (
@@ -4428,7 +4489,6 @@ const App = () => {
       <article className="surface surface--board selection-stage" key={`overview-board-${selectedPropertyId}`}>
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.twin}</div>
             <h3>{selectedProperty?.name ?? t.sections.twin}</h3>
           </div>
           <div className="chip-row">
@@ -4490,7 +4550,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.watchlist}</div>
             <h3>{t.sections.watchlist}</h3>
           </div>
         </div>
@@ -4525,7 +4584,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.serviceFeed}</div>
             <h3>{isWorker ? (locale === "ru" ? "Мои заявки на обслуживание" : "My service jobs") : t.sections.serviceFeed}</h3>
           </div>
           <button className="secondary-button" onClick={() => setSelectedSection("service")} type="button">
@@ -4568,7 +4626,6 @@ const App = () => {
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.portfolio}</div>
             <h3>{t.sectionHeads.portfolio}</h3>
           </div>
         </div>
@@ -4607,7 +4664,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.team}</div>
             <h3>{ui.team}</h3>
           </div>
         </div>
@@ -4634,7 +4690,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.exports}</div>
             <h3>{ui.exports}</h3>
           </div>
         </div>
@@ -4666,7 +4721,6 @@ const App = () => {
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.portfolio}</div>
             <h3>{t.sectionHeads.portfolio}</h3>
           </div>
         </div>
@@ -4693,12 +4747,11 @@ const App = () => {
       <article className="surface surface--wide selection-stage" key={`portfolio-tenants-${selectedPropertyId}`}>
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.tenantRegistry}</div>
             <h3>{ui.tenantRegistry}</h3>
           </div>
         </div>
         <div className="table-shell">
-          <table className="industrial-table">
+          <ResponsiveTable className="industrial-table">
             <thead>
               <tr>
                 <th>{ui.tenantRegistry}</th>
@@ -4728,7 +4781,7 @@ const App = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
         {propertyScopedTenantRows.length === 0 ? <div className="empty-state">{t.hints.noData}</div> : null}
       </article>
@@ -4736,7 +4789,6 @@ const App = () => {
       <article className="surface surface--wide selection-stage" key={`portfolio-detail-${selectedPropertyId}-${selectedTenantId}`}>
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.tenantPassport}</div>
             <h3>{tenantDetail?.tenant.name ?? selectedTenant?.name ?? ui.tenantPassport}</h3>
           </div>
         </div>
@@ -4782,7 +4834,7 @@ const App = () => {
                     <div className="list-row" key={payment.id}>
                       <div>
                         <strong>{payment.period}</strong>
-                        <p>{formatMoney(payment.amount, locale)} · {payment.method}</p>
+                        <p>{formatMoney(payment.amount, locale)} · {paymentMethodLabel(payment.method)}</p>
                       </div>
                       <div className="list-aside">
                         <span className={`status-pill status-pill--${payment.status}`}>
@@ -4866,7 +4918,6 @@ const App = () => {
       <article className="surface surface--wide selection-stage" key={`portfolio-units-${selectedPropertyId}`}>
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.fields.unit}</div>
             <h3>{t.sectionHeads.portfolio}</h3>
           </div>
         </div>
@@ -4901,10 +4952,10 @@ const App = () => {
 
   const renderLeases = () => (
     <section className="section-grid">
+      {isTenant ? <TenantServices data={operations} /> : null}
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.leases}</div>
             <h3>{t.sectionHeads.leases}</h3>
           </div>
         </div>
@@ -4935,7 +4986,6 @@ const App = () => {
         <article className="surface">
           <div className="surface-head">
             <div>
-              <div className="section-label">{locale === "ru" ? "Оплата" : "Payment"}</div>
               <h3>{locale === "ru" ? "Отправить оплату на проверку" : "Send payment for review"}</h3>
             </div>
           </div>
@@ -4987,7 +5037,7 @@ const App = () => {
                 }}
                 type="file"
               />
-              <small className="attachment-hint">{supportedFileHint(locale)}</small>
+              <small className="attachment-hint">{supportedFileHint(locale)} · до 100 МБ на файл</small>
             </label>
             {paymentProofFile ? (
               <div className="file-picked-summary">
@@ -5007,15 +5057,14 @@ const App = () => {
         <article className="surface">
           <div className="surface-head">
             <div>
-              <div className="section-label">{ui.finance}</div>
               <h3>{ui.finance}</h3>
             </div>
           </div>
           <div className="summary-strip summary-strip--vertical">
             <div className="summary-chip">
-              <span>{ui.collectionRate}</span>
+              <span>{ui.collectionRate} · {overview.finance.collectionPeriodLabel}</span>
               <strong>{overview.finance.collectionRate}%</strong>
-              <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
+              <small title="Фактически оплачено / начислено за указанный месяц">{getCollectionBasisLabel(overview.finance, locale)}</small>
             </div>
             <div className="summary-chip">
               <span>{ui.arrears}</span>
@@ -5038,12 +5087,11 @@ const App = () => {
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.exports}</div>
             <h3>{ui.exports}</h3>
           </div>
         </div>
         <div className="table-shell">
-          <table className="industrial-table">
+          <ResponsiveTable className="industrial-table">
             <thead>
               <tr>
                 <th>{ui.exports}</th>
@@ -5075,7 +5123,7 @@ const App = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
       </article>
       ) : null}
@@ -5083,7 +5131,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.watchlist}</div>
             <h3>{t.sections.watchlist}</h3>
           </div>
         </div>
@@ -5119,11 +5166,11 @@ const App = () => {
 
   const renderService = () => (
     <section className="section-grid service-grid">
+      {isWorker && session && <WorkerMeters token={session.token} userId={session.user.id} />}
       {!isWorker ? (
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.ticketCreate}</div>
             <h3>{t.sections.ticketCreate}</h3>
           </div>
         </div>
@@ -5191,7 +5238,6 @@ const App = () => {
       <article className="surface">
           <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.serviceFeed}</div>
             <h3>{isWorker ? (locale === "ru" ? "Мои заявки на обслуживание" : "My service jobs") : t.sections.serviceFeed}</h3>
           </div>
           <select
@@ -5242,7 +5288,6 @@ const App = () => {
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.sections.ticketDetail}</div>
             <h3>{selectedTicket?.title ?? t.sections.ticketDetail}</h3>
           </div>
         </div>
@@ -5362,7 +5407,6 @@ const App = () => {
         <article className="surface">
           <div className="surface-head">
             <div>
-              <div className="section-label">{ui.notifications}</div>
               <h3>{ui.notifications}</h3>
             </div>
           </div>
@@ -5380,7 +5424,7 @@ const App = () => {
                     <strong>{item.title}</strong>
                   </div>
                   <p>{item.message}</p>
-                  <small>{formatDateTime(item.createdAt, locale)}</small>
+                  <small>{formatDateTime(item.createdAt, locale)} · {item.unread ? "Не прочитано" : "Прочитано"}</small>
                 </button>
               ))
             ) : (
@@ -5407,7 +5451,7 @@ const App = () => {
             <button className="text-button" onClick={() => startEditProperty(property)} type="button">
               {adminEditLabel}
             </button>
-            <button className="text-button" onClick={() => handleDelete(`/api/properties/${property.id}`)} type="button">
+            <button className="text-button text-button--danger" onClick={() => handleDelete(`/api/properties/${property.id}`)} type="button">
               {t.actions.delete}
             </button>
           </div>
@@ -5429,7 +5473,7 @@ const App = () => {
             <button className="text-button" onClick={() => startEditTenant(tenant)} type="button">
               {adminEditLabel}
             </button>
-            <button className="text-button" onClick={() => handleDelete(`/api/tenants/${tenant.id}`)} type="button">
+            <button className="text-button text-button--danger" onClick={() => handleDelete(`/api/tenants/${tenant.id}`)} type="button">
               {t.actions.delete}
             </button>
           </div>
@@ -5455,7 +5499,7 @@ const App = () => {
             <button className="text-button" onClick={() => startEditUnit(unit)} type="button">
               {adminEditLabel}
             </button>
-            <button className="text-button" onClick={() => handleDelete(`/api/units/${unit.id}`)} type="button">
+            <button className="text-button text-button--danger" onClick={() => handleDelete(`/api/units/${unit.id}`)} type="button">
               {t.actions.delete}
             </button>
           </div>
@@ -5476,7 +5520,7 @@ const App = () => {
           <button className="text-button" onClick={() => startEditLease(lease)} type="button">
             {adminEditLabel}
           </button>
-          <button className="text-button" onClick={() => handleDelete(`/api/leases/${lease.id}`)} type="button">
+          <button className="text-button text-button--danger" onClick={() => handleDelete(`/api/leases/${lease.id}`)} type="button">
             {t.actions.delete}
           </button>
         </div>
@@ -5646,6 +5690,9 @@ const App = () => {
             <span>{t.fields.number}</span>
             <input name="number" onChange={handleFieldChange(setUnitForm)} value={unitForm.number} />
           </label>
+          <label><span>Корпус</span><input name="building" value={unitForm.building} onChange={handleFieldChange(setUnitForm)} placeholder="Корпус А" /></label>
+          <label><span>Подъезд / секция</span><input name="entrance" value={unitForm.entrance} onChange={handleFieldChange(setUnitForm)} placeholder="Секция 1" /></label>
+          <label><span>Фото помещения (HTTPS)</span><input name="photoUrl" type="url" value={unitForm.photoUrl} onChange={handleFieldChange(setUnitForm)} /></label>
           <label>
             <span>{t.fields.floor}</span>
             <input name="floor" onChange={handleFieldChange(setUnitForm)} type="number" value={unitForm.floor} />
@@ -5708,9 +5755,7 @@ const App = () => {
     }
 
     const editingLease = overview.leases.find((lease) => lease.id === editingAdmin.lease) ?? null;
-    const availableLeaseUnits = overview.units.filter(
-      (unit) => !unit.leaseStage || unit.leaseStage === "terminated" || unit.id === editingLease?.unitId
-    );
+    const availableLeaseUnits = overview.units;
 
     return (
       <form
@@ -5730,9 +5775,10 @@ const App = () => {
           )
         }
       >
+        <p className="field-hint">Обязательны: арендатор, помещение, номер, стадия, даты и ставка договора.</p>
         <label>
-          <span>{t.fields.tenant}</span>
-          <select name="tenantId" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.tenantId}>
+          <span>{t.fields.tenant} *</span>
+          <select required name="tenantId" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.tenantId}>
             {overview.tenants.map((tenant) => (
               <option key={tenant.id} value={tenant.id}>
                 {tenant.name}
@@ -5742,7 +5788,7 @@ const App = () => {
         </label>
         <label>
           <span>{t.fields.unit}</span>
-          <select name="unitId" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.unitId}>
+          <select required name="unitId" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.unitId}>
             {availableLeaseUnits.map((unit) => (
               <option key={unit.id} value={unit.id}>
                 {unit.propertyName} · {unit.number}
@@ -5752,7 +5798,7 @@ const App = () => {
         </label>
         <label>
           <span>{t.fields.contractNumber}</span>
-          <input name="contractNumber" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.contractNumber} />
+          <input required name="contractNumber" onChange={handleFieldChange(setLeaseForm)} value={leaseForm.contractNumber} />
         </label>
         <label>
           <span>{t.fields.stage}</span>
@@ -5766,28 +5812,29 @@ const App = () => {
         </label>
         <label>
           <span>{t.fields.startDate}</span>
-          <input name="startDate" onChange={handleFieldChange(setLeaseForm)} type="date" value={leaseForm.startDate} />
+          <input required name="startDate" onChange={handleFieldChange(setLeaseForm)} type="date" value={leaseForm.startDate} />
         </label>
         <label>
           <span>{t.fields.endDate}</span>
-          <input name="endDate" onChange={handleFieldChange(setLeaseForm)} type="date" value={leaseForm.endDate} />
+          <input required name="endDate" onChange={handleFieldChange(setLeaseForm)} type="date" value={leaseForm.endDate} />
         </label>
         <label>
           <span>{t.fields.ratePerSqm}</span>
-          <input name="ratePerSqm" onChange={handleFieldChange(setLeaseForm)} type="number" value={leaseForm.ratePerSqm} />
+          <input required name="ratePerSqm" onChange={handleFieldChange(setLeaseForm)} type="number" value={leaseForm.ratePerSqm} />
         </label>
         <label>
           <span>{t.fields.deposit}</span>
           <input name="deposit" onChange={handleFieldChange(setLeaseForm)} type="number" value={leaseForm.deposit} />
         </label>
         <label>
-          <span>{t.fields.indexationPct}</span>
+          <span>{t.fields.indexationPct} в год</span>
           <input
             name="indexationPct"
             onChange={handleFieldChange(setLeaseForm)}
             type="number"
             value={leaseForm.indexationPct}
-          />
+            min="0" max="100" step="0.01"
+          /><small className="field-hint">Необязательно: 0 — без индексации. Годовой процент фиксируется в договоре; изменение ставки и начислений подтверждает менеджер вручную.</small>
         </label>
         <button className="primary-button" disabled={busyAction.startsWith("/api/leases")} type="submit">
           {editingAdmin.lease ? adminSaveChangesLabel : t.actions.save}
@@ -5806,7 +5853,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.admin}</div>
             <h3>{t.sectionHeads.admin}</h3>
           </div>
         </div>
@@ -5834,7 +5880,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.admin}</div>
             <h3>{t.sectionHeads.admin}</h3>
           </div>
         </div>
@@ -5844,7 +5889,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.team}</div>
             <h3>{ui.team}</h3>
           </div>
         </div>
@@ -5858,7 +5902,7 @@ const App = () => {
                 </p>
               </div>
               <div className="list-aside">
-                <span>{member.assignedTicketCount}</span>
+                <span title="Количество назначенных открытых заявок">{member.assignedTicketCount} открытых заявок</span>
               </div>
             </div>
           ))}
@@ -5868,7 +5912,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{ui.exports}</div>
             <h3>{ui.exports}</h3>
           </div>
         </div>
@@ -5928,7 +5971,7 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.dashboard}</h2>
-          <p>{managerUi.subtitles.dashboard}</p>
+
         </div>
       </div>
 
@@ -5936,12 +5979,12 @@ const App = () => {
         <article className="mvp-metric">
           <span>{t.metrics.occupancy}</span>
           <strong>{overview.occupancyRate}%</strong>
-          <small>{formatArea(overview.totals.occupied_area, locale)}</small>
+          <small title="Занятая / общая арендопригодная площадь">{formatArea(overview.totals.occupied_area, locale)} / {formatArea(overview.totals.total_rentable_area, locale)}</small>
         </article>
         <article className="mvp-metric">
-          <span>{ui.collectionRate}</span>
+          <span>{ui.collectionRate} · {overview.finance.collectionPeriodLabel}</span>
           <strong>{overview.finance.collectionRate}%</strong>
-          <small>{getCollectionBasisLabel(overview.finance, locale)}</small>
+          <small title="Фактически оплачено / начислено за указанный месяц">{getCollectionBasisLabel(overview.finance, locale)}</small>
         </article>
         <article className="mvp-metric">
           <span>{ui.arrears}</span>
@@ -5951,12 +5994,12 @@ const App = () => {
         <article className="mvp-metric">
           <span>{t.metrics.openTickets}</span>
           <strong>{openTicketCount}</strong>
-          <small>{focusTickets.length} {ui.urgent.toLowerCase()}</small>
+          <small>{serviceTickets.filter(isCriticalTicket).length} {ui.urgent.toLowerCase()}</small>
         </article>
         <article className="mvp-metric">
           <span>{ui.opex}</span>
           <strong>{overview.finance.opexRatio}%</strong>
-          <small>{ui.noi}: {formatCompactMoney(overview.finance.noi, locale)}</small>
+          <small title="Полученные платежи минус внесённые операционные расходы за месяц. Для полного расчёта внесите все расходы в Эксплуатации.">Чистый операционный доход: {formatCompactMoney(overview.finance.noi, locale)}</small>
         </article>
         <article className="mvp-metric">
           <span>{ui.forecast}</span>
@@ -5969,33 +6012,15 @@ const App = () => {
         <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{ui.finance}</div>
-              <h3>{ui.cashflow}</h3>
+              <h3>{ui.cashflow}</h3><p className="field-hint">План начислений минус внесённые расходы. Будущая оплата не гарантирована.</p>
             </div>
           </div>
-          <div className="finance-chart">
-            {overview.finance.series.map((point) => (
-              <div className="finance-bar" key={point.id}>
-                <div className="finance-bar-track">
-                  <span className="finance-bar-fill finance-bar-fill--billed" style={{ height: `${Math.max(14, point.billed / 180000)}px` }} />
-                  <span
-                    className="finance-bar-fill finance-bar-fill--forecast"
-                    style={{ height: `${Math.max(14, point.forecast / 180000)}px` }}
-                  />
-                  <div className="finance-value">
-                    <strong>{formatCompactMoney(point.forecast, locale)}</strong>
-                    <span>{point.label}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ForecastChart series={overview.finance.series} />
         </article>
 
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{ui.urgent}</div>
               <h3>{ui.notifications}</h3>
             </div>
           </div>
@@ -6013,7 +6038,7 @@ const App = () => {
                     <strong>{item.title}</strong>
                   </div>
                   <p>{item.message}</p>
-                  <small>{formatDateTime(item.createdAt, locale)}</small>
+                  <small>{formatDateTime(item.createdAt, locale)} · {item.unread ? "Не прочитано" : "Прочитано"}</small>
                 </button>
               ))
             ) : (
@@ -6025,7 +6050,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.nav.chat}</div>
               <h3>{managerUi.nav.chat}</h3>
             </div>
             <button className="secondary-button" onClick={() => setManagerScreen("chat")} type="button">
@@ -6060,7 +6084,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{ui.team}</div>
               <h3>{ui.team}</h3>
             </div>
             <button className="secondary-button" onClick={() => setManagerScreen("staff")} type="button">
@@ -6075,7 +6098,7 @@ const App = () => {
                   <p>{t.roles[member.role]}</p>
                 </div>
                 <div className="mvp-list-aside">
-                  <span>{member.assignedTicketCount}</span>
+                  <span title="Количество назначенных открытых заявок">{member.assignedTicketCount} открытых заявок</span>
                   <small>{member.propertyName ?? productBrand.name}</small>
                 </div>
               </div>
@@ -6092,7 +6115,7 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.tenants}</h2>
-          <p>{propertyScopedTenantRows.length} · {managerUi.subtitles.tenants}</p>
+          <p>{countLabel(propertyScopedTenantRows.length, ["арендатор", "арендатора", "арендаторов"])}</p>
         </div>
         <div className="mvp-actions">
           <input
@@ -6141,7 +6164,7 @@ const App = () => {
 
       <article className="mvp-card">
         <div className="mvp-table-wrap selection-stage" key={`manager-tenants-${selectedPropertyId}`}>
-          <table className="mvp-table">
+          <ResponsiveTable className="mvp-table">
             <thead>
               <tr>
                 <th>{managerUi.nav.tenants}</th>
@@ -6192,7 +6215,7 @@ const App = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
         {propertyScopedTenantRows.length === 0 ? <div className="empty-state">{t.hints.noData}</div> : null}
       </article>
@@ -6225,7 +6248,6 @@ const App = () => {
           </button>
           <div>
             <h2>{tenantDetail?.tenant.name ?? selectedTenant?.name ?? managerUi.titles.tenantDetail}</h2>
-            <p>{managerUi.subtitles.tenantDetail}</p>
           </div>
           {tenantDetail ? (
             <div className="mvp-actions">
@@ -6233,7 +6255,7 @@ const App = () => {
                 {adminEditLabel}
               </button>
               {canDeletePortfolioItems ? (
-                <button className="text-button" onClick={() => void handleDelete(`/api/tenants/${tenantDetail.tenant.id}`)} type="button">
+                <button className="text-button text-button--danger" onClick={() => void handleDelete(`/api/tenants/${tenantDetail.tenant.id}`)} type="button">
                   {t.actions.delete}
                 </button>
               ) : null}
@@ -6263,7 +6285,6 @@ const App = () => {
                 <article className="mvp-card">
                   <div className="mvp-card-head">
                     <div>
-                      <div className="section-label">{managerUi.baseInfo}</div>
                       <h3>{tenantDetail.tenant.name}</h3>
                     </div>
                   </div>
@@ -6279,15 +6300,14 @@ const App = () => {
                 <article className="mvp-card">
                   <div className="mvp-card-head">
                     <div>
-                      <div className="section-label">{ui.tenantPassport}</div>
                       <h3>{ui.tenantPassport}</h3>
                     </div>
                   </div>
                   <div className="mvp-metrics mvp-metrics--compact">
-                    <article className="mvp-metric"><span>{t.fields.area}</span><strong>{formatArea(tenantDetail.summary.totalArea, locale)}</strong></article>
-                    <article className="mvp-metric"><span>{ui.monthlyRent}</span><strong>{formatCompactMoney(tenantDetail.summary.monthlyRent, locale)}</strong></article>
-                    <article className="mvp-metric"><span>{ui.paymentDiscipline}</span><strong>{tenantDetail.summary.paymentDiscipline}%</strong></article>
-                    <article className="mvp-metric"><span>{ui.arrears}</span><strong>{formatCompactMoney(tenantDetail.summary.arrearsAmount, locale)}</strong></article>
+                    <article className="mvp-metric" title="Сумма площадей связанных помещений без повторного учёта одного помещения."><span>{t.fields.area} ⓘ</span><strong>{formatArea(tenantDetail.summary.totalArea, locale)}</strong></article>
+                    <article className="mvp-metric" title="Площадь × месячная ставка по действующим договорам."><span>{ui.monthlyRent} ⓘ</span><strong>{formatCompactMoney(tenantDetail.summary.monthlyRent, locale)}</strong></article>
+                    <article className="mvp-metric" title="Фактически оплачено / начислено по счетам арендатора × 100%. Частичные оплаты учитываются."><span>{ui.paymentDiscipline} ⓘ</span><strong>{tenantDetail.summary.paymentDiscipline}%</strong></article>
+                    <article className="mvp-metric" title="Неоплаченный остаток счетов с истёкшим сроком оплаты."><span>{ui.arrears} ⓘ</span><strong>{formatCompactMoney(tenantDetail.summary.arrearsAmount, locale)}</strong></article>
                   </div>
                 </article>
               </div>
@@ -6296,7 +6316,7 @@ const App = () => {
             {tenantDetailTab === "contracts" ? (
               <article className="mvp-card">
                 <div className="mvp-table-wrap">
-                  <table className="mvp-table">
+                  <ResponsiveTable className="mvp-table">
                     <thead>
                       <tr>
                         <th>{t.fields.contractNumber}</th>
@@ -6310,12 +6330,12 @@ const App = () => {
                       </thead>
                       <tbody>
                         {tenantDetail.leases.map((lease) => (
-                        <tr key={lease.id}>
+                        <tr key={lease.id} className={lease.stage !== "terminated" && (daysUntil(lease.endDate) ?? 1) < 0 ? "lease-expired" : ""}>
                           <td>{lease.contractNumber}</td>
                           <td>{lease.unitNumber ?? "—"}</td>
                           <td>{t.leaseStages[lease.stage as keyof typeof t.leaseStages]}</td>
                           <td>{formatMoney(lease.ratePerSqm, locale)}</td>
-                          <td>{formatDate(lease.endDate, locale)}</td>
+                          <td>{formatDate(lease.endDate, locale)}{lease.stage !== "terminated" && (daysUntil(lease.endDate) ?? 1) < 0 ? <small>Срок истёк</small> : null}</td>
                           <td>
                             <button className="secondary-button secondary-button--compact" onClick={() => void loadLeaseDocuments(lease)} type="button">
                               {managerUi.open}
@@ -6333,7 +6353,7 @@ const App = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </ResponsiveTable>
                 </div>
               </article>
             ) : null}
@@ -6341,7 +6361,7 @@ const App = () => {
             {tenantDetailTab === "payments" ? (
               <article className="mvp-card">
                 <div className="mvp-table-wrap">
-                  <table className="mvp-table">
+                  <ResponsiveTable className="mvp-table">
                     <thead>
                       <tr>
                         <th>{ui.payments}</th>
@@ -6354,14 +6374,14 @@ const App = () => {
                         <tr key={payment.id}>
                           <td>
                             <strong>{payment.period}</strong>
-                            <small>{formatMoney(payment.amount, locale)} · {payment.method}</small>
+                            <small>{formatMoney(payment.amount, locale)} · {paymentMethodLabel(payment.method)}</small>
                           </td>
                           <td>{ui.paymentStatus[payment.status]}</td>
                           <td>{formatDate(payment.paidDate ?? payment.dueDate, locale)}</td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </ResponsiveTable>
                 </div>
               </article>
             ) : null}
@@ -6410,7 +6430,7 @@ const App = () => {
                   </button>
                 </form>
                 <div className="mvp-table-wrap">
-                  <table className="mvp-table">
+                  <ResponsiveTable className="mvp-table">
                     <thead>
                       <tr>
                         <th>{locale === "ru" ? "\u0421\u0447\u0435\u0442\u0447\u0438\u043a" : "Meter"}</th>
@@ -6439,7 +6459,7 @@ const App = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </ResponsiveTable>
                 </div>
                 {tenantDetail.meters.length === 0 ? <div className="empty-state">{t.hints.noData}</div> : null}
               </article>
@@ -6451,7 +6471,6 @@ const App = () => {
                   <form className="mvp-card mvp-form" onSubmit={handleTenantNoteSubmit}>
                     <div className="mvp-card-head">
                       <div>
-                        <div className="section-label">{ui.notes}</div>
                         <h3>{locale === "ru" ? "Добавить запись переговоров" : "Add negotiation note"}</h3>
                       </div>
                     </div>
@@ -6492,7 +6511,7 @@ const App = () => {
                         }}
                         type="file"
                       />
-                      <small className="attachment-hint">{supportedFileHint(locale)}</small>
+                      <small className="attachment-hint">{supportedFileHint(locale)} · до 100 МБ на файл</small>
                     </label>
                     {tenantNoteFile ? (
                       <div className="file-picked-summary">
@@ -6554,7 +6573,7 @@ const App = () => {
                                       <small>{attachment.uploadedByName ?? "—"}</small>
                                     </div>
                                     {canManagePortfolio ? (
-                                      <button className="text-button" onClick={() => void deleteTenantNoteAttachment(note.id, attachment.id)} type="button">
+                                      <button className="text-button text-button--danger" onClick={() => void deleteTenantNoteAttachment(note.id, attachment.id)} type="button">
                                         {t.actions.delete}
                                       </button>
                                     ) : null}
@@ -6593,7 +6612,7 @@ const App = () => {
             {tenantDetailTab === "tickets" ? (
               <article className="mvp-card">
                 <div className="mvp-table-wrap">
-                  <table className="mvp-table">
+                  <ResponsiveTable className="mvp-table">
                     <thead>
                       <tr>
                         <th>№</th>
@@ -6614,7 +6633,7 @@ const App = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </ResponsiveTable>
                 </div>
               </article>
             ) : null}
@@ -6676,7 +6695,7 @@ const App = () => {
               if (isEditing) {
                 cancelAdminEdit(panel);
               }
-              setManagerScreen(backScreen);
+              if (!isEditing) setManagerScreen(backScreen);
             }}
             type="button"
           >
@@ -6684,7 +6703,7 @@ const App = () => {
           </button>
           <div>
             <h2>{title}</h2>
-            <p>{subtitle}</p>
+            <p>{isEditing ? "Измените нужные поля и сохраните." : "Заполните данные новой записи."}</p>
           </div>
         </div>
 
@@ -6700,7 +6719,7 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.units}</h2>
-          <p>{managerUi.subtitles.units}</p>
+          <p>{countLabel(filteredPropertyScopedUnits.length, ["помещение", "помещения", "помещений"])}</p>
         </div>
         <div className="mvp-actions">
           <select className="filter-select" onChange={(event) => setUnitTypeFilter(event.target.value)} value={unitTypeFilter}>
@@ -6751,9 +6770,10 @@ const App = () => {
         ))}
       </div>
 
+      <UnitStructure token={session.token} properties={overview.properties} units={propertyScopedUnits} tickets={tickets} equipment={operations?.equipment ?? []} onUnit={openUnitDetail} />
       <article className="mvp-card selection-stage" key={`manager-units-${selectedPropertyId}`}>
         <div className="mvp-table-wrap">
-          <table className="mvp-table">
+          <ResponsiveTable className="mvp-table">
             <thead>
               <tr>
                 <th>{t.fields.unit}</th>
@@ -6802,7 +6822,7 @@ const App = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
         {filteredPropertyScopedUnits.length === 0 ? <div className="empty-state">{t.hints.noData}</div> : null}
       </article>
@@ -6817,7 +6837,6 @@ const App = () => {
         </button>
         <div>
           <h2>{selectedUnit ? `${selectedUnit.propertyName ?? "—"} · ${selectedUnit.number}` : managerUi.titles.unitDetail}</h2>
-          <p>{managerUi.subtitles.unitDetail}</p>
         </div>
         {selectedUnit ? (
           <div className="mvp-actions">
@@ -6828,7 +6847,7 @@ const App = () => {
               {adminEditLabel}
             </button>
             {canDeletePortfolioItems ? (
-              <button className="text-button" onClick={() => void handleDelete(`/api/units/${selectedUnit.id}`)} type="button">
+              <button className="text-button text-button--danger" onClick={() => void handleDelete(`/api/units/${selectedUnit.id}`)} type="button">
                 {t.actions.delete}
               </button>
             ) : null}
@@ -6841,7 +6860,6 @@ const App = () => {
           <article className="mvp-card">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.baseInfo}</div>
                 <h3>{selectedUnit.number}</h3>
               </div>
             </div>
@@ -6865,7 +6883,6 @@ const App = () => {
             <article className="mvp-card">
               <div className="mvp-card-head">
                 <div>
-                  <div className="section-label">{locale === "ru" ? "Площади" : "Areas"}</div>
                   <h3>{locale === "ru" ? "Разделить помещение" : "Split unit"}</h3>
                 </div>
               </div>
@@ -6926,7 +6943,6 @@ const App = () => {
           <article className="mvp-card">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.leaseHistory}</div>
                 <h3>{managerUi.leaseHistory}</h3>
               </div>
             </div>
@@ -6953,12 +6969,11 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.linkedTickets}</div>
                 <h3>{managerUi.linkedTickets}</h3>
               </div>
             </div>
             <div className="mvp-table-wrap">
-              <table className="mvp-table">
+              <ResponsiveTable className="mvp-table">
                 <thead>
                   <tr>
                     <th>№</th>
@@ -6979,7 +6994,7 @@ const App = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
             {selectedUnitTickets.length === 0 ? <div className="empty-state">{t.hints.ticketEmpty}</div> : null}
           </article>
@@ -6995,7 +7010,6 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.leases}</h2>
-          <p>{managerUi.subtitles.leases}</p>
         </div>
         <div className="mvp-actions">
           <select className="filter-select" onChange={(event) => setLeaseStageFilter(event.target.value)} value={leaseStageFilter}>
@@ -7028,7 +7042,7 @@ const App = () => {
 
       <article className="mvp-card">
         <div className="mvp-table-wrap">
-          <table className="mvp-table">
+          <ResponsiveTable className="mvp-table">
             <thead>
               <tr>
                 <th>{t.fields.contractNumber}</th>
@@ -7043,13 +7057,13 @@ const App = () => {
             </thead>
             <tbody>
               {managerLeaseRows.map((lease) => (
-                <tr key={lease.id}>
+                <tr key={lease.id} className={lease.stage !== "terminated" && (daysUntil(lease.endDate) ?? 1) < 0 ? "lease-expired" : ""}>
                   <td>{lease.contractNumber}</td>
                   <td>{lease.tenantName ?? "—"}</td>
                   <td>{lease.propertyName ?? "—"} · {lease.unitNumber ?? "—"}</td>
                   <td>{t.leaseStages[lease.stage as keyof typeof t.leaseStages]}</td>
                   <td>{formatMoney(lease.ratePerSqm, locale)}</td>
-                  <td>{formatDate(lease.endDate, locale)}</td>
+                  <td>{formatDate(lease.endDate, locale)}{lease.stage !== "terminated" && (daysUntil(lease.endDate) ?? 1) < 0 ? <small>Срок истёк</small> : null}</td>
                   <td>
                     <button className="secondary-button secondary-button--compact" onClick={() => void loadLeaseDocuments(lease)} type="button">
                       {managerUi.open}
@@ -7064,7 +7078,7 @@ const App = () => {
                       {adminEditLabel}
                     </button>
                     {canDeletePortfolioItems ? (
-                      <button className="text-button" onClick={() => void handleDelete(`/api/leases/${lease.id}`)} type="button">
+                      <button className="text-button text-button--danger" onClick={() => void handleDelete(`/api/leases/${lease.id}`)} type="button">
                         {t.actions.delete}
                       </button>
                     ) : null}
@@ -7072,21 +7086,31 @@ const App = () => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
         {managerLeaseRows.length === 0 ? <div className="empty-state">{t.hints.noData}</div> : null}
       </article>
     </section>
   );
 
+  const moveBoardTicket = async (ticketId: string, status: string) => {
+    const ticket = tickets.find(t => t.id === ticketId);
+    if (!ticket || ticket.status === status || busyAction) return;
+    const reopenReason = !isOpenTicket(ticket.status) && isOpenTicket(status) ? window.prompt("Причина возобновления заявки") : undefined;
+    if (reopenReason === null || reopenReason === "") return;
+    setBusyAction("kanban"); setError("");
+    try { await apiRequest(`/api/tickets/${ticketId}`, { token: session.token, method: "PUT", body: { status, reopenReason } }); await refreshWorkspace(); }
+    catch (error) { setError(error instanceof Error ? error.message : "Не удалось изменить статус"); }
+    finally { setBusyAction(""); }
+  };
+
   const renderManagerTickets = () => (
     <section className="mvp-page">
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.tickets}</h2>
-          <p>{managerUi.subtitles.tickets}</p>
         </div>
-        <div className="mvp-actions">
+        <div className="mvp-actions"><button className="secondary-button" onClick={() => setTicketView(ticketView === "board" ? "table" : "board")} type="button">{ticketView === "board" ? "Таблица" : "Канбан"}</button>
           <select className="filter-select" onChange={(event) => setTicketFilter(event.target.value as TicketFilter)} value={ticketFilter}>
             <option value="all">{locale === "ru" ? "Все статусы" : "All"}</option>
             {ticketStatusOptions.map((status) => (
@@ -7101,9 +7125,19 @@ const App = () => {
         </div>
       </div>
 
-      <article className="mvp-card">
+      {ticketView === "board" ? <div className="kanban-board">
+        {[{id:"new", label:"Новые", statuses:["new","accepted"]}, {id:"in_progress",label:"В работе",statuses:["in_progress"]}, {id:"waiting_tenant",label:"Ожидание",statuses:["waiting_tenant"]}, {id:"deferred",label:"Отложены",statuses:["deferred"]}, {id:"completed",label:"Выполнены",statuses:["completed","resolved"]}, {id:"closed",label:"Закрыты",statuses:["closed","rejected"]}].map(column => <section className="kanban-column" key={column.id} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void moveBoardTicket(event.dataTransfer.getData("text/plain"), column.id); }}>
+          <h3>{column.label} <small>{filteredTickets.filter(t => column.statuses.includes(t.status)).length}</small></h3>
+          {filteredTickets.filter(t => column.statuses.includes(t.status)).map(ticket => <article className="kanban-ticket" draggable key={ticket.id} onDragStart={event => event.dataTransfer.setData("text/plain", ticket.id)}>
+            <button type="button" className="text-button" onClick={() => openTicketDetail(ticket.id)}>{ticket.number} · {ticket.title}</button>
+            <p>{ticket.propertyName} · {ticket.unitNumber}</p><small>{ticket.assignedToName || "Не назначен"}</small>
+            <span className={`status-pill status-pill--${getSlaState(ticket, locale).tone}`}>{getSlaState(ticket, locale).label}</span>
+            <select aria-label={`Статус ${ticket.number}`} value={ticket.status} disabled={Boolean(busyAction)} onChange={event => void moveBoardTicket(ticket.id, event.target.value)}>{ticketStatusOptions.map(status => <option key={status} value={status}>{getTicketStatusLabel(status, locale)}</option>)}</select>
+          </article>)}
+        </section>)}
+      </div> : <article className="mvp-card">
         <div className="mvp-table-wrap">
-          <table className="mvp-table">
+          <ResponsiveTable className="mvp-table">
             <thead>
               <tr>
                 <th>№</th>
@@ -7125,14 +7159,14 @@ const App = () => {
                   <td>{ticket.tenantName ?? "—"}</td>
                   <td>{t.ticketPriorities[ticket.priority as keyof typeof t.ticketPriorities]}</td>
                   <td>{t.ticketStatuses[ticket.status as keyof typeof t.ticketStatuses]}</td>
-                  <td>{formatDate(ticket.updatedAt, locale)}</td>
+                  <td><span className={`status-pill status-pill--${getSlaState(ticket, locale).tone}`}>{getSlaState(ticket, locale).label}</span></td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
         {filteredTickets.length === 0 ? <div className="empty-state">{t.hints.ticketEmpty}</div> : null}
-      </article>
+      </article>}
     </section>
   );
 
@@ -7144,7 +7178,6 @@ const App = () => {
         </button>
         <div>
           <h2>{managerUi.titles.ticketCreate}</h2>
-          <p>{managerUi.subtitles.ticketCreate}</p>
         </div>
       </div>
 
@@ -7206,7 +7239,6 @@ const App = () => {
         </button>
         <div>
           <h2>{selectedTicket?.title ?? managerUi.titles.ticketDetail}</h2>
-          <p>{managerUi.subtitles.ticketDetail}</p>
         </div>
       </div>
 
@@ -7215,11 +7247,12 @@ const App = () => {
           <article className="mvp-card">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{selectedTicket.number}</div>
+                <div className="record-number">{selectedTicket.number}</div>
                 <h3>{selectedTicket.title}</h3>
               </div>
             </div>
             <p>{selectedTicket.description}</p>
+            <TicketOperations token={session.token} ticket={selectedTicket} overview={overview} operations={operations} onRefresh={refreshWorkspace} onUnit={openUnitDetail} onTenant={openTenantDetail} onTicket={openTicketDetail} tickets={tickets} />
             <div className="mvp-info-list">
               <div className="mvp-info-row"><span>{t.fields.property}</span><strong>{selectedTicket.propertyName ?? "—"}</strong></div>
               <div className="mvp-info-row"><span>{t.fields.unit}</span><strong>{selectedTicket.unitNumber ?? "—"}</strong></div>
@@ -7281,7 +7314,6 @@ const App = () => {
 
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{locale === "ru" ? "История" : "History"}</div>
                 <h3>{locale === "ru" ? "История заявки" : "Ticket history"}</h3>
               </div>
             </div>
@@ -7297,7 +7329,7 @@ const App = () => {
                       </strong>
                       <span>{formatDateTime(event.createdAt, locale)}</span>
                     </div>
-                    <p>{event.reason ?? (event.createdByName ?? "—")}</p>
+                    <p>{event.createdByName ?? "Система"}{event.reason ? ` · ${event.reason}` : ""}</p>
                   </div>
                 ))
               ) : (
@@ -7307,7 +7339,6 @@ const App = () => {
 
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{t.fields.content}</div>
                 <h3>{t.fields.content}</h3>
               </div>
             </div>
@@ -7345,7 +7376,6 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.chat}</h2>
-          <p>{managerUi.subtitles.chat}</p>
         </div>
       </div>
 
@@ -7379,7 +7409,6 @@ const App = () => {
         <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.nav.chat}</div>
               <h3>{selectedChatThread?.tenantName ?? managerUi.nav.chat}</h3>
             </div>
             <small>{selectedChatThread?.propertyName ?? "—"}</small>
@@ -7444,7 +7473,6 @@ const App = () => {
       <article className="surface">
         <div className="surface-head">
           <div>
-            <div className="section-label">{t.nav.chat}</div>
             <h3>{locale === "ru" ? "Диалог по заявкам" : "Ticket chat"}</h3>
           </div>
         </div>
@@ -7477,7 +7505,7 @@ const App = () => {
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
-            <div className="section-label">{selectedChatTargetTicket?.number ?? t.nav.chat}</div>
+            <div className="record-number">{selectedChatTargetTicket?.number ?? t.nav.chat}</div>
             <h3>{selectedChatTargetTicket?.title ?? t.nav.chat}</h3>
           </div>
           <small>{selectedChatTargetTicket?.propertyName ?? "—"} · {selectedChatTargetTicket?.unitNumber ?? "—"}</small>
@@ -7540,7 +7568,7 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.notifications}</h2>
-          <p>{managerUi.subtitles.notifications}</p>
+          <p>Красный — критично; жёлтый — требует внимания; синий — информация; зелёный — успешно.</p>
         </div>
         {overview.notifications.some((item) => item.unread) ? (
           <button className="secondary-button" onClick={() => void markAllNotificationsRead()} type="button">
@@ -7563,7 +7591,7 @@ const App = () => {
                 <strong>{item.title}</strong>
               </div>
               <p>{item.message}</p>
-              <small>{formatDateTime(item.createdAt, locale)}</small>
+              <small>{formatDateTime(item.createdAt, locale)} · {item.unread ? "Не прочитано" : "Прочитано"}</small>
             </button>
           ))
         ) : (
@@ -7589,7 +7617,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">1</div>
               <h3>{locale === "ru" ? "Объект" : "Property"}</h3>
             </div>
           </div>
@@ -7624,7 +7651,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">2</div>
               <h3>{locale === "ru" ? "Первое помещение" : "First unit"}</h3>
             </div>
           </div>
@@ -7663,7 +7689,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">3</div>
               <h3>{locale === "ru" ? "Арендатор" : "Tenant"}</h3>
             </div>
           </div>
@@ -7702,7 +7727,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">4</div>
               <h3>{locale === "ru" ? "Договор и запуск" : "Lease launch"}</h3>
             </div>
           </div>
@@ -7741,7 +7765,6 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.objects}</h2>
-          <p>{managerUi.subtitles.objects}</p>
         </div>
         <div className="mvp-actions">
           <button
@@ -7795,7 +7818,6 @@ const App = () => {
         <article className="mvp-card area-split-card selection-stage" key={`manager-area-split-${selectedPropertyId}`}>
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{locale === "ru" ? "Фонд" : "Fund"}</div>
               <h3>{locale === "ru" ? "Деление площадей" : "Area split"}</h3>
             </div>
             <small>{formatArea(selectedPropertySnapshot.rentableArea, locale)}</small>
@@ -7838,7 +7860,6 @@ const App = () => {
         <article className="surface surface--board selection-stage" key={`manager-objects-board-${selectedPropertyId}`}>
           <div className="surface-head">
             <div>
-              <div className="section-label">{t.sections.twin}</div>
               <h3>{selectedProperty?.name ?? t.sections.twin}</h3>
             </div>
             {selectedProperty ? (
@@ -7847,7 +7868,7 @@ const App = () => {
                   {adminEditLabel}
                 </button>
                 {canDeletePortfolioItems ? (
-                  <button className="text-button" onClick={() => void handleDelete(`/api/properties/${selectedProperty.id}`)} type="button">
+                  <button className="text-button text-button--danger" onClick={() => void handleDelete(`/api/properties/${selectedProperty.id}`)} type="button">
                     {t.actions.delete}
                   </button>
                 ) : null}
@@ -7882,7 +7903,6 @@ const App = () => {
         <article className="mvp-card selection-stage" key={`manager-objects-units-${selectedPropertyId}`}>
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{t.fields.unit}</div>
               <h3>{t.fields.unit}</h3>
             </div>
             <button className="secondary-button" onClick={() => setManagerScreen("units")} type="button">
@@ -7903,49 +7923,7 @@ const App = () => {
     </section>
   );
 
-  const renderManagerStaff = () => (
-    <section className="mvp-page">
-      <div className="mvp-page-header">
-        <div>
-          <h2>{managerUi.titles.staff}</h2>
-          <p>{managerUi.subtitles.staff}</p>
-        </div>
-        <div className="mvp-actions">
-          <button className="primary-button" onClick={() => setManagerScreen("staff-add")} type="button">
-            {managerUi.add}
-          </button>
-        </div>
-      </div>
-
-      <article className="mvp-card">
-        <div className="mvp-table-wrap">
-          <table className="mvp-table">
-            <thead>
-              <tr>
-                <th>{managerUi.nav.staff}</th>
-                <th>{t.fields.email}</th>
-                <th>{managerUi.objectScope}</th>
-                <th>{t.fields.status}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {overview.team.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <strong>{member.fullName}</strong>
-                    <small>{t.roles[member.role]}</small>
-                  </td>
-                  <td>{member.email ?? "—"}</td>
-                  <td>{member.propertyName ?? managerUi.allObjects}</td>
-                  <td>{member.lastLoginAt ? formatDateTime(member.lastLoginAt, locale) : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-  );
+  const renderManagerStaff = () => <Operations token={session.token} user={session.user} overview={overview} tickets={tickets} onRefresh={refreshWorkspace} onUnit={openUnitDetail} onTicket={openTicketDetail} initialTab="users" onCreateUser={() => setManagerScreen("staff-add")} />;
 
   const renderManagerStaffCreate = () => (
     <section className="mvp-page">
@@ -7974,8 +7952,8 @@ const App = () => {
             <input name="phone" onChange={handleFieldChange(setStaffCreateForm)} value={staffCreateForm.phone} />
           </label>
           <label>
-            <span>{managerUi.passwordTemp}</span>
-            <input name="password" onChange={handleFieldChange(setStaffCreateForm)} type="password" value={staffCreateForm.password} />
+            <span>{managerUi.passwordTemp} (от 10 символов)</span>
+            <input required minLength={10} name="password" onChange={handleFieldChange(setStaffCreateForm)} type="password" value={staffCreateForm.password} />
           </label>
           <label>
             <span>{locale === "ru" ? "Роль" : "Role"}</span>
@@ -8019,7 +7997,6 @@ const App = () => {
         <div className="mvp-page-header">
           <div>
             <h2>{managerUi.titles.billing}</h2>
-            <p>{managerUi.subtitles.billing}</p>
           </div>
           <div className="mvp-actions">
             <button className="secondary-button" onClick={() => void downloadBillingReconciliation()} type="button">
@@ -8058,10 +8035,9 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{locale === "ru" ? "Оплаты" : "Payments"}</div>
                 <h3>{locale === "ru" ? "Оплаты арендаторов на проверке" : "Tenant payment proofs in review"}</h3>
               </div>
-              <span className="status-pill status-pill--warning">{pendingPaymentProofTickets.length}</span>
+              <span className="status-pill status-pill--warning">{pendingPaymentProofTickets.length} подтверждений оплаты</span>
             </div>
             <div className="mvp-stack">
               {pendingPaymentProofTickets.slice(0, 5).map((ticket) => {
@@ -8118,8 +8094,7 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.nav.billing}</div>
-                <h3>{locale === "ru" ? "Сверка оплат" : "Payment reconciliation"}</h3>
+                <h3>{locale === "ru" ? "Сверка оплат" : "Payment reconciliation"}</h3><p className="field-hint">Все счета с неоплаченным остатком или переплатой перечислены ниже. Ожидающие оплаты счета ещё могут быть в срок.</p>
               </div>
               <span className={`status-pill status-pill--${billingReconciliation.summary.issues > 0 ? "warning" : "success"}`}>
                 {billingReconciliation.summary.issues > 0
@@ -8148,7 +8123,6 @@ const App = () => {
             <div className="mvp-stack">
               {billingReconciliation.rows
                 .filter((row) => row.reconciliationStatus !== "matched")
-                .slice(0, 4)
                 .map((row) => (
                   <div className="mvp-list-row" key={row.invoiceId}>
                     <div>
@@ -8161,7 +8135,7 @@ const App = () => {
                     </div>
                     <div className="mvp-list-aside">
                       <strong>{formatMoney(row.outstandingAmount || row.overpaidAmount, locale)}</strong>
-                      <small>{row.reconciliationStatus}</small>
+                      <small>{reconciliationLabel(row.reconciliationStatus)}</small>
                     </div>
                   </div>
                 ))}
@@ -8176,12 +8150,11 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.nav.billing}</div>
                 <h3>{locale === "ru" ? "Счета арендаторов" : "Tenant invoices"}</h3>
               </div>
             </div>
             <div className="mvp-table-wrap">
-              <table className="mvp-table">
+              <ResponsiveTable className="mvp-table">
                 <thead>
                   <tr>
                     <th>{locale === "ru" ? "Период" : "Period"}</th>
@@ -8210,14 +8183,13 @@ const App = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           </article>
 
           <article className="mvp-card">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{locale === "ru" ? "Оплата" : "Payment"}</div>
                 <h3>{locale === "ru" ? "Принять платеж" : "Post payment"}</h3>
               </div>
             </div>
@@ -8291,7 +8263,6 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.import}</h2>
-          <p>{managerUi.subtitles.import}</p>
         </div>
       </div>
 
@@ -8299,7 +8270,6 @@ const App = () => {
         <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.templates}</div>
               <h3>{managerUi.templates}</h3>
             </div>
             <label className="import-mode">
@@ -8364,7 +8334,6 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.import}</div>
                 <h3>{locale === "ru" ? "Отчеты импорта" : "Import reports"}</h3>
               </div>
             </div>
@@ -8407,7 +8376,6 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.import}</div>
                 <h3>{locale === "ru" ? "Согласование импорта" : "Import approvals"}</h3>
               </div>
             </div>
@@ -8460,7 +8428,6 @@ const App = () => {
           <article className="mvp-card mvp-card--wide">
             <div className="mvp-card-head">
               <div>
-                <div className="section-label">{managerUi.import}</div>
                 <h3>{locale === "ru" ? "Партии импорта" : "Import batches"}</h3>
               </div>
             </div>
@@ -8497,12 +8464,11 @@ const App = () => {
         <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.readyExports}</div>
               <h3>{managerUi.readyExports}</h3>
             </div>
           </div>
           <div className="mvp-table-wrap">
-            <table className="mvp-table">
+            <ResponsiveTable className="mvp-table">
               <thead>
                 <tr>
                   <th>{ui.exports}</th>
@@ -8532,7 +8498,7 @@ const App = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </ResponsiveTable>
           </div>
         </article>
       </div>
@@ -8544,7 +8510,6 @@ const App = () => {
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.profile}</h2>
-          <p>{managerUi.subtitles.profile}</p>
         </div>
       </div>
 
@@ -8552,7 +8517,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.access}</div>
               <h3>{session.user.fullName}</h3>
             </div>
           </div>
@@ -8570,7 +8534,6 @@ const App = () => {
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
-              <div className="section-label">{managerUi.security}</div>
               <h3>{session.user.totpEnabled ? managerUi.totpEnabled : managerUi.totpDisabled}</h3>
             </div>
           </div>
@@ -8654,7 +8617,6 @@ const App = () => {
         <section className="document-panel">
           <div className="document-panel-head">
             <div>
-              <span className="section-label">{t.fields.document}</span>
               <h3>{documentPanelLease.contractNumber}</h3>
               <p>
                 {documentPanelLease.tenantName ?? "—"} · {documentPanelLease.propertyName ?? "—"} · {documentPanelLease.unitNumber ?? "—"}
@@ -8693,7 +8655,7 @@ const App = () => {
                 }}
                 type="file"
               />
-              <small className="attachment-hint">{supportedFileHint(locale)}</small>
+              <small className="attachment-hint">{supportedFileHint(locale)} · до 100 МБ на файл</small>
             </label>
           ) : null}
 
@@ -8716,7 +8678,7 @@ const App = () => {
                       {managerUi.open}
                     </button>
                     {canManageDocuments ? (
-                      <button className="text-button" onClick={() => void deleteLeaseDocument(documentPanelLease.id, item.id)} type="button">
+                      <button className="text-button text-button--danger" onClick={() => void deleteLeaseDocument(documentPanelLease.id, item.id)} type="button">
                         {t.actions.delete}
                       </button>
                     ) : null}
@@ -8738,6 +8700,7 @@ const App = () => {
     ) : null;
 
   const renderManagerScreen = () => {
+    if (managerScreen === "operations") return <Operations token={session.token} user={session.user} overview={overview} tickets={tickets} onRefresh={refreshWorkspace} onUnit={openUnitDetail} onTicket={openTicketDetail} />;
     if (managerScreen === "dashboard") {
       return renderManagerDashboard();
     }
@@ -8827,11 +8790,13 @@ const App = () => {
 
   const renderManagerShell = () => (
     <main className="mvp-shell">
-      <aside className="mvp-sidebar">
+      <header className="mobile-app-bar"><strong>{productBrand.name}</strong><button type="button" ref={mobileMenuButton} className="secondary-button" aria-controls="workspace-navigation" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(!mobileNavOpen)}><span className={`burger-icon ${mobileNavOpen ? "burger-icon--open" : ""}`} aria-hidden="true"><i /><i /><i /></span><span>{mobileNavOpen ? "Закрыть" : "Меню"}</span></button></header>
+      {mobileNavOpen && <button type="button" className="mobile-nav-scrim" aria-label="Закрыть меню" onClick={() => setMobileNavOpen(false)} />}
+      <aside id="workspace-navigation" className={`mvp-sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
         <div className="mvp-brand">
           <div>
             <strong>{productBrand.name}</strong>
-            <span>{managerUi.shellRole}</span>
+            <span>Управление недвижимостью</span>
           </div>
         </div>
 
@@ -8840,13 +8805,13 @@ const App = () => {
             <button
               className={activeManagerNav === screen ? "mvp-nav-button mvp-nav-button--active" : "mvp-nav-button"}
               key={screen}
-              onClick={() => setManagerScreen(screen)}
+              onClick={() => { setManagerScreen(screen); setMobileNavOpen(false); }}
               type="button"
             >
               <span>{managerUi.nav[screen]}</span>
-              {screen === "tickets" ? <small>{openTicketCount}</small> : null}
-              {screen === "chat" ? <small>{chatThreads.length}</small> : null}
-              {screen === "notifications" ? <small>{overview.notifications.filter((item) => item.unread).length}</small> : null}
+              {screen === "tickets" && openTicketCount > 0 ? <small>{openTicketCount}</small> : null}
+              {screen === "chat" && chatThreads.length > 0 ? <small>{chatThreads.length}</small> : null}
+              {screen === "notifications" && overview.notifications.some(item => item.unread) ? <small>{overview.notifications.filter((item) => item.unread).length}</small> : null}
             </button>
           ))}
         </div>
@@ -8858,7 +8823,7 @@ const App = () => {
             <button
               className={activeManagerNav === screen ? "mvp-nav-button mvp-nav-button--active" : "mvp-nav-button"}
               key={screen}
-              onClick={() => setManagerScreen(screen)}
+              onClick={() => { setManagerScreen(screen); setMobileNavOpen(false); }}
               type="button"
             >
               <span>{managerUi.nav[screen]}</span>
@@ -8869,18 +8834,14 @@ const App = () => {
         <div className="mvp-user">
           <strong>{session.user.fullName}</strong>
           <small>{t.roles[session.user.role]} · {selectedProperty?.name ?? productBrand.name}</small>
+          <button className="sidebar-logout" onClick={handleLogout} type="button">Выйти</button>
         </div>
       </aside>
 
       <section className="mvp-main">
-        <header className="mvp-topbar">
-          <div className="mvp-breadcrumb">
-            <span>{activeManagerNav === "profile" ? managerUi.nav.profile : managerUi.nav[activeManagerNav as keyof typeof managerUi.nav]}</span>
-          </div>
-        </header>
 
-        {error ? <div className="banner banner--error">{error}</div> : null}
-        {notice ? <div className="banner banner--notice">{notice}</div> : null}
+        {error ? <div className="banner banner--error" role="alert">{error}</div> : null}
+        {notice ? <div className="banner banner--notice" role="status">{notice}</div> : null}
         {renderDocumentPanel()}
 
         {renderManagerScreen()}
@@ -8918,7 +8879,7 @@ const App = () => {
             id: "payment",
             label: locale === "ru" ? "Отправить оплату" : "Send payment proof",
             meta: locale === "ru" ? "чек менеджеру" : "receipt to manager",
-            tone: overview.finance.arrearsAmount > 0 ? "warning" : "neutral",
+            tone: (overview.finance?.arrearsAmount ?? 0) > 0 ? "warning" : "neutral",
             onClick: () => setSelectedSection("leases")
           }
         ];
@@ -8971,7 +8932,9 @@ const App = () => {
 
   return (
     <main className="workspace-shell">
-      <aside className="sidebar">
+      <header className="mobile-app-bar"><strong>{productBrand.name}</strong><button type="button" ref={mobileMenuButton} className="secondary-button" aria-controls="workspace-navigation" aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(!mobileNavOpen)}><span className={`burger-icon ${mobileNavOpen ? "burger-icon--open" : ""}`} aria-hidden="true"><i /><i /><i /></span><span>{mobileNavOpen ? "Закрыть" : "Меню"}</span></button></header>
+      {mobileNavOpen && <button type="button" className="mobile-nav-scrim" aria-label="Закрыть меню" onClick={() => setMobileNavOpen(false)} />}
+      <aside id="workspace-navigation" className={`sidebar ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
         <div className="sidebar-brand">
           <strong>{productBrand.name}</strong>
           <span>{productBrand.subtitle}</span>
@@ -8982,7 +8945,7 @@ const App = () => {
             <button
               className={activeWorkspaceSection === section ? "nav-button nav-button--active" : "nav-button"}
               key={section}
-              onClick={() => setSelectedSection(section)}
+              onClick={() => { setSelectedSection(section); setMobileNavOpen(false); }}
               type="button"
             >
               <span>{t.nav[section]}</span>
@@ -9004,7 +8967,6 @@ const App = () => {
       <section className="workspace-main">
         <header className="workspace-header">
           <div>
-            <p className="section-label">{t.roles[session.user.role]}</p>
             <h1>{sectionTitle}</h1>
           </div>
 
@@ -9014,7 +8976,7 @@ const App = () => {
                 <div className="workspace-kpi">
                   <span>{isTenant ? t.nav.leases : ui.collectionRate}</span>
                   <strong>{isTenant ? overview.leases.length : `${overview.finance.collectionRate}%`}</strong>
-                  {!isTenant ? <small>{getCollectionBasisLabel(overview.finance, locale)}</small> : null}
+                  {!isTenant ? <small title="Фактически оплачено / начислено за указанный месяц">{getCollectionBasisLabel(overview.finance, locale)}</small> : null}
                 </div>
               ) : null}
               <div className="workspace-kpi">
@@ -9026,8 +8988,8 @@ const App = () => {
           </div>
         </header>
 
-        {error ? <div className="banner banner--error">{error}</div> : null}
-        {notice ? <div className="banner banner--notice">{notice}</div> : null}
+        {error ? <div className="banner banner--error" role="alert">{error}</div> : null}
+        {notice ? <div className="banner banner--notice" role="status">{notice}</div> : null}
         {renderDocumentPanel()}
 
         {renderSection()}

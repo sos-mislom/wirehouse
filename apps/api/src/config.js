@@ -128,3 +128,8 @@ export const config = {
   smtpFrom: process.env.SMTP_FROM ?? "sklad kontur <noreply@skladkontur.ru>",
   notificationChannels: toList(process.env.NOTIFICATION_CHANNELS ?? "in_app,email")
 };
+
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.JWT_ACCESS_SECRET || config.jwtSecret.length < 32 || config.jwtSecret === "skladkontur-demo-secret") throw new Error("Production requires a unique JWT_ACCESS_SECRET of at least 32 characters");
+  if (config.tenantOtpCode || config.allowOtpWithoutDelivery) throw new Error("Production forbids fixed OTP and OTP without delivery");
+}

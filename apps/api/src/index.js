@@ -7,6 +7,9 @@ import path from "node:path";
 import tls from "node:tls";
 import ExcelJS from "exceljs";
 
+import { isOpenTicket, isCriticalTicket, MAX_ATTACHMENT_BYTES } from "../../../packages/contracts/src/domain.js";
+import { getOperations, saveOperation, addReading, addWorkLog, updateUser, publicUser, runMaintenance, validateTicketLinks } from "./operations.js";
+
 import { config } from "./config.js";
 import {
   createToken,
@@ -128,7 +131,11 @@ const safeCheck = async (fn) => {
 
 const parseJsonBody = async (request) => {
   const chunks = [];
+  let size = 0;
+  const limit = request.url?.startsWith("/api/auth/") ? 1024 * 1024 : 140 * 1024 * 1024;
   for await (const chunk of request) {
+    size += chunk.length;
+    if (size > limit) throw Object.assign(new Error("Превышен максимальный размер запроса"), { status: 413 });
     chunks.push(chunk);
   }
 
@@ -155,7 +162,8 @@ const authenticate = (request) => {
     return null;
   }
 
-  return db.getUserById(payload.sub);
+  const user = db.getUserById(payload.sub);
+  return user?.is_active === 1 ? user : null;
 };
 
 const requireAuth = (request, response) => {
@@ -201,6 +209,7 @@ const buildSystemReadiness = async () => {
     };
   });
   const redis = await safeCheck(async () => {
+    if (!config.redisUrl) return { ok: true, message: "Single API process: in-memory expiring authentication challenges" };
     const value = execFileSync(config.redisCliBin, ["-u", config.redisUrl, "PING"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"]
@@ -228,15 +237,15 @@ const buildSystemReadiness = async () => {
       id: "redis",
       label: "Redis",
       ok: redis.ok,
-      status: redis.ok ? "redis" : "unavailable",
+      status: !config.redisUrl ? "memory" : redis.ok ? "redis" : "unavailable",
       message: redis.message
     },
     {
       id: "storage",
       label: "File storage",
-      ok: storage.ok && storage.driver === "s3",
+      ok: storage.ok,
       status: storage.driver ?? "unknown",
-      message: storage.driver === "s3" ? storage.message : "Local file storage is active; set S3 env for production"
+      message: storage.driver === "s3" ? storage.message : "Persistent local volume; included in scheduled backups"
     },
     {
       id: "secrets",
@@ -320,6 +329,9 @@ const normalizeUnit = (record) => ({
   id: record.id,
   propertyId: record.property_id,
   number: record.number,
+  building: record.building ?? "",
+  entrance: record.entrance ?? "",
+  photoUrl: record.photo_url ?? "",
   floor: Number(record.floor),
   area: Number(record.area),
   type: record.type,
@@ -404,6 +416,11 @@ const normalizeTicket = (record) => ({
   category: record.category,
   priority: record.priority,
   status: record.status,
+  equipmentId: record.equipment_id ?? null,
+  serviceId: record.service_id ?? null,
+  leaseId: record.lease_id ?? null,
+  maintenancePlanId: record.maintenance_plan_id ?? null,
+  workLogs: record.work_logs ?? [],
   sourceChannel: record.source_channel ?? "web",
   title: record.title,
   description: record.description,
@@ -1276,7 +1293,7 @@ const notifyTicketEvent = async ({ ticket, type, title, message, tone = "info", 
   });
 const formatMonthLabel = (value) =>
   new Intl.DateTimeFormat("ru-RU", {
-    month: "short"
+    month: "long"
   })
     .format(value)
     .replace(".", "");
@@ -1286,7 +1303,7 @@ const daysUntilIso = (isoDate) => {
   const ms = new Date(isoDate).getTime() - Date.now();
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
 };
-const isOpenTicket = (status) => !["completed", "resolved", "closed", "rejected"].includes(status);
+
 const compareByDateDesc = (left, right) => new Date(right).getTime() - new Date(left).getTime();
 const compareNotifications = (left, right) => {
   const toneDelta =
@@ -1317,103 +1334,28 @@ const buildLeaseRevenueRows = (scoped) => {
     });
 };
 const buildFinanceSummary = (scoped, scopedTickets) => {
-  const tenantIds = new Set(scoped.tenants.map((tenant) => tenant.id));
-  const invoices = db.listBillingInvoices().filter((invoice) => tenantIds.has(invoice.tenant_id));
-  const today = new Date();
-  const currentPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const currentInvoices = invoices.filter((invoice) => invoice.period === currentPeriod);
-  const billedMonthly = sumBy(currentInvoices, (invoice) => invoice.total_amount);
-  const collectedMonthly = sumBy(currentInvoices, (invoice) => invoice.paid_amount);
-  const isDueOrTouched = (invoice) => {
-    const dueTime = new Date(invoice.due_date).getTime();
-    return (
-      Number(invoice.paid_amount ?? 0) > 0 ||
-      invoice.status !== "upcoming" ||
-      (Number.isFinite(dueTime) && dueTime <= today.getTime())
-    );
-  };
-  const currentCollectibleInvoices = currentInvoices.filter(isDueOrTouched);
-  const fallbackPeriod =
-    [...new Set(invoices.map((invoice) => invoice.period))]
-      .filter((period) => period < currentPeriod)
-      .sort((left, right) => right.localeCompare(left))[0] ?? currentPeriod;
-  const collectionBaseInvoices =
-    currentCollectibleInvoices.length > 0
-      ? currentCollectibleInvoices
-      : invoices.filter((invoice) => invoice.period === fallbackPeriod);
-  const collectionBilled = sumBy(collectionBaseInvoices, (invoice) => invoice.total_amount);
-  const collectionPaid = sumBy(collectionBaseInvoices, (invoice) => invoice.paid_amount);
-  const collectionRate = collectionBilled > 0 ? roundMetric((collectionPaid / collectionBilled) * 100) : 0;
-  const collectionPeriodLabel =
-    collectionBaseInvoices.length > 0
-      ? formatMonthLabel(new Date(`${collectionBaseInvoices[0].period}-01`))
-      : formatMonthLabel(today);
-  const effectiveCollectedMonthly =
-    currentCollectibleInvoices.length > 0
-      ? collectedMonthly
-      : money(billedMonthly * Math.max(0.82, Math.min(1.01, collectionRate / 100 || 0.92)));
-  const maintenanceUnits = scoped.units.filter((unit) => unit.status === "maintenance").length;
-  const urgentTickets = scopedTickets.filter(
-    (ticket) => isOpenTicket(ticket.status) && priorityWeights[ticket.priority] >= 3
-  ).length;
-  const openBillingTickets = scopedTickets.filter(
-    (ticket) => isOpenTicket(ticket.status) && ticket.category === "billing"
-  ).length;
-  const budgetOpex = totalsSafe(scoped.units.filter((unit) => unit.status === "occupied"), (unit) => unit.area) * 82;
-  const opexActual = budgetOpex * (1 + maintenanceUnits * 0.03 + urgentTickets * 0.018);
-  const arrearsAmount = money(
-    sumBy(invoices.filter((invoice) => ["late", "overdue"].includes(invoice.status)), (invoice) => Math.max(0, invoice.total_amount - invoice.paid_amount)) +
-      openBillingTickets * 42000
-  );
-  const noi = money(effectiveCollectedMonthly - opexActual);
-  const opexRatio = budgetOpex > 0 ? roundMetric((opexActual / budgetOpex) * 100) : 0;
-  const currentMonth = startOfMonth();
-  const expiringSoon = scoped.leases.filter(
-    (lease) => activeLeaseStages.has(lease.stage) && daysUntilIso(lease.endDate) <= 60
-  ).length;
-  const series = [0, 1, 2].map((offset, index) => {
-    const monthDate = addMonths(currentMonth, offset);
-    const demandFactor = 1 - Math.max(0, expiringSoon - 1) * 0.015 + index * 0.01;
-    const stressFactor = 1 + maintenanceUnits * 0.015 + openBillingTickets * 0.012;
-    const period = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`;
-    const periodInvoices = invoices.filter((invoice) => invoice.period === period);
-    const periodBilled = sumBy(periodInvoices, (invoice) => invoice.total_amount);
-    const periodCollected = sumBy(periodInvoices, (invoice) => invoice.paid_amount);
-    const periodCollectibleInvoices = periodInvoices.filter(isDueOrTouched);
-    const shouldUseActualCollection = period < currentPeriod || periodCollectibleInvoices.length > 0;
-    const billed = periodBilled > 0 ? money(periodBilled) : money(billedMonthly * (0.98 + index * 0.015));
-    const collected =
-      periodBilled > 0 && shouldUseActualCollection
-        ? money(periodCollected)
-        : money(billed * Math.max(0.82, Math.min(1.01, (collectionRate / 100 || 0.92) * demandFactor)));
-    const forecast = money(collected - budgetOpex * stressFactor);
-
-    return {
-      id: `finance-${offset}`,
-      label: formatMonthLabel(monthDate),
-      billed,
-      collected,
-      forecast
-    };
+  const leaseIds = new Set(scoped.leases.map(l => l.id));
+  const propertyIds = new Set(scoped.properties.map(p => p.id));
+  const invoices = db.listBillingInvoices().filter(i => leaseIds.has(i.lease_id));
+  const currentPeriod = new Date().toISOString().slice(0, 7);
+  const current = invoices.filter(i => i.period === currentPeriod);
+  const collectionBilled = sumBy(current, i => i.total_amount);
+  const collectionPaid = sumBy(current, i => i.paid_amount);
+  const collectionRate = collectionBilled ? roundMetric(collectionPaid / collectionBilled * 100) : 0;
+  const expenses = db.data.operating_expenses.filter(e => propertyIds.has(e.propertyId));
+  const actualExpenses = sumBy(expenses.filter(e => e.date.startsWith(currentPeriod)), e => e.amount);
+  const invoiceIds = new Set(invoices.map(i => i.id));
+  const cashReceipts = sumBy(db.listBillingPayments().filter(p => invoiceIds.has(p.invoice_id) && p.paid_at.startsWith(currentPeriod)), p => p.amount);
+  const arrearsAmount = sumBy(invoices.filter(i => i.due_date < new Date().toISOString().slice(0, 10)), i => Math.max(0, i.total_amount - i.paid_amount));
+  const series = [0, 1, 2].map(offset => {
+    const date = addMonths(startOfMonth(), offset);
+    const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const periodInvoices = invoices.filter(i => i.period === period);
+    const billed = periodInvoices.length ? sumBy(periodInvoices, i => i.total_amount) : sumBy(scoped.leases.filter(l => activeLeaseStages.has(l.stage) && l.startDate <= `${period}-31` && l.endDate >= `${period}-01`), l => (scoped.units.find(u => u.id === l.unitId)?.area ?? 0) * l.ratePerSqm);
+    const costs = sumBy(expenses.filter(e => e.date.startsWith(period)), e => e.amount);
+    return { id: `finance-${offset}`, label: formatMonthLabel(date), billed: money(billed), collected: money(sumBy(periodInvoices, i => i.paid_amount)), forecast: money(billed - costs) };
   });
-
-  return {
-    collectionRate,
-    collectionPeriod: collectionBaseInvoices[0]?.period ?? currentPeriod,
-    collectionPeriodLabel,
-    collectionBasis:
-      currentCollectibleInvoices.length > 0
-        ? "current_due"
-        : fallbackPeriod < currentPeriod
-          ? "last_closed"
-          : "forecast",
-    arrearsAmount,
-    opexRatio,
-    noi,
-    forecastQuarter: money(sumBy(series, (entry) => entry.forecast)),
-    forecastPeriodLabel: `${series[0]?.label ?? ""}–${series[series.length - 1]?.label ?? ""}`,
-    series
-  };
+  return { collectionRate, collectionBilled: money(collectionBilled), collectionPaid: money(collectionPaid), collectionPeriod: currentPeriod, collectionPeriodLabel: formatMonthLabel(new Date()), collectionBasis: "current_due", arrearsAmount: money(arrearsAmount), opexRatio: collectionBilled ? roundMetric(actualExpenses / collectionBilled * 100) : 0, noi: money(cashReceipts - actualExpenses), forecastQuarter: money(sumBy(series, p => p.forecast)), forecastPeriodLabel: `${series[0].label}–${series[2].label}`, series };
 };
 const buildNotifications = (scoped, scopedTickets) => {
   const ticketItems = scopedTickets
@@ -1437,7 +1379,7 @@ const buildNotifications = (scoped, scopedTickets) => {
         id: `lease-${lease.id}`,
         tone: remainingDays <= 15 ? "critical" : remainingDays <= 45 ? "warning" : "info",
         title: `Договор ${lease.contractNumber}`,
-        message: `${lease.tenantName ?? "Арендатор"} · ${lease.propertyName ?? "Объект"} · ${Math.max(remainingDays, 0)} дн. до завершения`,
+        message: `${lease.tenantName ?? "Арендатор"} · ${lease.propertyName ?? "Объект"} · ${remainingDays < 0 ? `истёк ${Math.abs(remainingDays)} дн. назад` : `${remainingDays} дн. до завершения`}`,
         createdAt: lease.updatedAt,
         propertyName: lease.propertyName ?? null,
         entityType: "lease",
@@ -1463,7 +1405,7 @@ const buildNotifications = (scoped, scopedTickets) => {
       unread: unit.status === "maintenance"
     }));
 
-  return [...ticketItems, ...leaseItems, ...unitItems].sort(compareNotifications).slice(0, 8);
+  return [...ticketItems, ...leaseItems, ...unitItems].sort(compareNotifications);
 };
 const totalsSafe = (items, selector) => sumBy(items, selector);
 const buildTeamSummary = (user, scopedProperties, scopedTickets) => {
@@ -1497,8 +1439,8 @@ const buildTeamSummary = (user, scopedProperties, scopedTickets) => {
     });
 
   return users.map((member) => {
-    const assignedTickets = scopedTickets.filter((ticket) => ticket.assignedTo === member.id);
-    const urgentTicketCount = assignedTickets.filter((ticket) => priorityWeights[ticket.priority] >= 3).length;
+    const assignedTickets = scopedTickets.filter((ticket) => ticket.assignedTo === member.id && isOpenTicket(ticket.status));
+    const urgentTicketCount = assignedTickets.filter(isCriticalTicket).length;
     const propertyName = member.property_id ? propertyById.get(member.property_id)?.name ?? null : null;
     const focusTicket = [...assignedTickets].sort((left, right) => {
       const priorityDelta = (priorityWeights[right.priority] ?? 0) - (priorityWeights[left.priority] ?? 0);
@@ -1512,6 +1454,8 @@ const buildTeamSummary = (user, scopedProperties, scopedTickets) => {
     return {
       id: member.id,
       fullName: member.full_name,
+      isActive: member.is_active === 1,
+      specialty: member.specialty ?? "",
       role: member.role,
       propertyId: member.property_id,
       propertyName,
@@ -2943,12 +2887,12 @@ const buildBillingReconciliation = (user) => {
         reconciliationStatus === "matched"
           ? ""
           : reconciliationStatus === "overpaid"
-            ? "Payment exceeds invoice amount"
+            ? "Оплата превышает сумму счёта"
             : reconciliationStatus === "partial"
-              ? "Partial payment"
+              ? "Частичная оплата"
               : isOverdue
-                ? "Overdue outstanding balance"
-                : "Awaiting payment",
+                ? "Просроченный остаток"
+                : "Ожидается оплата",
       paymentCount: invoicePayments.length
     };
   });
@@ -3078,10 +3022,12 @@ const buildScopedCollections = (user) => {
   return {
     properties: scopedProperties,
     units: scopedUnits,
-    tenants: scopedTenants.map((tenant) => ({
-      ...tenant,
-      leaseCount: leaseCounts.get(tenant.id) ?? 0
-    })),
+    tenants: scopedTenants.map((tenant) => {
+      const leaseIds = new Set(scopedLeases.filter(l => l.tenantId === tenant.id).map(l => l.id));
+      const invoices = db.listBillingInvoices({tenantId: tenant.id}).filter(i => leaseIds.has(i.lease_id));
+      const billed = sumBy(invoices, i => i.total_amount);
+      return { ...tenant, leaseCount: leaseCounts.get(tenant.id) ?? 0, paymentDiscipline: billed ? roundMetric(sumBy(invoices, i => i.paid_amount) / billed * 100) : 0 };
+    }),
     leases: scopedLeases
   };
 };
@@ -3127,12 +3073,14 @@ const buildDashboardResponse = (user) => {
       ? Number(((totals.occupied_area / totals.total_rentable_area) * 100).toFixed(1))
       : 0;
   const finance = buildFinanceSummary(scoped, scopedTickets);
-  const persistedNotifications = db.listNotificationsForUser(user.id).map(normalizeNotification);
-  const generatedNotifications = buildNotifications(scoped, scopedTickets);
-  const notificationById = new Map(
-    [...persistedNotifications, ...generatedNotifications].map((item) => [item.id, item])
-  );
-  const notifications = [...notificationById.values()].sort(compareNotifications).slice(0, 12);
+  const activeTicketIds = new Set(scopedTickets.filter(t => isOpenTicket(t.status)).map(t => t.id));
+  const persistedNotifications = db.listNotificationsForUser(user.id).map(normalizeNotification).filter(n => n.entityType !== "ticket" || activeTicketIds.has(n.entityId));
+  const generatedNotifications = buildNotifications(scoped, scopedTickets).map(n => {
+    const receipt = db.data.notification_reads.find(r => r.userId === user.id && r.notificationId === n.id);
+    return { ...n, unread: n.unread && (!receipt || receipt.version !== n.createdAt) };
+  });
+  const generatedEntities = new Set(generatedNotifications.map(n => `${n.entityType}:${n.entityId}`));
+  const notifications = [...generatedNotifications, ...persistedNotifications.filter(n => !generatedEntities.has(`${n.entityType}:${n.entityId}`))].sort(compareNotifications);
   const team = buildTeamSummary(user, scoped.properties, scopedTickets);
   const exports = buildExportQueue(scoped, scopedTickets);
 
@@ -3352,7 +3300,7 @@ const tenantOnboardingPayload = () => ({
       id: "whatsapp",
       label: "WhatsApp",
       url: config.whatsappBotUrl,
-      enabled: Boolean(config.whatsappBotUrl),
+      enabled: Boolean(config.whatsappBotUrl && config.whatsappAccessToken && config.whatsappPhoneNumberId),
       instruction: "Напишите номер телефона в бизнес-чат WhatsApp."
     }
   ]
@@ -3750,7 +3698,7 @@ const persistBotTicketAttachment = async ({ ticket, user, channel, fileName, mim
   if (content.length === 0) {
     throw new Error("Empty file");
   }
-  if (content.length > 100 * 1024 * 1024) {
+  if (content.length > MAX_ATTACHMENT_BYTES) {
     throw new Error("File is too large");
   }
 
@@ -4138,7 +4086,10 @@ const buildTenantDetailResponse = (user, tenantId) => {
   const units = scoped.units.filter((unit) => unitIds.has(unit.id));
   const tickets = getScopedTickets(user).filter((ticket) => ticket.tenantId === tenant.id);
   const manualNotes = db.listTenantNotes(tenant.id).map(normalizeTenantNote);
-  const payments = buildTenantLedgerPayments(tenant);
+  const scopedLeaseIds = new Set(leases.map(l => l.id));
+  const tenantInvoices = db.listBillingInvoices({ tenantId: tenant.id }).filter(i => scopedLeaseIds.has(i.lease_id));
+  const invoiceIds = new Set(tenantInvoices.map(i => i.id));
+  const payments = buildTenantLedgerPayments(tenant).filter(p => invoiceIds.has(p.id));
   const openTicketCount = tickets.filter((ticket) => isOpenTicket(ticket.status)).length;
   const monthlyRent = sumBy(
     leases.filter((lease) => activeLeaseStages.has(lease.stage)),
@@ -4147,14 +4098,10 @@ const buildTenantDetailResponse = (user, tenantId) => {
       return (unit?.area ?? 0) * lease.ratePerSqm;
     }
   );
-  const billedAmount = sumBy(payments, (payment) => payment.amount);
-  const paidAmount = sumBy(payments.filter((payment) => payment.paidDate), (payment) => payment.amount);
+  const billedAmount = sumBy(tenantInvoices, i => i.total_amount);
+  const paidAmount = sumBy(tenantInvoices, i => i.paid_amount);
   const collectionRate = billedAmount > 0 ? roundMetric((paidAmount / billedAmount) * 100) : 0;
-  const arrearsAmount =
-    payments
-      .filter((payment) => ["late", "overdue"].includes(payment.status))
-      .reduce((total, payment) => total + payment.amount * (payment.status === "overdue" ? 0.22 : 0.08), 0) +
-    tickets.filter((ticket) => ticket.category === "billing" && isOpenTicket(ticket.status)).length * 32000;
+  const arrearsAmount = sumBy(tenantInvoices.filter(i => i.due_date < new Date().toISOString().slice(0, 10)), i => Math.max(0, i.total_amount - i.paid_amount));
   const nextExpiry = [...leases]
     .filter((lease) => activeLeaseStages.has(lease.stage))
     .sort((left, right) => new Date(left.endDate).getTime() - new Date(right.endDate).getTime())[0]?.endDate ?? null;
@@ -4175,7 +4122,7 @@ const buildTenantDetailResponse = (user, tenantId) => {
     leases,
     tickets,
     payments,
-    meters: buildTenantLedgerMeters(tenant),
+    meters: buildTenantLedgerMeters(tenant).filter(m => units.some(u => u.id === m.unitId)),
     notes: buildTenantNotes(tenant, tickets, manualNotes),
     risks: buildTenantRisks(tenant, leases, tickets)
   };
@@ -4274,7 +4221,7 @@ const server = http.createServer(async (request, response) => {
       }
 
       const user = db.getUserByEmail(body.email);
-      if (!user || !verifyPassword(body.password, user.password_hash)) {
+      if (!user || user.is_active !== 1 || !verifyPassword(body.password, user.password_hash)) {
         unauthorized(response);
         return;
       }
@@ -4621,7 +4568,7 @@ const server = http.createServer(async (request, response) => {
       }
 
       ok(response, {
-        items: db.listNotificationsForUser(user.id).map(normalizeNotification)
+        items: buildDashboardResponse(user).notifications
       });
       return;
     }
@@ -4633,13 +4580,15 @@ const server = http.createServer(async (request, response) => {
         return;
       }
 
-      const delivery = db.markNotificationRead({
-        userId: user.id,
-        deliveryId: notificationReadMatch[1]
-      });
+      const notificationId = notificationReadMatch[1];
+      const notification = buildDashboardResponse(user).notifications.find(n => n.id === notificationId);
+      if (!notification) { notFound(response); return; }
+      const delivery = db.markNotificationRead({ userId: user.id, deliveryId: notificationId });
       if (!delivery) {
-        notFound(response);
-        return;
+        const receipt = db.data.notification_reads.find(r => r.userId === user.id && r.notificationId === notificationId);
+        const values = { userId: user.id, notificationId, version: notification.createdAt, readAt: new Date().toISOString() };
+        if (receipt) Object.assign(receipt, values); else db.data.notification_reads.push(values);
+        db.save();
       }
 
       ok(response, { success: true });
@@ -5266,6 +5215,29 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (pathname === "/api/operations" || pathname.startsWith("/api/operations/") || (pathname.startsWith("/api/users/") && method === "PUT")) {
+      const user = requireAuth(request, response);
+      if (!user) return;
+      try {
+        if (method === "GET" && pathname === "/api/operations") { ok(response, getOperations(db, user)); return; }
+        const body = await parseJsonBody(request);
+        const userMatch = pathname.match(/^\/api\/users\/([a-zA-Z0-9-]+)$/);
+        if (userMatch && method === "PUT") { ok(response, { item: updateUser(db, user, userMatch[1], body) }); return; }
+        const reading = pathname.match(/^\/api\/operations\/meters\/([a-zA-Z0-9-]+)\/readings$/);
+        if (reading && method === "POST") { created(response, { item: addReading(db, user, reading[1], body) }); return; }
+        const work = pathname.match(/^\/api\/operations\/tickets\/([a-zA-Z0-9-]+)\/work$/);
+        if (work && method === "POST") { created(response, { item: addWorkLog(db, user, work[1], body) }); return; }
+        const operation = pathname.match(/^\/api\/operations\/(equipment|services|plans|meters|news|expenses|floorplans)(?:\/([a-zA-Z0-9-]+))?$/);
+        if (operation && ((method === "POST" && !operation[2]) || (method === "PUT" && operation[2]))) {
+          const item = saveOperation(db, user, operation[1], operation[2], body);
+          if (operation[1] === "plans") runMaintenance(db);
+          (method === "POST" ? created : ok)(response, { item }); return;
+        }
+        notFound(response);
+      } catch (error) { json(response, error.status ?? 400, { error: error.message }); }
+      return;
+    }
+
     if (method === "POST" && pathname === "/api/users") {
       const user = requirePortfolioWriteAccess(request, response);
       if (!user) {
@@ -5295,6 +5267,7 @@ const server = http.createServer(async (request, response) => {
       }
 
       try {
+        if (String(body.password).length < 10) { badRequest(response, "Пароль должен содержать не менее 10 символов"); return; }
         const createdUser = db.createUser({
           fullName: String(body.fullName),
           email: String(body.email).toLowerCase(),
@@ -5304,6 +5277,8 @@ const server = http.createServer(async (request, response) => {
           propertyId: body.role === "admin" ? null : String(body.propertyId)
         });
 
+        db.audit(user, "user_created", "user", createdUser.id, { user: publicUser(createdUser) });
+        db.save();
         created(response, {
           item: sanitizeUser(createdUser)
         });
@@ -6150,6 +6125,7 @@ const server = http.createServer(async (request, response) => {
       };
 
       try {
+        validateTicketLinks(db, user, payload);
         const createdRecord = db.createTicket(payload);
         const ticket = hydrateTicket(createdRecord.id) ?? normalizeTicket(createdRecord);
         await notifyTicketEvent({
@@ -6274,7 +6250,7 @@ const server = http.createServer(async (request, response) => {
           return;
         }
 
-        if (content.length > 100 * 1024 * 1024) {
+        if (content.length > MAX_ATTACHMENT_BYTES) {
           badRequest(response, "File is too large");
           return;
         }
@@ -6498,6 +6474,7 @@ const server = http.createServer(async (request, response) => {
         }
 
         try {
+          validateTicketLinks(db, user, nextPayload, db.getById("tickets", ticketId));
           const updatedRecord = db.updateTicket(ticketId, {
             ...nextPayload,
             reopenReason: body.reopenReason,
@@ -6513,7 +6490,7 @@ const server = http.createServer(async (request, response) => {
             type: "ticket_updated",
             title: `${updatedTicket.number} · ${updatedTicket.title}`,
             message: `Статус: ${translateStatus(updatedTicket.status)}. Ответственный: ${updatedTicket.assignedToName ?? "не назначен"}`,
-            tone: ["resolved", "closed"].includes(updatedTicket.status) ? "success" : "info",
+            tone: !isOpenTicket(updatedTicket.status) ? "success" : "info",
             actor: user
           });
           ok(response, {
@@ -6529,9 +6506,8 @@ const server = http.createServer(async (request, response) => {
     notFound(response);
   } catch (error) {
     console.error("warehouse-api error", error);
-    json(response, 500, {
-      error: "Internal server error",
-      message: error.message
+    json(response, error.status ?? (error instanceof SyntaxError ? 400 : 500), {
+      error: error.status || error instanceof SyntaxError ? error.message : "Internal server error"
     });
   }
 });
@@ -6539,3 +6515,12 @@ const server = http.createServer(async (request, response) => {
 server.listen(config.port, config.host, () => {
   console.log(`warehouse-api listening on http://${config.host}:${config.port}`);
 });
+
+const maintenanceTimer = setInterval(() => {
+  if (db.data.maintenance_plans.some(p => p.active && p.nextDate <= new Date().toISOString().slice(0, 10))) {
+    try { runMaintenance(db); } catch (error) { console.error("Maintenance generation failed", error.message); }
+  }
+}, 60_000);
+maintenanceTimer.unref();
+if (db.data.maintenance_plans.some(p => p.active && p.nextDate <= new Date().toISOString().slice(0, 10))) runMaintenance(db);
+for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => { clearInterval(maintenanceTimer); server.close(() => process.exit(0)); });

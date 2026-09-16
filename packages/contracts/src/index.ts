@@ -22,6 +22,7 @@ export type TicketStatus =
   | "completed"
   | "closed"
   | "rejected"
+  | "deferred"
   | "waiting_tenant"
   | "resolved";
 

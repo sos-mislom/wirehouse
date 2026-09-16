@@ -4,7 +4,7 @@ export type UserRole = "admin" | "manager" | "worker" | "tenant";
 export const brand = {
   ru: {
     name: "склад контур",
-    subtitle: "операционная платформа складской недвижимости"
+    subtitle: "Управление недвижимостью"
   },
   en: {
     name: "warehouse contour",
@@ -20,9 +20,9 @@ export const copy = {
       title: "CRM, заявки и объектный контроль в едином контуре.",
       description:
         "Рабочая система для управляющей компании складской недвижимости: объектный борт, договорный рейл и сервисная очередь без лишнего промо-шума.",
-      staffTab: "Сотрудник",
-      tenantTab: "Арендатор",
-      staffTitle: "Вход для администратора, менеджера и рабочего",
+      staffTab: "По паролю",
+      tenantTab: "По телефону",
+      staffTitle: "Вход в личный кабинет",
       tenantTitle: "Введите телефон, закреплённый за договором. Код придёт в подключённый канал.",
       tenantFirstTimeTitle: "Первый вход арендатора",
       tenantFirstTimeText: "Сначала привяжите Telegram или VK: откройте бота, отправьте номер телефона из договора, затем вернитесь сюда и запросите код.",
@@ -213,6 +213,7 @@ export const copy = {
       new: "Новая",
       in_progress: "В работе",
       waiting_tenant: "Ожидает арендатора",
+      deferred: "Отложена",
       resolved: "Решена",
       closed: "Закрыта"
     },
@@ -417,6 +418,7 @@ export const copy = {
       in_progress: "In progress",
       completed: "Completed",
       waiting_tenant: "Waiting for tenant",
+      deferred: "Deferred",
       resolved: "Resolved",
       closed: "Closed",
       rejected: "Rejected"
@@ -454,4 +456,4 @@ export const ticketCategoryOptions = [
   "other"
 ] as const;
 export const ticketPriorityOptions = ["low", "medium", "high", "urgent"] as const;
-export const ticketStatusOptions = ["new", "accepted", "in_progress", "completed", "closed", "rejected", "waiting_tenant", "resolved"] as const;
+export const ticketStatusOptions = ["new", "accepted", "in_progress", "completed", "closed", "rejected", "waiting_tenant", "deferred", "resolved"] as const;

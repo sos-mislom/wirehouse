@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import os from "node:os";
 
 import { hashPassword } from "./auth.js";
+import { isOpenTicket, requireNumber, requireDate, leaseOverlaps } from "../../../packages/contracts/src/domain.js";
 
 const nowIso = () => new Date().toISOString();
 const createId = () => crypto.randomUUID();
@@ -45,7 +46,7 @@ const ticketCategories = new Set([
   "other"
 ]);
 const ticketPriorities = new Set(["low", "medium", "high", "urgent"]);
-const ticketStatuses = new Set(["new", "accepted", "in_progress", "completed", "closed", "rejected", "waiting_tenant", "resolved"]);
+const ticketStatuses = new Set(["new", "accepted", "in_progress", "completed", "closed", "rejected", "waiting_tenant", "deferred", "resolved"]);
 const userRoles = new Set(["admin", "manager", "worker", "tenant"]);
 const billingStatuses = new Set(["paid", "partial", "late", "overdue", "upcoming"]);
 const meterTypes = new Set(["power", "electricity", "cold_chain", "heating", "water"]);
@@ -85,6 +86,16 @@ const createEmptyData = () => ({
   otp_bindings: [],
   password_resets: [],
   import_batches: [],
+  notification_reads: [],
+  audit_log: [],
+  floor_plans: [],
+  equipment: [],
+  service_catalog: [],
+  maintenance_plans: [],
+  meters: [],
+  resource_readings: [],
+  announcements: [],
+  operating_expenses: [],
   import_approvals: []
 });
 
@@ -164,6 +175,13 @@ export class WarehouseDatabase {
     this.demoSeedEnabled = process.env.ENABLE_DEMO_SEED === "true";
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.data = this.load();
+    // Public mutations are synchronous; one snapshot and one durable write per operation.
+    for (const name of Object.getOwnPropertyNames(WarehouseDatabase.prototype)) {
+      if (/^(create|update|delete|mark|set|sync|split)[A-Z]/.test(name)) {
+        const mutate = this[name].bind(this);
+        this[name] = (...args) => this.transaction(() => mutate(...args));
+      }
+    }
     if (this.demoSeedEnabled) {
       this.ensureSeedData();
       this.ensureRichDemoData();
@@ -178,7 +196,7 @@ export class WarehouseDatabase {
   }
 
   runPsql(args, input = null) {
-    return execFileSync(this.psqlBin, [this.databaseUrl, "-X", ...args], {
+    return execFileSync(this.psqlBin, [this.databaseUrl, "-X", "-v", "ON_ERROR_STOP=1", ...args], {
       encoding: "utf8",
       input,
       stdio: input === null ? ["ignore", "pipe", "pipe"] : ["pipe", "pipe", "pipe"]
@@ -217,7 +235,7 @@ values ('warehouse', $${tag}$${json}$${tag}$::jsonb, now())
 on conflict (id) do update set data = excluded.data, updated_at = now();`;
     const filePath = path.join(os.tmpdir(), `warehouse-state-${crypto.randomUUID()}.sql`);
     try {
-      fs.writeFileSync(filePath, sql);
+      fs.writeFileSync(filePath, sql, { mode: 0o600 });
       this.runPsql(["-q", "-f", filePath]);
     } finally {
       if (fs.existsSync(filePath)) {
@@ -227,112 +245,47 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   load() {
-    if (this.backend === "postgres") {
-      const state = this.readPostgresState();
-      if (state) {
-        return {
-          properties: ensureArray(state.properties),
-          units: ensureArray(state.units),
-          tenants: ensureArray(state.tenants),
-          leases: ensureArray(state.leases),
-          users: ensureArray(state.users),
-          tickets: ensureArray(state.tickets),
-          ticket_history: ensureArray(state.ticket_history),
-          ticket_comments: ensureArray(state.ticket_comments),
-          ticket_attachments: ensureArray(state.ticket_attachments),
-          tenant_notes: ensureArray(state.tenant_notes),
-          tenant_note_attachments: ensureArray(state.tenant_note_attachments),
-          lease_documents: ensureArray(state.lease_documents),
-          billing_invoices: ensureArray(state.billing_invoices),
-          billing_payments: ensureArray(state.billing_payments),
-          meter_readings: ensureArray(state.meter_readings),
-          notification_events: ensureArray(state.notification_events),
-          notification_deliveries: ensureArray(state.notification_deliveries),
-          otp_bindings: ensureArray(state.otp_bindings),
-          password_resets: ensureArray(state.password_resets),
-          import_batches: ensureArray(state.import_batches),
-          import_approvals: ensureArray(state.import_approvals)
-        };
-      }
-
-      if (fs.existsSync(this.dbPath)) {
-        try {
-          const raw = JSON.parse(fs.readFileSync(this.dbPath, "utf8"));
-          this.persistLoadedData = true;
-          return {
-            properties: ensureArray(raw.properties),
-            units: ensureArray(raw.units),
-            tenants: ensureArray(raw.tenants),
-            leases: ensureArray(raw.leases),
-            users: ensureArray(raw.users),
-            tickets: ensureArray(raw.tickets),
-            ticket_history: ensureArray(raw.ticket_history),
-            ticket_comments: ensureArray(raw.ticket_comments),
-            ticket_attachments: ensureArray(raw.ticket_attachments),
-            tenant_notes: ensureArray(raw.tenant_notes),
-            tenant_note_attachments: ensureArray(raw.tenant_note_attachments),
-            lease_documents: ensureArray(raw.lease_documents),
-            billing_invoices: ensureArray(raw.billing_invoices),
-            billing_payments: ensureArray(raw.billing_payments),
-            meter_readings: ensureArray(raw.meter_readings),
-            notification_events: ensureArray(raw.notification_events),
-            notification_deliveries: ensureArray(raw.notification_deliveries),
-            otp_bindings: ensureArray(raw.otp_bindings),
-            password_resets: ensureArray(raw.password_resets),
-            import_batches: ensureArray(raw.import_batches),
-            import_approvals: ensureArray(raw.import_approvals)
-          };
-        } catch {
-          this.persistLoadedData = true;
-          return createEmptyData();
-        }
-      }
-
-      this.persistLoadedData = true;
-      return createEmptyData();
+    let raw;
+    if (this.backend === "postgres") raw = this.readPostgresState();
+    if (!raw && fs.existsSync(this.dbPath)) {
+      raw = JSON.parse(fs.readFileSync(this.dbPath, "utf8"));
+      this.persistLoadedData = this.backend === "postgres";
     }
-
-    if (!fs.existsSync(this.dbPath)) {
-      return createEmptyData();
+    if (raw && (typeof raw !== "object" || Array.isArray(raw))) throw new Error("Invalid database state; restore a backup");
+    const data = createEmptyData();
+    for (const key of Object.keys(data)) {
+      if (raw?.[key] !== undefined && !Array.isArray(raw[key])) throw new Error(`Invalid database collection: ${key}`);
+      data[key] = raw?.[key] ?? [];
     }
-
-    try {
-      const raw = JSON.parse(fs.readFileSync(this.dbPath, "utf8"));
-      return {
-        properties: ensureArray(raw.properties),
-        units: ensureArray(raw.units),
-        tenants: ensureArray(raw.tenants),
-        leases: ensureArray(raw.leases),
-        users: ensureArray(raw.users),
-        tickets: ensureArray(raw.tickets),
-        ticket_history: ensureArray(raw.ticket_history),
-        ticket_comments: ensureArray(raw.ticket_comments),
-        ticket_attachments: ensureArray(raw.ticket_attachments),
-        tenant_notes: ensureArray(raw.tenant_notes),
-        tenant_note_attachments: ensureArray(raw.tenant_note_attachments),
-        lease_documents: ensureArray(raw.lease_documents),
-        billing_invoices: ensureArray(raw.billing_invoices),
-        billing_payments: ensureArray(raw.billing_payments),
-        meter_readings: ensureArray(raw.meter_readings),
-        notification_events: ensureArray(raw.notification_events),
-        notification_deliveries: ensureArray(raw.notification_deliveries),
-        otp_bindings: ensureArray(raw.otp_bindings),
-        password_resets: ensureArray(raw.password_resets),
-        import_batches: ensureArray(raw.import_batches),
-        import_approvals: ensureArray(raw.import_approvals)
-      };
-    } catch {
-      return createEmptyData();
-    }
+    return data;
   }
 
   save() {
-    if (this.backend === "postgres") {
-      this.writePostgresState(this.data);
-      return;
-    }
+    if (this.backend === "postgres") { this.writePostgresState(this.data); return; }
+    const tmp = `${this.dbPath}.${process.pid}.tmp`;
+    const fd = fs.openSync(tmp, "w", 0o600);
+    try { fs.writeFileSync(fd, JSON.stringify(this.data, null, 2)); fs.fsyncSync(fd); }
+    finally { fs.closeSync(fd); }
+    fs.renameSync(tmp, this.dbPath);
+  }
 
-    fs.writeFileSync(this.dbPath, JSON.stringify(this.data, null, 2));
+  transaction(fn) {
+    if (this.inTransaction) return fn();
+    this.inTransaction = true;
+    const before = clone(this.data);
+    const save = this.save;
+    this.save = () => {};
+    try {
+      const result = fn();
+      this.save = save;
+      this.save();
+      return result;
+    } catch (error) { this.data = before; throw error; }
+    finally { this.save = save; this.inTransaction = false; }
+  }
+
+  audit(actor, action, entityType, entityId, changes = {}) {
+    this.data.audit_log.push({ id: createId(), actorId: actor.id, actorName: actor.full_name, action, entityType, entityId, changes, createdAt: nowIso() });
   }
 
   ensureUnique(collection, predicate, message) {
@@ -409,10 +362,16 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   validatePropertyPayload(record) {
+    requireNumber(record.total_area, "Общая площадь", 0.01);
+    requireNumber(record.rentable_area, "Арендопригодная площадь", 0, record.total_area);
     assertEnum(record.warehouse_class, warehouseClasses, "warehouse class");
   }
 
   validateUnitPayload(record) {
+    requireNumber(record.area, "Площадь", 0.01);
+    requireNumber(record.floor, "Этаж", -10, 300);
+    if (record.photo_url && !/^https:\/\//.test(record.photo_url)) throw new Error("Фото помещения должно использовать HTTPS");
+    if (!Number.isInteger(record.floor)) throw new Error("Этаж должен быть целым числом");
     assertEnum(record.type, unitTypes, "unit type");
     assertEnum(record.status, unitStatuses, "unit status");
   }
@@ -422,6 +381,12 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   validateLeasePayload(record) {
+    requireDate(record.start_date, "Начало договора");
+    requireDate(record.end_date, "Окончание договора");
+    if (record.start_date > record.end_date) throw new Error("Окончание договора раньше начала");
+    requireNumber(record.rate_per_sqm, "Ставка");
+    requireNumber(record.deposit, "Депозит");
+    requireNumber(record.indexation_pct, "Индексация", 0, 100);
     assertEnum(record.stage, leaseStages, "lease stage");
   }
 
@@ -1784,6 +1749,8 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   deleteProperty(id) {
+    if (this.data.units.some(u => u.property_id === id) || this.data.operating_expenses.some(x => x.propertyId === id) || this.data.floor_plans.some(x => x.propertyId === id)) throw new Error("Нельзя удалить объект с помещениями, расходами или планами");
+    if ([...this.data.equipment, ...this.data.meters, ...this.data.maintenance_plans, ...this.data.service_catalog, ...this.data.announcements].some(x => x.propertyId === id)) throw new Error("Объект используется в эксплуатации");
     const current = this.getById("properties", id);
     if (!current) {
       return createChangeResult(0);
@@ -1851,14 +1818,19 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.requireProperty(payload.propertyId);
     this.ensureUnique(
       this.data.units,
-      (unit) => unit.property_id === payload.propertyId && unit.number === payload.number,
-      "Unit number must be unique within the property"
+      (unit) => unit.property_id === payload.propertyId && unit.number === payload.number && (unit.building ?? "") === (payload.building ?? "") && (unit.entrance ?? "") === (payload.entrance ?? "") && Number(unit.floor) === Number(payload.floor),
+      "Номер помещения должен быть уникальным в пределах этажа и секции"
     );
 
     const record = {
       id: createId(),
       property_id: payload.propertyId,
       number: payload.number,
+      building: String(payload.building ?? "").trim(),
+      entrance: String(payload.entrance ?? "").trim(),
+      plan_x: Number(payload.planX ?? 0),
+      plan_y: Number(payload.planY ?? 0),
+      photo_url: String(payload.photoUrl ?? ""),
       floor: Number(payload.floor),
       area: Number(payload.area),
       type: payload.type,
@@ -1891,14 +1863,17 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
       (unit) =>
         unit.id !== id &&
         unit.property_id === nextPropertyId &&
-        unit.number === (payload.number ?? current.number),
-      "Unit number must be unique within the property"
+        unit.number === (payload.number ?? current.number) && (unit.building ?? "") === (payload.building ?? current.building ?? "") && (unit.entrance ?? "") === (payload.entrance ?? current.entrance ?? "") && Number(unit.floor) === Number(payload.floor ?? current.floor),
+      "Номер помещения должен быть уникальным в пределах этажа и секции"
     );
 
     const next = {
       ...current,
       property_id: nextPropertyId,
       number: payload.number ?? current.number,
+      building: payload.building !== undefined ? String(payload.building).trim() : current.building ?? "",
+      entrance: payload.entrance !== undefined ? String(payload.entrance).trim() : current.entrance ?? "",
+      photo_url: payload.photoUrl !== undefined ? String(payload.photoUrl) : current.photo_url ?? "",
       floor: payload.floor !== undefined ? Number(payload.floor) : current.floor,
       area: payload.area !== undefined ? Number(payload.area) : current.area,
       type: payload.type ?? current.type,
@@ -1942,7 +1917,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.ensureUnique(
       this.data.units,
       (unit) => unit.property_id === current.property_id && unit.number === newNumber,
-      "Unit number must be unique within the property"
+      "Номер помещения должен быть уникальным в пределах этажа и секции"
     );
 
     const created = {
@@ -1974,6 +1949,8 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   deleteUnit(id) {
+    if (this.data.leases.some(l => l.unit_id === id) || this.data.tickets.some(t => t.unit_id === id) || this.data.floor_plans.some(p => p.markers?.some(m => m.unitId === id))) throw new Error("Нельзя удалить помещение с договорами, заявками или отметками на плане");
+    if (this.data.equipment.some(x => x.unitId === id) || this.data.meters.some(x => x.unitId === id) || this.data.maintenance_plans.some(x => x.unitId === id)) throw new Error("Сначала перенесите оборудование, счётчики и ППР помещения");
     const current = this.getById("units", id);
     if (!current) {
       return createChangeResult(0);
@@ -2028,7 +2005,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
       existingUser.phone = tenantRecord.phone;
       existingUser.full_name = tenantRecord.contact_name;
       existingUser.tenant_id = tenantRecord.id;
-      existingUser.is_active = 1;
+      // Editing tenant contact details must not reactivate a blocked account.
       return existingUser.id;
     }
 
@@ -2121,6 +2098,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   deleteTenant(id) {
+    if (this.data.leases.some(l => l.tenant_id === id) || this.data.tickets.some(t => t.tenant_id === id)) throw new Error("Нельзя удалить арендатора с договорами или заявками; измените его статус");
     const current = this.getById("tenants", id);
     if (!current) {
       return createChangeResult(0);
@@ -2308,7 +2286,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.requireUnit(payload.unitId);
     this.ensureUnique(
       this.data.leases,
-      (lease) => lease.unit_id === payload.unitId,
+      (lease) => lease.unit_id === payload.unitId && leaseOverlaps(lease, { stage: payload.stage, start_date: payload.startDate, end_date: payload.endDate }),
       "Unit already has a lease"
     );
     this.ensureUnique(
@@ -2355,7 +2333,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     this.requireUnit(nextUnitId);
     this.ensureUnique(
       this.data.leases,
-      (lease) => lease.id !== id && lease.unit_id === nextUnitId,
+      (lease) => lease.id !== id && lease.unit_id === nextUnitId && leaseOverlaps(lease, { stage: payload.stage ?? current.stage, start_date: payload.startDate ?? current.start_date, end_date: payload.endDate ?? current.end_date }),
       "Unit already has a lease"
     );
     this.ensureUnique(
@@ -2399,6 +2377,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
   }
 
   deleteLease(id) {
+    if (this.data.billing_invoices.some(i => i.lease_id === id) || this.data.tickets.some(t => t.lease_id === id) || this.data.lease_documents.some(d => d.lease_id === id)) throw new Error("Нельзя удалить договор со счетами, заявками или документами; используйте статус «Расторгнут»");
     const current = this.getById("leases", id);
     if (!current) {
       return createChangeResult(0);
@@ -2541,7 +2520,12 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
       description: payload.description,
       sla_hours: slaHours,
       sla_due_at: payload.slaDueAt ?? addHours(new Date(createdAt), slaHours),
-      checklist_items: buildChecklistItems(payload.category),
+      equipment_id: payload.equipmentId ?? null,
+      service_id: payload.serviceId ?? null,
+      lease_id: payload.leaseId ?? null,
+      maintenance_plan_id: payload.maintenancePlanId ?? null,
+      work_logs: [],
+      checklist_items: payload.checklistItems ?? buildChecklistItems(payload.category),
       created_at: createdAt,
       updated_at: createdAt,
       resolved_at: null,
@@ -2598,6 +2582,9 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
       category: nextCategory,
       priority: payload.priority ?? current.priority,
       status: nextStatus,
+      equipment_id: payload.equipmentId !== undefined ? payload.equipmentId : current.equipment_id,
+      service_id: payload.serviceId !== undefined ? payload.serviceId : current.service_id,
+      lease_id: payload.leaseId !== undefined ? payload.leaseId : current.lease_id,
       source_channel: payload.sourceChannel ?? current.source_channel,
       title: payload.title ?? current.title,
       description: payload.description ?? current.description,
@@ -2609,7 +2596,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
           : current.checklist_items,
       updated_at: nowIso(),
       resolved_at:
-        nextStatus === "resolved"
+        !isOpenTicket(nextStatus)
           ? current.resolved_at ?? nowIso()
           : nextStatus === "closed"
             ? current.resolved_at ?? nowIso()
@@ -2805,6 +2792,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
           tenant_name: tenant?.name ?? null,
           unit_number: unit?.number ?? null,
           property_name: property?.name ?? null,
+          status: this.calculateBillingStatus(invoice),
           paid_amount: paidAmount,
           paid_at: payments.sort((left, right) => String(right.paid_at).localeCompare(String(left.paid_at)))[0]?.paid_at ?? null
         };

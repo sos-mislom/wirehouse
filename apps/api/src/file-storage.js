@@ -35,6 +35,10 @@ export const createFileStorage = (config) => {
         }
       },
       async check() {
+        for (const directory of [config.documentStoragePath, config.ticketAttachmentStoragePath]) {
+          fs.mkdirSync(directory, { recursive: true });
+          fs.accessSync(directory, fs.constants.W_OK | fs.constants.R_OK);
+        }
         return {
           ok: true,
           driver: "local",
