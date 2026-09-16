@@ -84,6 +84,7 @@ const createEmptyData = () => ({
   notification_events: [],
   notification_deliveries: [],
   otp_bindings: [],
+  bot_link_codes: [],
   password_resets: [],
   import_batches: [],
   notification_reads: [],
@@ -1482,14 +1483,16 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
     const binding = this.data.otp_bindings.find(
       (item) => item.channel === channel && normalizePhoneKey(item.phone) === normalized
     );
-    return binding ? clone(binding) : null;
+    const user = binding?.user_id ? this.getUserById(binding.user_id) : null;
+    return binding && user?.is_active && normalizePhoneKey(user.phone) === normalized ? clone(binding) : null;
   }
 
   getOtpBindingByRecipient(channel, recipientId) {
     const binding = this.data.otp_bindings.find(
       (item) => item.channel === channel && String(item.recipient_id) === String(recipientId)
     );
-    return binding ? clone(binding) : null;
+    const user = binding?.user_id ? this.getUserById(binding.user_id) : null;
+    return binding && user?.is_active && normalizePhoneKey(user.phone) === normalizePhoneKey(binding.phone) ? clone(binding) : null;
   }
 
   upsertOtpBinding(payload) {
@@ -1527,7 +1530,7 @@ on conflict (id) do update set data = excluded.data, updated_at = now();`;
 
     return clone(
       this.data.otp_bindings.filter(
-        (item) => String(item.phone ?? "").replace(/[^\d+]/g, "") === phone && item.recipient_id
+        (item) => item.user_id === user.id && user.is_active === 1 && normalizePhoneKey(item.phone) === normalizePhoneKey(phone) && item.recipient_id
       )
     );
   }

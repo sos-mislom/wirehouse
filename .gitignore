@@ -35,3 +35,8 @@ backups/
 *.log
 
 infra/deploy/keys/
+
+# Private integration credentials supplied locally.
+pass.txt
+пасс.txt
+пасс.тхт

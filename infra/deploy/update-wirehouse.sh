@@ -3,6 +3,8 @@
 set -euo pipefail
 umask 077
 cd /opt/wirehouse
+compose_args=(-p wirehouse -f compose.yml)
+if [[ -f compose.network.yml ]]; then compose_args+=(-f compose.network.yml); fi
 release_tag=${1:?Usage: update-wirehouse.sh RELEASE_TAG}
 [[ "$release_tag" =~ ^[A-Za-z0-9_.-]+$ ]] || exit 2
 release="/opt/wirehouse/releases/$release_tag"
@@ -23,12 +25,12 @@ rollback() {
   cp "$release/previous-nginx.conf" /etc/nginx/sites-available/wirehouse.conf
   ln -s "$previous_web" /var/www/wirehouse/rollback-link
   mv -Tf /var/www/wirehouse/rollback-link /var/www/wirehouse/current
-  docker compose -p wirehouse -f compose.yml up -d api </dev/null
+  docker compose "${compose_args[@]}" up -d api </dev/null
   nginx -t && systemctl reload nginx
 }
 trap 'rollback' ERR
 cp "$release/infra/deploy/compose.wirehouse.yml" compose.yml
-docker compose -p wirehouse -f compose.yml up -d api </dev/null
+docker compose "${compose_args[@]}" up -d api </dev/null
 healthy=false
 for attempt in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:18044/health > "$release/health.json"; then healthy=true; break; fi

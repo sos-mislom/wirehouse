@@ -1,3 +1,4 @@
+import { verifiedTelegramPhone, issueBotLink, consumeBotLink, bindBotUser } from "./bot-links.js";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -3286,22 +3287,15 @@ const tenantOnboardingPayload = () => ({
       id: "telegram",
       label: "Telegram",
       url: config.telegramBotUrl,
-      enabled: Boolean(config.telegramBotUrl && config.telegramBotToken),
-      instruction: "Откройте бота и отправьте номер телефона, закреплённый за договором."
+      enabled: Boolean(config.telegramBotUrl && config.telegramBotToken && config.telegramWebhookSecret),
+      instruction: "Откройте бота и поделитесь своим контактом кнопкой «Поделиться телефоном»."
     },
     {
       id: "vk",
       label: "VK",
       url: config.vkBotUrl,
-      enabled: Boolean(config.vkBotUrl && config.vkGroupToken),
-      instruction: "Откройте сообщения сообщества и отправьте номер телефона."
-    },
-    {
-      id: "whatsapp",
-      label: "WhatsApp",
-      url: config.whatsappBotUrl,
-      enabled: Boolean(config.whatsappBotUrl && config.whatsappAccessToken && config.whatsappPhoneNumberId),
-      instruction: "Напишите номер телефона в бизнес-чат WhatsApp."
+      enabled: Boolean(config.vkBotUrl && config.vkGroupToken && config.vkWebhookSecret && config.vkGroupId),
+      instruction: "Откройте сообщения сообщества. Для первой привязки отправьте одноразовый код из кабинета или полученный у управляющего."
     }
   ]
 });
@@ -3421,6 +3415,7 @@ const parseTelegramPhone = (message) => {
   return raw.length === 11 && raw.startsWith("7") ? `+${raw}` : raw;
 };
 const handleTelegramWebhook = async (request, response) => {
+  if (!config.telegramBotToken || !config.telegramWebhookSecret) { serviceUnavailable(response, "Telegram не настроен"); return; }
   if (config.telegramWebhookSecret) {
     const actualSecret = request.headers["x-telegram-bot-api-secret-token"];
     if (actualSecret !== config.telegramWebhookSecret) {
@@ -3455,6 +3450,8 @@ const handleTelegramWebhook = async (request, response) => {
     return;
   }
 
+  if (message.chat?.type !== "private" || String(chatId) !== String(message.from?.id)) { ok(response, {success:true}); return; }
+
   const media = extractTelegramMedia(message);
   if (media) {
     const binding = db.getOtpBindingByRecipient("telegram", chatId);
@@ -3473,7 +3470,13 @@ const handleTelegramWebhook = async (request, response) => {
     }
   }
 
-  const phone = parseTelegramPhone(message);
+  if (/^\/link(?:\s|$)/i.test(message.text || "")) {
+    let text;
+    try { consumeBotLink(db, "telegram", chatId, message.text); text = "Telegram подключён. Вернитесь на сайт и запросите код входа."; }
+    catch (error) { text = error.message; }
+    await sendTelegramText({chatId, text}); ok(response, {success:true}); return;
+  }
+  const phone = verifiedTelegramPhone(message);
   if (!phone) {
     const binding = db.getOtpBindingByRecipient("telegram", chatId);
     if (binding && message?.text && !String(message.text).startsWith("/")) {
@@ -3508,7 +3511,8 @@ const handleTelegramWebhook = async (request, response) => {
     if (config.telegramBotToken) {
       await sendTelegramText({
         chatId,
-        text: "Для привязки к склад контур отправьте номер телефона, закреплённый за договором. Например: +79990000001."
+        text: "Поделитесь своим телефоном кнопкой ниже. Номер должен совпадать с указанным в договоре. Либо отправьте /link и одноразовый код из кабинета.",
+        replyMarkup: {keyboard:[[{text:"Поделиться телефоном",request_contact:true}]],resize_keyboard:true,one_time_keyboard:true}
       });
     }
     ok(response, { success: true, bound: false });
@@ -3532,14 +3536,9 @@ const handleTelegramWebhook = async (request, response) => {
     return;
   }
 
-  db.upsertOtpBinding({
-    channel: "telegram",
-    phone: user.phone,
-    tenantId: user.tenant_id,
-    userId: user.id,
-    recipientId: chatId,
-    displayName: [message.from?.first_name, message.from?.last_name].filter(Boolean).join(" ")
-  });
+  try { bindBotUser(db, user, "telegram", chatId, [message.from?.first_name, message.from?.last_name].filter(Boolean).join(" ")); }
+  catch (error) { if (!error.status) throw error; await sendTelegramText({chatId, text:error.message}); ok(response, {success:true}); return; }
+
 
   if (config.telegramBotToken) {
     await sendTelegramText({
@@ -3913,6 +3912,8 @@ const buildLeaseDocumentHtml = (lease) => `<!doctype html>
 </html>`;
 const handleVkWebhook = async (request, response) => {
   const update = await parseJsonBody(request);
+  if (!config.vkGroupToken || !config.vkWebhookSecret || !config.vkGroupId) { serviceUnavailable(response, "VK не настроен"); return; }
+  if (update.secret !== config.vkWebhookSecret || String(update.group_id) !== String(config.vkGroupId)) { forbidden(response); return; }
   if (update.type === "confirmation") {
     response.writeHead(200, {
       "Content-Type": "text/plain; charset=utf-8",
@@ -3938,6 +3939,7 @@ const handleVkWebhook = async (request, response) => {
 
   const message = update.object?.message ?? {};
   const userId = message.from_id;
+  if (!Number.isInteger(userId) || userId <= 0 || message.peer_id !== userId) { response.end("ok"); return; }
   const payload =
     typeof message.payload === "string"
       ? (() => {
@@ -3980,8 +3982,12 @@ const handleVkWebhook = async (request, response) => {
     }
   }
 
-  const phone = parseTelegramPhone({ text: message.text });
-  if (!phone) {
+  if (/^\/link(?:\s|$)/i.test(message.text || "")) {
+    let text;
+    try { consumeBotLink(db, "vk", userId, message.text); text = "VK подключён. Вернитесь на сайт и запросите код входа."; }
+    catch (error) { text = error.message; }
+    await sendVkText({userId, message:text}); response.end("ok"); return;
+  }
     const binding = userId ? db.getOtpBindingByRecipient("vk", userId) : null;
     if (binding && message.text) {
       const completed = await handleBotWorkerTextCommand({
@@ -4022,51 +4028,7 @@ const handleVkWebhook = async (request, response) => {
       return;
     }
 
-    if (config.vkGroupToken && userId) {
-      await sendVkText({
-        userId,
-        message: "Для привязки к склад контур отправьте номер телефона. Например: +79990000001."
-      });
-    }
-    response.end("ok");
-    return;
-  }
-
-  const user = db.getTenantUserByNormalizedPhone(phone) ?? db.getUserByPredicate(
-    (item) =>
-      normalizePhoneKey(item.phone) === normalizePhoneKey(phone) &&
-      item.role !== "tenant" &&
-      item.is_active === 1
-  );
-  if (!user) {
-    if (config.vkGroupToken && userId) {
-      await sendVkText({
-        userId,
-        message: "Этот телефон не найден в склад контур. Проверьте номер или обратитесь к администратору."
-      });
-    }
-    response.end("ok");
-    return;
-  }
-
-  db.upsertOtpBinding({
-    channel: "vk",
-    phone: user.phone,
-    tenantId: user.tenant_id,
-    userId: user.id,
-    recipientId: userId,
-    displayName: ""
-  });
-
-  if (config.vkGroupToken && userId) {
-    await sendVkText({
-      userId,
-      message:
-        user.role === "tenant"
-          ? "Телефон привязан. Теперь вернитесь на страницу входа арендатора и запросите код."
-          : "Телефон сотрудника привязан. Теперь можно получать коды восстановления пароля в VK."
-    });
-  }
+  await sendVkText({userId, message: "Чтобы подключить VK, отправьте /link и одноразовый код из раздела «Подключение мессенджеров» в кабинете. При первом входе код выдаёт управляющий. Сам по себе номер телефона не подтверждает доступ."});
 
   response.writeHead(200, {
     "Content-Type": "text/plain; charset=utf-8",
@@ -4451,6 +4413,12 @@ const server = http.createServer(async (request, response) => {
         user: sanitizeUser(freshUser)
       });
       return;
+    }
+
+    if (method === "POST" && pathname === "/api/integrations/link-code") {
+      const user = requireAuth(request, response); if (!user) return;
+      const body = await parseJsonBody(request);
+      ok(response, issueBotLink(db, user, body.userId, body.channel)); return;
     }
 
     if (method === "GET" && pathname === "/api/auth/me") {

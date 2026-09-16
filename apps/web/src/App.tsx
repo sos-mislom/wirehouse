@@ -1,3 +1,4 @@
+import { MessengerButtons, BotLinkPanel } from "./MessengerButtons";
 import { ForecastChart } from "./ForecastChart";
 import { ResponsiveTable } from "./ResponsiveTable";
 import { isOpenTicket, isCriticalTicket, slaState, MAX_ATTACHMENT_BYTES } from "../../../packages/contracts/src/domain.js";
@@ -1155,6 +1156,7 @@ const App = () => {
     lease: initialRoute.editLease || null
   });
   const [bootstrapping, setBootstrapping] = useState(true);
+  const [tenantConnectionOpen, setTenantConnectionOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"staff" | "tenant">("staff");
   const [tenantOtpRequested, setTenantOtpRequested] = useState(false);
   const [staffAuthStep, setStaffAuthStep] = useState<"password" | "mfa" | "reset-request" | "reset-confirm">("password");
@@ -4213,10 +4215,10 @@ const App = () => {
           </div>
 
           <div className="login-title">
-            <p>{authMode === "staff" ? t.auth.staffTitle : t.auth.tenantTitle}</p>
+            <p>{tenantConnectionOpen ? "Подключить мессенджер" : authMode === "staff" ? t.auth.staffTitle : "Вход по телефону"}</p>
           </div>
 
-          <div className="auth-tabs auth-tabs--mvp">
+          {!tenantConnectionOpen && <div className="auth-tabs auth-tabs--mvp">
             <button
               className={authMode === "staff" ? "auth-tab auth-tab--active" : "auth-tab"}
               onClick={() => setAuthMode("staff")}
@@ -4231,7 +4233,7 @@ const App = () => {
             >
               {t.auth.tenantTab}
             </button>
-          </div>
+          </div>}
 
           {error ? <div className="banner banner--error" role="alert">{error}</div> : null}
           {notice ? <div className="banner banner--notice" role="status">{notice}</div> : null}
@@ -4328,54 +4330,34 @@ const App = () => {
                 </form>
               ) : null}
             </>
+          ) : tenantConnectionOpen ? (
+            <section className="messenger-setup">
+              <MessengerButtons channels={tenantOnboarding?.channels ?? []} showInstructions />
+              <button className="text-button messenger-back" type="button" onClick={() => { setTenantConnectionOpen(false); setError(""); }}>← Ко входу</button>
+            </section>
           ) : (
             <>
-              <div className="tenant-onboarding">
-                <div>
-                  <strong>{tenantOnboarding?.channels.some(channel => channel.enabled) ? t.auth.tenantFirstTimeTitle : "Вход по телефону пока недоступен"}</strong>
-                  <p>{tenantOnboarding?.channels.some(channel => channel.enabled) ? t.auth.tenantFirstTimeText : "Используйте вкладку «По паролю». Доступ выдаёт управляющий объектом."}</p>
-                </div>
-                <div className="tenant-channel-grid">
-                  {(tenantOnboarding?.channels ?? []).map((channel) =>
-                    channel.enabled && channel.url ? (
-                      <a
-                        className={`tenant-channel tenant-channel--${channel.id}`}
-                        href={channel.url}
-                        key={channel.id}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        <span>{channel.label}</span>
-                      </a>
-                    ) : (
-                      <span className="tenant-channel tenant-channel--disabled" key={channel.id}>
-                        <span>{channel.label}</span>
-                        <small>{t.auth.channelUnavailable}</small>
-                      </span>
-                    )
-                  )}
-                </div>
-              </div>
-
               <form className="auth-form" onSubmit={tenantOtpRequested ? handleTenantVerify : handleTenantOtpRequest}>
                 <label>
                   <span>{t.auth.phone}</span>
-                  <input name="phone" onChange={handleFieldChange(setTenantForm)} value={tenantForm.phone} />
+                  <input name="phone" type="tel" autoComplete="tel" required placeholder="+7 999 123-45-67" onChange={handleFieldChange(setTenantForm)} value={tenantForm.phone} />
                 </label>
                 {tenantOtpRequested ? (
                   <label>
                     <span>{t.auth.otp}</span>
-                    <input name="otp" onChange={handleFieldChange(setTenantForm)} value={tenantForm.otp} />
+                    <input name="otp" inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" maxLength={6} onChange={handleFieldChange(setTenantForm)} value={tenantForm.otp} />
                   </label>
                 ) : null}
                 <button
                   className="primary-button"
-                  disabled={busyAction === "tenant-request" || busyAction === "tenant-verify"}
+                  disabled={busyAction === "tenant-request" || busyAction === "tenant-verify" || !tenantOnboarding?.channels.some(channel => channel.enabled)}
                   type="submit"
                 >
                   {tenantOtpRequested ? t.auth.verifyOtp : t.auth.requestOtp}
                 </button>
+                {!tenantOtpRequested && <p className="auth-delivery-hint">Код придёт в подключённый Telegram или VK.</p>}
               </form>
+              <div className="auth-connect-link"><span>Впервые здесь?</span><button type="button" className="text-button" onClick={() => { setTenantConnectionOpen(true); setError(""); setNotice(""); }}>Подключить мессенджер</button></div>
             </>
           )}
 
@@ -4386,7 +4368,7 @@ const App = () => {
 
   const renderOverview = () => (
     <section className="section-grid overview-grid">
-      {isTenant ? <TenantServices data={operations} /> : null}
+      {isTenant ? <><TenantServices data={operations} /><article className="surface"><BotLinkPanel token={session.token} /></article></> : null}
       <article className="surface surface--hero surface--wide">
         <div className="industrial-hero">
           <div className="industrial-hero-copy">
@@ -4952,7 +4934,7 @@ const App = () => {
 
   const renderLeases = () => (
     <section className="section-grid">
-      {isTenant ? <TenantServices data={operations} /> : null}
+      {isTenant ? <><TenantServices data={operations} /><article className="surface"><BotLinkPanel token={session.token} /></article></> : null}
       <article className="surface surface--wide">
         <div className="surface-head">
           <div>
@@ -5166,7 +5148,7 @@ const App = () => {
 
   const renderService = () => (
     <section className="section-grid service-grid">
-      {isWorker && session && <WorkerMeters token={session.token} userId={session.user.id} />}
+      {isWorker && session && <><article className="surface"><BotLinkPanel token={session.token} /></article><WorkerMeters token={session.token} userId={session.user.id} /></>}
       {!isWorker ? (
       <article className="surface">
         <div className="surface-head">
@@ -8513,6 +8495,7 @@ const App = () => {
         </div>
       </div>
 
+      <article className="mvp-card"><BotLinkPanel token={session.token} /></article>
       <div className="mvp-grid">
         <article className="mvp-card">
           <div className="mvp-card-head">

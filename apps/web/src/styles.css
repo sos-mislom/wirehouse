@@ -3613,3 +3613,35 @@ label > span, .form-grid label > span { color: var(--ink-soft); font-weight: 500
 }
 
 .plan-marker { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tenant-channel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tenant-channel { flex-direction: row; gap: 8px; min-height: 48px; padding: 12px; border: 0; font: inherit; font-weight: 600; cursor: pointer; }
+.tenant-channel svg { width: 28px; height: 28px; flex: 0 0 28px; }
+.tenant-channel--telegram { background: #229ed9; color: #fff; }
+.tenant-channel--telegram:hover { background: #1688bd; color: #fff; }
+.tenant-channel--vk { background: #0077ff; color: #fff; }
+.tenant-channel--vk:hover { background: #0065da; color: #fff; }
+.tenant-channel--disabled { background: #eef1f3; color: #58636b; cursor: default; }
+.tenant-channel span { min-width: 0; }
+.tenant-channel small { color: inherit; }
+.tenant-channel:focus-visible { outline: 3px solid #143e65; outline-offset: 3px; }
+.bot-link-panel { margin-top: 12px; }
+.bot-link-panel summary { cursor: pointer; font-weight: 600; padding-block: 8px; }
+.bot-link-panel p { font-size: 14px; line-height: 1.5; margin: 10px 0; }
+.bot-link-result { display: grid; gap: 10px; margin-top: 14px; }
+.bot-link-result code { overflow-wrap: anywhere; user-select: all; padding: 12px; background: #eef3f6; border-radius: 6px; }
+.bot-link-result small { color: var(--ink-muted); }
+
+.auth-tabs--mvp .auth-tab { min-width: 0; padding-inline: 12px; white-space: nowrap; font-size: 14px; }
+@media (max-width: 400px) { .tenant-channel-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.messenger-setup { margin-top: 24px; }
+.messenger-setup .tenant-channel-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+.messenger-option { min-width: 0; }
+.messenger-option .tenant-channel { width: 100%; }
+.messenger-option p { margin-top: 8px; font-size: 14px; line-height: 1.55; color: var(--ink-soft); }
+.messenger-back { margin-top: 22px; min-height: 44px; }
+.auth-form .auth-delivery-hint { font-size: 13px; line-height: 1.5; margin: 0; color: var(--ink-muted); }
+.auth-connect-link { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; }
+.auth-connect-link > span { color: var(--ink-muted); }
+.auth-connect-link .text-button { font-size: 13px; min-height: 36px; padding: 0; }

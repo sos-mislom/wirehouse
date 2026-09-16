@@ -21,6 +21,19 @@ try {
   server.listen(5173,'127.0.0.1');await once(server,'listening');
   for(let i=0;i<100;i++){try{if((await fetch('http://127.0.0.1:3001/health')).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
   browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const loginPage=await browser.newPage({viewport:{width:320,height:844}});
+  await loginPage.route('**/api/auth/tenant/onboarding',route=>route.fulfill({json:{channels:[{id:'telegram',label:'Telegram',url:'https://t.me/warehousecontourbot',enabled:true},{id:'vk',label:'VK',url:'https://vk.me/warehouse_contour',enabled:true},{id:'whatsapp',label:'WhatsApp',url:'https://example.com',enabled:true}]}}));
+  await loginPage.goto('http://127.0.0.1:5173');await loginPage.getByRole('button',{name:'По телефону',exact:true}).click();
+  assert.equal(await loginPage.locator('.tenant-channel').count(),0,'Returning users do not see setup instructions');
+  await loginPage.locator('input[name=phone]').fill('+79990000101');await loginPage.screenshot({path:'.deploy/phone-login-mobile.png',fullPage:true});
+  await loginPage.getByRole('button',{name:'Подключить мессенджер',exact:true}).click();
+  assert.equal(await loginPage.locator('.tenant-channel svg').count(),2);
+  assert.equal(await loginPage.getByText('WhatsApp',{exact:true}).count(),0);
+  assert.ok(await loginPage.locator('.tenant-channel').evaluateAll(buttons=>buttons.every(button=>button.scrollWidth<=button.clientWidth+1)),'Messenger labels are not clipped');
+  assert.equal(await loginPage.getByRole('link',{name:'Открыть Telegram'}).evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(34, 158, 217)');
+  assert.equal(await loginPage.getByRole('link',{name:'Открыть VK'}).evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(0, 119, 255)');
+  assert.ok(await loginPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2));await loginPage.screenshot({path:'.deploy/messenger-login-mobile.png',fullPage:true});
+  await loginPage.getByRole('button',{name:'← Ко входу',exact:true}).click();assert.equal(await loginPage.locator('input[name=phone]').inputValue(),'+79990000101');
   await page.addInitScript(token=>localStorage.setItem('warehouse-platform-token',token),createToken({sub:f.admin.id,role:'admin'},secret));
   await page.goto('http://127.0.0.1:5173');await page.getByRole('heading',{name:'Дашборд',exact:true}).waitFor();
   await page.getByRole('button',{name:'Арендаторы',exact:true}).click();await page.getByRole('heading',{name:'Арендаторы',exact:true}).waitFor();
@@ -52,6 +65,8 @@ try {
   await page.screenshot({path:'.deploy/kanban-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Пользователи',exact:true}).click();await page.getByRole('heading',{name:'Пользователи и доступ'}).waitFor();
   const workerCard=page.locator('.operation-card').filter({has:page.getByRole('heading',{name:'Электрик',exact:true})});await workerCard.getByRole('button',{name:'Изменить'}).click();await page.getByLabel('Имя *',{exact:true}).fill('Электрик обновлён');await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.getByRole('heading',{name:'Электрик обновлён'}).waitFor();
+  const tenantCard=page.locator('.operation-card').filter({has:page.getByRole('heading',{name:'Иван',exact:true})});
+  await tenantCard.getByText('Подключение мессенджеров',{exact:true}).click();await tenantCard.getByRole('button',{name:'VK',exact:true}).click();await tenantCard.locator('.bot-link-result code').waitFor();assert.match(await tenantCard.locator('.bot-link-result code').innerText(),/^\/link [A-F0-9]{24}$/);
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:'.deploy/users-mobile.png',fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'No horizontal page overflow on mobile');
   await page.getByRole('button',{name:'Меню',exact:true}).click();
