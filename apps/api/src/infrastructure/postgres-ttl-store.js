@@ -4,7 +4,7 @@ export class PostgresTtlStore {
   constructor(namespace, db) {
     this.namespace = namespace;
     this.db = db;
-    this.redisEnabled = false;
+    this.backend = "postgres";
   }
   get(key) {
     const entry = this.db.data.auth_challenges.find(

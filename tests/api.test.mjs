@@ -10,6 +10,8 @@ import { saveOperation } from "../apps/api/src/operations.js";
 const secret = "wirehouse-test-secret";
 
 test("API regression: scoped finance, persisted notification reads, validation and blocked sessions", async (t) => {
+  if (!process.env.TEST_POSTGRES_URL)
+    return t.skip("TEST_POSTGRES_URL is required for API integration tests");
   const f = fixture();
   t.after(f.cleanup);
   const period = new Date().toISOString().slice(0, 7);
@@ -48,7 +50,6 @@ test("API regression: scoped finance, persisted notification reads, validation a
     propertyId: f.property.id,
   });
   f.db.getById("users", unassigned.id).property_id = null;
-  f.db.save();
   const task = f.db.createTicket({
     unitId: f.unit.id,
     createdBy: f.admin.id,
@@ -64,16 +65,12 @@ test("API regression: scoped finance, persisted notification reads, validation a
   await once(socket, "listening");
   const port = socket.address().port;
   await new Promise((r) => socket.close(r));
-  const pg = process.env.TEST_POSTGRES_URL
-    ? await postgresFixture(f.db.data)
-    : null;
+  const pg = await postgresFixture(f.db.data);
   const env = {
     ...process.env,
     API_HOST: "127.0.0.1",
     API_PORT: String(port),
-    WAREHOUSE_DB_PATH: f.dbPath,
-    ENABLE_DEMO_SEED: "false",
-    DATABASE_URL: pg?.url ?? "",
+    DATABASE_URL: pg.url,
     POSTGRES_URL: "",
     REDIS_URL: "",
     JWT_ACCESS_SECRET: secret,
@@ -108,7 +105,7 @@ test("API regression: scoped finance, persisted notification reads, validation a
   };
   t.after(async () => {
     await stop();
-    if (pg) await pg.cleanup();
+    await pg.cleanup();
   });
   const call = async (path, user = f.manager, method = "GET", body) => {
     const r = await fetch(`http://127.0.0.1:${port}${path}`, {

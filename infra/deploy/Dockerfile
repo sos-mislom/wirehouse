@@ -8,10 +8,10 @@ COPY packages/contracts/package.json packages/contracts/package.json
 RUN npm ci --omit=dev --ignore-scripts --workspace apps/api --include-workspace-root && npm cache clean --force
 COPY apps/api/src apps/api/src
 COPY packages/contracts/src packages/contracts/src
-COPY scripts/bootstrap-deployment.mjs scripts/bootstrap-deployment.mjs
+COPY scripts/create-initial-admin.mjs scripts/create-initial-admin.mjs
 RUN mkdir -p /data && chown node:node /data
 USER node
-ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=3001 WAREHOUSE_DB_PATH=/data/state.json FILE_STORAGE_DRIVER=local
+ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=3001 FILE_STORAGE_DRIVER=local
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "apps/api/src/index.js"]

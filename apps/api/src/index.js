@@ -35,7 +35,7 @@ import { PostgresTtlStore } from "./infrastructure/postgres-ttl-store.js";
 import { bufferedResponse } from "./http/buffered-response.js";
 import { preloadBody } from "./http/body.js";
 import { createFileStorage } from "./file-storage.js";
-import { TtlStore } from "./infrastructure/ttl-store.js";
+import { RedisTtlStore } from "./infrastructure/ttl-store.js";
 
 const db = await openDatabase(config);
 const importApprovalThreshold = Number.parseInt(
@@ -54,9 +54,9 @@ if (fileStorage.driver === "local") {
 }
 
 const createChallengeStore = (namespace) =>
-  db.backend === "postgres" && !config.redisUrl
-    ? new PostgresTtlStore(namespace, db)
-    : new TtlStore(namespace, config.redisUrl, config.redisCliBin);
+  config.redisUrl
+    ? new RedisTtlStore(namespace, config.redisUrl, config.redisCliBin)
+    : new PostgresTtlStore(namespace, db);
 const otpStore = createChallengeStore("warehouse:otp");
 const mfaChallengeStore = createChallengeStore("warehouse:mfa");
 const chatContextStore = createChallengeStore("warehouse:chat-context");

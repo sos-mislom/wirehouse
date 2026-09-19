@@ -1,7 +1,4 @@
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-
 import {
   isOpenTicket,
   leaseOverlaps,
@@ -286,13 +283,9 @@ const buildChecklistItems = (category) =>
   }));
 
 export class WarehouseDatabase {
-  constructor(dbPath, { data } = {}) {
-    this.dbPath = dbPath;
-    this.backend = data ? "memory" : "json";
-    this.demoSeedEnabled = !data && process.env.ENABLE_DEMO_SEED === "true";
-    if (!data) fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-    this.data = data ?? this.load();
-    // Public mutations are synchronous; one snapshot and one durable write per operation.
+  constructor(data = createEmptyData()) {
+    this.data = structuredClone(data);
+    // Every public mutation is atomic inside the current request transaction.
     for (const name of Object.getOwnPropertyNames(
       WarehouseDatabase.prototype,
     )) {
@@ -301,59 +294,18 @@ export class WarehouseDatabase {
         this[name] = (...args) => this.transaction(() => mutate(...args));
       }
     }
-    if (this.demoSeedEnabled) {
-      this.ensureSeedData();
-      this.ensureRichDemoData();
-      this.ensureDemoBackfill();
-      this.ensureTicketOperationsBackfill();
-      this.ensureBillingBackfill();
-    }
-  }
-
-  load() {
-    const raw = fs.existsSync(this.dbPath)
-      ? JSON.parse(fs.readFileSync(this.dbPath, "utf8"))
-      : null;
-    if (raw && (typeof raw !== "object" || Array.isArray(raw)))
-      throw new Error("Invalid database state; restore a backup");
-    const data = createEmptyData();
-    for (const key of Object.keys(data)) {
-      if (raw?.[key] !== undefined && !Array.isArray(raw[key]))
-        throw new Error(`Invalid database collection: ${key}`);
-      data[key] = raw?.[key] ?? [];
-    }
-    return data;
-  }
-
-  save() {
-    if (this.backend === "memory") return;
-    const tmp = `${this.dbPath}.${process.pid}.tmp`;
-    const fd = fs.openSync(tmp, "w", 0o600);
-    try {
-      fs.writeFileSync(fd, JSON.stringify(this.data, null, 2));
-      fs.fsyncSync(fd);
-    } finally {
-      fs.closeSync(fd);
-    }
-    fs.renameSync(tmp, this.dbPath);
   }
 
   transaction(fn) {
     if (this.inTransaction) return fn();
     this.inTransaction = true;
     const before = clone(this.data);
-    const save = this.save;
-    this.save = () => {};
     try {
-      const result = fn();
-      this.save = save;
-      this.save();
-      return result;
+      return fn();
     } catch (error) {
       this.data = before;
       throw error;
     } finally {
-      this.save = save;
       this.inTransaction = false;
     }
   }
@@ -543,1100 +495,6 @@ export class WarehouseDatabase {
     return `SD-${year}-${String(next).padStart(4, "0")}`;
   }
 
-  ensureSeedData() {
-    if (this.data.users.length > 0) {
-      return;
-    }
-
-    const timestamp = nowIso();
-
-    const propertyA = {
-      id: createId(),
-      name: "Складской комплекс Север",
-      address: "Екатеринбург, ул. Промышленная, 12",
-      total_area: 25000,
-      rentable_area: 21000,
-      warehouse_class: "A",
-      description: "Основной распределительный узел.",
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    const propertyB = {
-      id: createId(),
-      name: "Логистический парк Восток",
-      address: "Екатеринбург, Логистический проезд, 7",
-      total_area: 18000,
-      rentable_area: 15000,
-      warehouse_class: "B+",
-      description: "Объект под mixed-use хранение.",
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    const tenantA = {
-      id: createId(),
-      name: "ООО ФростЛайн",
-      inn: "6678451234",
-      contact_name: "Ирина Ковалева",
-      phone: "+79990000001",
-      email: "tenant@skladkontur.local",
-      risk_level: "medium",
-      status: "active",
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    const tenantB = {
-      id: createId(),
-      name: "ООО ДокСервис",
-      inn: "6678451235",
-      contact_name: "Алексей Громов",
-      phone: "+79990000002",
-      email: "docks@skladkontur.local",
-      risk_level: "low",
-      status: "active",
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-
-    const units = [
-      {
-        id: createId(),
-        property_id: propertyA.id,
-        number: "A-101",
-        floor: 1,
-        area: 1200,
-        type: "warm",
-        status: "occupied",
-        ceiling_height: 12,
-        temperature_regime: "+16",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propertyA.id,
-        number: "A-102",
-        floor: 1,
-        area: 900,
-        type: "freezer",
-        status: "occupied",
-        ceiling_height: 10,
-        temperature_regime: "-18",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propertyA.id,
-        number: "A-103",
-        floor: 1,
-        area: 1100,
-        type: "warm",
-        status: "vacant",
-        ceiling_height: 11,
-        temperature_regime: "+18",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propertyB.id,
-        number: "B-201",
-        floor: 2,
-        area: 700,
-        type: "office",
-        status: "occupied",
-        ceiling_height: 4,
-        temperature_regime: "+22",
-        has_ramp: 0,
-        has_gate: 0,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propertyB.id,
-        number: "B-202",
-        floor: 2,
-        area: 950,
-        type: "cold",
-        status: "maintenance",
-        ceiling_height: 8,
-        temperature_regime: "+5",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-    ];
-
-    const leases = [
-      {
-        id: createId(),
-        tenant_id: tenantA.id,
-        unit_id: units[0].id,
-        contract_number: "SK-2026-001",
-        stage: "active",
-        start_date: "2026-01-01",
-        end_date: "2026-12-31",
-        rate_per_sqm: 1450,
-        deposit: 450000,
-        indexation_pct: 5,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        tenant_id: tenantB.id,
-        unit_id: units[3].id,
-        contract_number: "SK-2026-002",
-        stage: "active",
-        start_date: "2026-02-01",
-        end_date: "2026-05-10",
-        rate_per_sqm: 980,
-        deposit: 150000,
-        indexation_pct: 3,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-    ];
-
-    const users = [
-      {
-        id: createId(),
-        email: "admin@skladkontur.local",
-        phone: null,
-        password_hash: hashPassword("admin123"),
-        full_name: "Администратор склад контур",
-        role: "admin",
-        property_id: null,
-        tenant_id: null,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: "manager@skladkontur.local",
-        phone: null,
-        password_hash: hashPassword("manager123"),
-        full_name: "Менеджер Объекта",
-        role: "manager",
-        property_id: propertyA.id,
-        tenant_id: null,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: "worker@skladkontur.local",
-        phone: null,
-        password_hash: hashPassword("worker123"),
-        full_name: "Рабочий Смены",
-        role: "worker",
-        property_id: propertyA.id,
-        tenant_id: null,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: null,
-        phone: tenantA.phone,
-        password_hash: null,
-        full_name: tenantA.contact_name,
-        role: "tenant",
-        property_id: propertyA.id,
-        tenant_id: tenantA.id,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-    ];
-
-    const tickets = [
-      {
-        id: createId(),
-        number: "SD-2026-0001",
-        unit_id: units[0].id,
-        property_id: propertyA.id,
-        tenant_id: tenantA.id,
-        created_by: users[3].id,
-        assigned_to: users[2].id,
-        category: "maintenance",
-        priority: "high",
-        status: "in_progress",
-        source_channel: "web",
-        title: "Нужна диагностика погрузочных ворот",
-        description:
-          "Ворота на секции A-101 открываются с задержкой и не фиксируются в верхнем положении.",
-        created_at: timestamp,
-        updated_at: timestamp,
-        resolved_at: null,
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: "SD-2026-0002",
-        unit_id: units[3].id,
-        property_id: propertyB.id,
-        tenant_id: tenantB.id,
-        created_by: users[1].id,
-        assigned_to: null,
-        category: "billing",
-        priority: "medium",
-        status: "waiting_tenant",
-        source_channel: "web",
-        title: "Уточнить начисление по марту",
-        description:
-          "Требуется сверка фиксированной ставки и депозита по договору SK-2026-002.",
-        created_at: timestamp,
-        updated_at: timestamp,
-        resolved_at: null,
-        closed_at: null,
-      },
-    ];
-
-    const ticketComments = [
-      {
-        id: createId(),
-        ticket_id: tickets[0].id,
-        author_id: users[3].id,
-        content: "Проблема проявляется утром и после интенсивной отгрузки.",
-        created_at: timestamp,
-      },
-      {
-        id: createId(),
-        ticket_id: tickets[0].id,
-        author_id: users[2].id,
-        content: "Принял в работу, нужен осмотр привода и фиксатора.",
-        created_at: timestamp,
-      },
-    ];
-
-    this.data.properties.push(propertyA, propertyB);
-    this.data.tenants.push(tenantA, tenantB);
-    this.data.units.push(...units);
-    this.data.leases.push(...leases);
-    this.data.users.push(...users);
-    this.data.tickets.push(...tickets);
-    this.data.ticket_comments.push(...ticketComments);
-    this.save();
-  }
-
-  ensureRichDemoData() {
-    if (this.data.tenants.length > 4) {
-      return;
-    }
-
-    const timestamp = nowIso();
-    const propA = this.data.properties[0];
-    if (!propA) {
-      return;
-    }
-
-    let propB =
-      this.data.properties.find(
-        (property) => property.name === "Логистический парк Восток",
-      ) ??
-      this.data.properties[1] ??
-      null;
-    if (!propB) {
-      propB = {
-        id: createId(),
-        name: "Логистический парк Восток",
-        address: "Екатеринбург, Логистический проезд, 7",
-        total_area: 18000,
-        rentable_area: 15000,
-        warehouse_class: "B+",
-        description: "Объект под mixed-use хранение.",
-        created_at: timestamp,
-        updated_at: timestamp,
-      };
-      this.data.properties.push(propB);
-    }
-
-    const manager = this.data.users.find((user) => user.role === "manager");
-    const worker = this.data.users.find((user) => user.role === "worker");
-    if (!manager || !worker) {
-      return;
-    }
-
-    const extraTenants = [
-      {
-        id: createId(),
-        name: "ООО СеверФарм",
-        inn: "6678903456",
-        contact_name: "Марина Соколова",
-        phone: "+79990000003",
-        email: "severfarm@demo.local",
-        risk_level: "low",
-        status: "active",
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        name: "ООО МетизКомплект",
-        inn: "6678904567",
-        contact_name: "Дмитрий Кузнецов",
-        phone: "+79990000004",
-        email: "metiz@demo.local",
-        risk_level: "high",
-        status: "active",
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        name: "ООО Урал Ритейл Резерв",
-        inn: "6678905678",
-        contact_name: "Елена Новикова",
-        phone: "+79990000005",
-        email: "uralretail@demo.local",
-        risk_level: "medium",
-        status: "active",
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        name: "ИП Волков А.С.",
-        inn: "667890678901",
-        contact_name: "Андрей Волков",
-        phone: "+79990000006",
-        email: "volkov@demo.local",
-        risk_level: "low",
-        status: "active",
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-    ];
-    this.data.tenants.push(...extraTenants);
-
-    const extraUnits = [
-      {
-        id: createId(),
-        property_id: propA.id,
-        number: "A-104",
-        floor: 1,
-        area: 2200,
-        type: "warm",
-        status: "occupied",
-        ceiling_height: 12,
-        temperature_regime: "+18",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propB.id,
-        number: "ЮТ-1.1",
-        floor: 1,
-        area: 1600,
-        type: "warm",
-        status: "occupied",
-        ceiling_height: 10,
-        temperature_regime: "+16",
-        has_ramp: 1,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propB.id,
-        number: "ЮТ-1.2",
-        floor: 1,
-        area: 1100,
-        type: "cold",
-        status: "occupied",
-        ceiling_height: 8,
-        temperature_regime: "+5",
-        has_ramp: 1,
-        has_gate: 0,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propB.id,
-        number: "ЮТ-1.3",
-        floor: 1,
-        area: 800,
-        type: "warm",
-        status: "vacant",
-        ceiling_height: 9,
-        temperature_regime: "+18",
-        has_ramp: 0,
-        has_gate: 1,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propB.id,
-        number: "ЮТ-ОФ-1",
-        floor: 2,
-        area: 300,
-        type: "office",
-        status: "vacant",
-        ceiling_height: 3,
-        temperature_regime: "+22",
-        has_ramp: 0,
-        has_gate: 0,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        property_id: propB.id,
-        number: "ЮТ-ОФ-2",
-        floor: 2,
-        area: 450,
-        type: "office",
-        status: "occupied",
-        ceiling_height: 3,
-        temperature_regime: "+22",
-        has_ramp: 0,
-        has_gate: 0,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-    ];
-    this.data.units.push(...extraUnits);
-
-    const extraLeases = [
-      {
-        id: createId(),
-        tenant_id: extraTenants[0].id,
-        unit_id: extraUnits[1].id,
-        contract_number: "SK-2026-003",
-        stage: "active",
-        start_date: "2025-06-01",
-        end_date: "2027-05-31",
-        rate_per_sqm: 1100,
-        deposit: 350000,
-        indexation_pct: 5,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        tenant_id: extraTenants[1].id,
-        unit_id: extraUnits[5].id,
-        contract_number: "SK-2026-004",
-        stage: "sent",
-        start_date: "2026-06-01",
-        end_date: "2028-05-31",
-        rate_per_sqm: 850,
-        deposit: 200000,
-        indexation_pct: 4,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        tenant_id: extraTenants[2].id,
-        unit_id: extraUnits[2].id,
-        contract_number: "SK-2026-005",
-        stage: "active",
-        start_date: "2025-03-01",
-        end_date: "2026-08-31",
-        rate_per_sqm: 950,
-        deposit: 180000,
-        indexation_pct: 3,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-      {
-        id: createId(),
-        tenant_id: extraTenants[3].id,
-        unit_id: extraUnits[0].id,
-        contract_number: "SK-2026-006",
-        stage: "draft",
-        start_date: "2026-07-01",
-        end_date: "2028-06-30",
-        rate_per_sqm: 1300,
-        deposit: 400000,
-        indexation_pct: 5,
-        created_at: timestamp,
-        updated_at: timestamp,
-      },
-    ];
-    this.data.leases.push(...extraLeases);
-
-    for (const unit of extraUnits) {
-      if (
-        this.data.leases.some(
-          (lease) =>
-            lease.unit_id === unit.id && activeLeaseStages.has(lease.stage),
-        )
-      ) {
-        unit.status = "occupied";
-      }
-    }
-
-    const extraUsers = [
-      {
-        id: createId(),
-        email: null,
-        phone: extraTenants[0].phone,
-        password_hash: null,
-        full_name: extraTenants[0].contact_name,
-        role: "tenant",
-        property_id: propB.id,
-        tenant_id: extraTenants[0].id,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: null,
-        phone: extraTenants[2].phone,
-        password_hash: null,
-        full_name: extraTenants[2].contact_name,
-        role: "tenant",
-        property_id: propB.id,
-        tenant_id: extraTenants[2].id,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: "worker2@skladkontur.local",
-        phone: null,
-        password_hash: hashPassword("worker123"),
-        full_name: "Сергей Климов",
-        role: "worker",
-        property_id: propB.id,
-        tenant_id: null,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-      {
-        id: createId(),
-        email: "manager2@skladkontur.local",
-        phone: null,
-        password_hash: hashPassword("manager123"),
-        full_name: "Максим Лебедев",
-        role: "manager",
-        property_id: propB.id,
-        tenant_id: null,
-        is_active: 1,
-        created_at: timestamp,
-        last_login_at: null,
-      },
-    ];
-    this.data.users.push(...extraUsers);
-
-    const worker2 = extraUsers[2];
-    const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
-    const ticketNumber = (offset) =>
-      `SD-${new Date().getFullYear()}-${String(this.data.tickets.length + offset).padStart(4, "0")}`;
-    const extraTickets = [
-      {
-        id: createId(),
-        number: this.buildTicketNumber(),
-        unit_id: extraUnits[1].id,
-        property_id: propB.id,
-        tenant_id: extraTenants[0].id,
-        created_by: extraUsers[0].id,
-        assigned_to: worker2.id,
-        category: "gates_ramps",
-        priority: "high",
-        status: "new",
-        source_channel: "web",
-        title: "Проверить автоматику доковых ворот",
-        description:
-          "На воротах 4 и 5 периодически не срабатывает концевик закрытия после вечерней отгрузки.",
-        created_at: ago(0),
-        updated_at: ago(0),
-        resolved_at: null,
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: ticketNumber(4),
-        unit_id: extraUnits[2].id,
-        property_id: propB.id,
-        tenant_id: extraTenants[2].id,
-        created_by: extraUsers[1].id,
-        assigned_to: null,
-        category: "heating",
-        priority: "urgent",
-        status: "new",
-        source_channel: "web",
-        title: "Нарушение температурного режима в холодильной камере",
-        description:
-          "Температура в секции ЮТ-1.2 поднялась до +12°C при норме +5°C. Риск порчи продукции.",
-        created_at: ago(0),
-        updated_at: ago(0),
-        resolved_at: null,
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: ticketNumber(5),
-        unit_id: extraUnits[5].id,
-        property_id: propB.id,
-        tenant_id: extraTenants[1].id,
-        created_by: extraUsers[3].id,
-        assigned_to: worker2.id,
-        category: "electrical",
-        priority: "urgent",
-        status: "accepted",
-        source_channel: "web",
-        title: "Выпустить временные пропуска для подрядчика",
-        description:
-          "Подрядчик ООО ЭлектроМонтаж приезжает завтра для замены щита. Нужны пропуска на 3 человека.",
-        created_at: ago(0),
-        updated_at: ago(0),
-        resolved_at: null,
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: ticketNumber(6),
-        unit_id: extraUnits[0].id,
-        property_id: propA.id,
-        tenant_id: extraTenants[3].id,
-        created_by: manager.id,
-        assigned_to: worker.id,
-        category: "territory",
-        priority: "medium",
-        status: "in_progress",
-        source_channel: "web",
-        title: "Подготовить склад 6500 м² к показу",
-        description:
-          "Потенциальный арендатор ИП Волков А.С. приедет на осмотр. Нужно навести порядок, проверить освещение и ворота.",
-        created_at: ago(1),
-        updated_at: ago(0),
-        resolved_at: null,
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: ticketNumber(7),
-        unit_id: this.data.units[0].id,
-        property_id: propA.id,
-        tenant_id: this.data.tenants[0].id,
-        created_by: this.data.users[3]?.id ?? manager.id,
-        assigned_to: worker.id,
-        category: "plumbing",
-        priority: "high",
-        status: "completed",
-        source_channel: "web",
-        title: "Протечка в зоне разгрузки A-101",
-        description:
-          "Обнаружена течь в районе разгрузочного дока. Вода скапливается у стеллажей.",
-        created_at: ago(3),
-        updated_at: ago(1),
-        resolved_at: ago(1),
-        closed_at: null,
-      },
-      {
-        id: createId(),
-        number: ticketNumber(8),
-        unit_id: this.data.units[1].id,
-        property_id: propA.id,
-        tenant_id: this.data.tenants[0].id,
-        created_by: this.data.users[3]?.id ?? manager.id,
-        assigned_to: worker.id,
-        category: "security",
-        priority: "medium",
-        status: "closed",
-        source_channel: "web",
-        title: "Камера наблюдения у входа в A-102 не работает",
-        description:
-          "Камера №7 у входа в морозильную секцию не передаёт изображение уже 2 дня.",
-        created_at: ago(7),
-        updated_at: ago(5),
-        resolved_at: ago(5),
-        closed_at: ago(4),
-      },
-      {
-        id: createId(),
-        number: ticketNumber(9),
-        unit_id: extraUnits[1].id,
-        property_id: propB.id,
-        tenant_id: extraTenants[0].id,
-        created_by: extraUsers[0].id,
-        assigned_to: worker2.id,
-        category: "ventilation",
-        priority: "low",
-        status: "closed",
-        source_channel: "web",
-        title: "Шум вентиляции в секции ЮТ-1.1",
-        description:
-          "Гудит вентиляционная установка, мешает работать. Просим осмотреть.",
-        created_at: ago(14),
-        updated_at: ago(10),
-        resolved_at: ago(10),
-        closed_at: ago(9),
-      },
-      {
-        id: createId(),
-        number: ticketNumber(10),
-        unit_id: extraUnits[0].id,
-        property_id: propA.id,
-        tenant_id: extraTenants[3].id,
-        created_by: manager.id,
-        assigned_to: worker.id,
-        category: "loading_equipment",
-        priority: "medium",
-        status: "rejected",
-        source_channel: "web",
-        title: "Запрос на установку дополнительной рампы",
-        description:
-          "Арендатор просит установить вторую рампу. Передано в отдел развития.",
-        created_at: ago(20),
-        updated_at: ago(18),
-        resolved_at: null,
-        closed_at: null,
-      },
-    ];
-    this.data.tickets.push(...extraTickets);
-
-    this.data.ticket_comments.push(
-      {
-        id: createId(),
-        ticket_id: extraTickets[0].id,
-        author_id: extraUsers[0].id,
-        content:
-          "Проблема повторяется на пиковых отгрузках после 18:00, просим проверить до конца смены.",
-        created_at: ago(0),
-      },
-      {
-        id: createId(),
-        ticket_id: extraTickets[0].id,
-        author_id: worker2.id,
-        content:
-          "Взял в работу. Сначала проверю датчик положения и журнал ошибок контроллера.",
-        created_at: ago(0),
-      },
-      {
-        id: createId(),
-        ticket_id: extraTickets[3].id,
-        author_id: worker.id,
-        content:
-          "Территория убрана, освещение проверено. Осталось проверить ворота — закончу до 16:00.",
-        created_at: ago(0),
-      },
-      {
-        id: createId(),
-        ticket_id: extraTickets[4].id,
-        author_id: worker.id,
-        content:
-          "Течь устранена: заменена прокладка на соединении трубы. Просушка территории до утра.",
-        created_at: ago(1),
-      },
-    );
-
-    this.save();
-  }
-
-  ensureDemoBackfill() {
-    let changed = false;
-
-    if (
-      this.data.tickets.length === 0 &&
-      this.data.properties.length > 0 &&
-      this.data.units.length > 0
-    ) {
-      const timestamp = nowIso();
-      const manager =
-        this.data.users.find((user) => user.role === "manager") ??
-        this.data.users[0];
-      const worker =
-        this.data.users.find((user) => user.role === "worker") ?? null;
-      const tenantUser =
-        this.data.users.find((user) => user.role === "tenant") ?? null;
-      const tenant = tenantUser?.tenant_id
-        ? this.getTenantById(tenantUser.tenant_id)
-        : (this.data.tenants[0] ?? null);
-      const primaryUnit =
-        this.data.units.find((unit) => unit.status === "occupied") ??
-        this.data.units.find((unit) => unit.status === "maintenance") ??
-        this.data.units[0];
-      const secondaryUnit =
-        this.data.units.find(
-          (unit) => unit.id !== primaryUnit.id && unit.status !== "vacant",
-        ) ??
-        this.data.units.find((unit) => unit.id !== primaryUnit.id) ??
-        primaryUnit;
-      const primaryProperty = this.getPropertyById(primaryUnit.property_id);
-      const secondaryProperty = this.getPropertyById(secondaryUnit.property_id);
-
-      const seededTickets = [
-        {
-          id: createId(),
-          number: this.buildTicketNumber(),
-          unit_id: primaryUnit.id,
-          property_id: primaryProperty?.id ?? primaryUnit.property_id,
-          tenant_id: tenant?.id ?? null,
-          created_by: tenantUser?.id ?? manager?.id ?? this.data.users[0]?.id,
-          assigned_to: worker?.id ?? null,
-          category: "maintenance",
-          priority: "high",
-          status: "in_progress",
-          source_channel: "web",
-          title: "Нужна диагностика погрузочных ворот",
-          description:
-            "Ворота открываются с задержкой и не фиксируются в верхнем положении.",
-          created_at: timestamp,
-          updated_at: timestamp,
-          resolved_at: null,
-          closed_at: null,
-        },
-        {
-          id: createId(),
-          number: `SD-${new Date().getFullYear()}-${String(this.data.tickets.length + 2).padStart(4, "0")}`,
-          unit_id: secondaryUnit.id,
-          property_id: secondaryProperty?.id ?? secondaryUnit.property_id,
-          tenant_id: this.data.tenants[1]?.id ?? tenant?.id ?? null,
-          created_by: manager?.id ?? this.data.users[0]?.id,
-          assigned_to: null,
-          category: "billing",
-          priority: "medium",
-          status: "waiting_tenant",
-          source_channel: "web",
-          title: "Уточнить начисление по марту",
-          description:
-            "Требуется сверка фиксированной ставки и депозита по активному договору.",
-          created_at: timestamp,
-          updated_at: timestamp,
-          resolved_at: null,
-          closed_at: null,
-        },
-      ];
-
-      this.data.tickets.push(...seededTickets);
-      changed = true;
-
-      if (this.data.ticket_comments.length === 0) {
-        this.data.ticket_comments.push(
-          {
-            id: createId(),
-            ticket_id: seededTickets[0].id,
-            author_id: tenantUser?.id ?? manager?.id ?? this.data.users[0]?.id,
-            content: "Проблема проявляется утром и после интенсивной отгрузки.",
-            created_at: timestamp,
-          },
-          {
-            id: createId(),
-            ticket_id: seededTickets[0].id,
-            author_id: worker?.id ?? manager?.id ?? this.data.users[0]?.id,
-            content: "Принял в работу, нужен осмотр привода и фиксатора.",
-            created_at: timestamp,
-          },
-        );
-      }
-    } else if (
-      this.data.ticket_comments.length === 0 &&
-      this.data.tickets.length > 0
-    ) {
-      const timestamp = nowIso();
-      const firstTicket = this.data.tickets[0];
-      const commentAuthor =
-        this.data.users.find((user) => user.role === "worker") ??
-        this.data.users[0];
-
-      if (firstTicket && commentAuthor) {
-        this.data.ticket_comments.push({
-          id: createId(),
-          ticket_id: firstTicket.id,
-          author_id: commentAuthor.id,
-          content:
-            "Первичный осмотр внесён автоматически для заполнения демо-контура.",
-          created_at: timestamp,
-        });
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      this.save();
-    }
-  }
-
-  ensureTicketOperationsBackfill() {
-    let changed = false;
-    for (const ticket of this.data.tickets) {
-      const createdAt = ticket.created_at
-        ? new Date(ticket.created_at)
-        : new Date();
-      const priority =
-        ticket.priority && ticketSlaHoursByPriority[ticket.priority]
-          ? ticket.priority
-          : "medium";
-      if (!ticket.sla_hours) {
-        ticket.sla_hours = ticketSlaHoursByPriority[priority];
-        changed = true;
-      }
-      if (!ticket.sla_due_at) {
-        ticket.sla_due_at = addHours(createdAt, Number(ticket.sla_hours));
-        changed = true;
-      }
-      if (
-        !Array.isArray(ticket.checklist_items) ||
-        ticket.checklist_items.length === 0
-      ) {
-        ticket.checklist_items = buildChecklistItems(ticket.category);
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      this.save();
-    }
-  }
-
-  ensureBillingBackfill() {
-    let changed = false;
-    const currentMonth = startOfMonth();
-    const existingInvoiceKeys = new Set(
-      this.data.billing_invoices.map(
-        (invoice) => `${invoice.lease_id}:${invoice.period}`,
-      ),
-    );
-
-    for (const lease of this.data.leases.filter((item) =>
-      activeLeaseStages.has(item.stage),
-    )) {
-      const unit = this.getUnitById(lease.unit_id);
-      const tenant = this.getTenantById(lease.tenant_id);
-      if (!unit || !tenant) {
-        continue;
-      }
-
-      const monthlyRent = Math.round(
-        Number(unit.area) * Number(lease.rate_per_sqm),
-      );
-      const variableCharge = Math.round(
-        Number(unit.area) *
-          (unit.type === "freezer" ? 140 : unit.type === "office" ? 55 : 82),
-      );
-
-      for (const offset of [-2, -1, 0, 1]) {
-        const periodDate = addMonths(currentMonth, offset);
-        const period = formatPeriod(periodDate);
-        const invoiceKey = `${lease.id}:${period}`;
-        if (existingInvoiceKeys.has(invoiceKey)) {
-          continue;
-        }
-
-        const dueDate = new Date(
-          periodDate.getFullYear(),
-          periodDate.getMonth(),
-          10,
-        );
-        const status =
-          offset > 0
-            ? "upcoming"
-            : tenant.risk_level === "high" && offset === 0
-              ? "overdue"
-              : tenant.risk_level !== "low" && offset === -1
-                ? "late"
-                : "paid";
-        const invoiceId = createId();
-        const amount = monthlyRent + variableCharge;
-        this.data.billing_invoices.push({
-          id: invoiceId,
-          lease_id: lease.id,
-          tenant_id: tenant.id,
-          unit_id: unit.id,
-          period,
-          rent_amount: monthlyRent,
-          variable_amount: variableCharge,
-          total_amount: amount,
-          due_date: toIsoDay(dueDate),
-          status,
-          created_at: nowIso(),
-          updated_at: nowIso(),
-        });
-
-        if (["paid", "late"].includes(status)) {
-          const paidDate = new Date(
-            dueDate.getFullYear(),
-            dueDate.getMonth(),
-            dueDate.getDate() + (status === "late" ? 6 : 1),
-          );
-          this.data.billing_payments.push({
-            id: createId(),
-            invoice_id: invoiceId,
-            tenant_id: tenant.id,
-            amount,
-            paid_at: toIsoDay(paidDate),
-            method: "bank_transfer",
-            reference: `PAY-${period}-${String(this.data.billing_payments.length + 1).padStart(4, "0")}`,
-            created_at: nowIso(),
-          });
-        }
-
-        changed = true;
-      }
-
-      const meterKey = `${unit.id}:${formatPeriod(currentMonth)}`;
-      if (
-        !this.data.meter_readings.some(
-          (reading) => `${reading.unit_id}:${reading.period}` === meterKey,
-        )
-      ) {
-        this.data.meter_readings.push({
-          id: createId(),
-          unit_id: unit.id,
-          tenant_id: tenant.id,
-          period: formatPeriod(currentMonth),
-          meter_type:
-            unit.type === "freezer"
-              ? "cold_chain"
-              : unit.type === "office"
-                ? "electricity"
-                : "power",
-          value: Math.round(
-            Number(unit.area) *
-              (unit.type === "freezer"
-                ? 4.6
-                : unit.type === "office"
-                  ? 2.1
-                  : 3.2),
-          ),
-          previous_value: Math.round(
-            Number(unit.area) *
-              (unit.type === "freezer"
-                ? 4.2
-                : unit.type === "office"
-                  ? 2.0
-                  : 3.0),
-          ),
-          recorded_at: nowIso(),
-          status: unit.status === "maintenance" ? "attention" : "stable",
-        });
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      this.save();
-    }
-  }
-
   getUserByEmail(email) {
     const user = this.getUserByPredicate(
       (item) => item.email === email && item.is_active === 1,
@@ -1720,7 +578,6 @@ export class WarehouseDatabase {
       this.data.otp_bindings.push(next);
     }
 
-    this.save();
     return clone(next);
   }
 
@@ -1758,7 +615,6 @@ export class WarehouseDatabase {
       created_at: nowIso(),
     };
     this.data.password_resets.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -1780,7 +636,6 @@ export class WarehouseDatabase {
       return null;
     }
     reset.attempts = Number(reset.attempts ?? 0) + 1;
-    this.save();
     return clone(reset);
   }
 
@@ -1790,7 +645,6 @@ export class WarehouseDatabase {
       return;
     }
     reset.consumed_at = nowIso();
-    this.save();
   }
 
   updateUserPassword(id, password) {
@@ -1799,7 +653,6 @@ export class WarehouseDatabase {
       return null;
     }
     user.password_hash = hashPassword(password);
-    this.save();
     return clone(user);
   }
 
@@ -1809,7 +662,6 @@ export class WarehouseDatabase {
       return null;
     }
     user.totp_pending_secret = secret;
-    this.save();
     return clone(user);
   }
 
@@ -1821,7 +673,6 @@ export class WarehouseDatabase {
     user.totp_secret = user.totp_pending_secret;
     user.totp_pending_secret = null;
     user.totp_enabled = 1;
-    this.save();
     return clone(user);
   }
 
@@ -1833,7 +684,6 @@ export class WarehouseDatabase {
     user.totp_secret = null;
     user.totp_pending_secret = null;
     user.totp_enabled = 0;
-    this.save();
     return clone(user);
   }
 
@@ -1899,7 +749,6 @@ export class WarehouseDatabase {
 
     this.validateUserPayload(record);
     this.data.users.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -1910,7 +759,6 @@ export class WarehouseDatabase {
     }
 
     user.last_login_at = nowIso();
-    this.save();
   }
 
   listProperties() {
@@ -1937,7 +785,6 @@ export class WarehouseDatabase {
 
     this.validatePropertyPayload(record);
     this.data.properties.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -1966,7 +813,6 @@ export class WarehouseDatabase {
 
     this.validatePropertyPayload(next);
     Object.assign(current, next);
-    this.save();
     return clone(current);
   }
 
@@ -2033,7 +879,6 @@ export class WarehouseDatabase {
     this.data.properties = this.data.properties.filter(
       (property) => property.id !== id,
     );
-    this.save();
     return createChangeResult(1);
   }
 
@@ -2110,7 +955,6 @@ export class WarehouseDatabase {
 
     this.validateUnitPayload(record);
     this.data.units.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -2181,7 +1025,6 @@ export class WarehouseDatabase {
 
     this.validateUnitPayload(next);
     Object.assign(current, next);
-    this.save();
     return clone(current);
   }
 
@@ -2238,7 +1081,6 @@ export class WarehouseDatabase {
     current.updated_at = nowIso();
     this.validateUnitPayload(current);
     this.data.units.push(created);
-    this.save();
     return {
       original: clone(current),
       created: clone(created),
@@ -2286,7 +1128,6 @@ export class WarehouseDatabase {
     );
     this.data.leases = this.data.leases.filter((lease) => lease.unit_id !== id);
     this.data.units = this.data.units.filter((unit) => unit.id !== id);
-    this.save();
     return createChangeResult(1);
   }
 
@@ -2387,7 +1228,6 @@ export class WarehouseDatabase {
     this.validateTenantPayload(record);
     this.data.tenants.push(record);
     this.syncTenantPortalUser(record);
-    this.save();
     return clone(record);
   }
 
@@ -2428,7 +1268,6 @@ export class WarehouseDatabase {
     this.validateTenantPayload(next);
     Object.assign(current, next);
     this.syncTenantPortalUser(current);
-    this.save();
     return clone(current);
   }
 
@@ -2487,7 +1326,6 @@ export class WarehouseDatabase {
       (note) => note.tenant_id !== id,
     );
     this.data.tenants = this.data.tenants.filter((tenant) => tenant.id !== id);
-    this.save();
     return createChangeResult(1);
   }
 
@@ -2535,7 +1373,6 @@ export class WarehouseDatabase {
     }
 
     this.data.tenant_notes.push(record);
-    this.save();
     return clone({
       ...record,
       author_name: author?.full_name ?? "Система",
@@ -2595,7 +1432,6 @@ export class WarehouseDatabase {
     if (currentNote) {
       currentNote.updated_at = nowIso();
     }
-    this.save();
     return clone(record);
   }
 
@@ -2613,7 +1449,6 @@ export class WarehouseDatabase {
     if (note) {
       note.updated_at = nowIso();
     }
-    this.save();
     return { result: createChangeResult(1), attachment: clone(current) };
   }
 
@@ -2683,7 +1518,6 @@ export class WarehouseDatabase {
       this.setUnitStatus(record.unit_id, "occupied");
     }
 
-    this.save();
     return clone(record);
   }
 
@@ -2758,7 +1592,6 @@ export class WarehouseDatabase {
       this.setUnitStatus(current.unit_id, "vacant");
     }
 
-    this.save();
     return clone(current);
   }
 
@@ -2786,7 +1619,6 @@ export class WarehouseDatabase {
     if (this.countActiveLeasesForUnit(current.unit_id) === 0) {
       this.setUnitStatus(current.unit_id, "vacant");
     }
-    this.save();
     return createChangeResult(1);
   }
 
@@ -2831,7 +1663,6 @@ export class WarehouseDatabase {
 
     this.data.lease_documents.push(record);
     lease.updated_at = nowIso();
-    this.save();
     return clone(record);
   }
 
@@ -2848,7 +1679,6 @@ export class WarehouseDatabase {
     if (lease) {
       lease.updated_at = nowIso();
     }
-    this.save();
     return { result: createChangeResult(1), document: clone(current) };
   }
 
@@ -2961,7 +1791,6 @@ export class WarehouseDatabase {
       created_by: payload.createdBy,
       created_at: createdAt,
     });
-    this.save();
     return clone(record);
   }
 
@@ -3059,7 +1888,6 @@ export class WarehouseDatabase {
         created_at: nowIso(),
       });
     }
-    this.save();
     return clone(current);
   }
 
@@ -3104,7 +1932,6 @@ export class WarehouseDatabase {
       : null;
     ticket.updated_at = nowIso();
 
-    this.save();
     return clone(item);
   }
 
@@ -3151,7 +1978,6 @@ export class WarehouseDatabase {
       storedTicket.updated_at = nowIso();
     }
 
-    this.save();
     return clone(record);
   }
 
@@ -3202,7 +2028,6 @@ export class WarehouseDatabase {
       storedTicket.updated_at = nowIso();
     }
 
-    this.save();
     return clone(record);
   }
 
@@ -3219,7 +2044,6 @@ export class WarehouseDatabase {
     if (ticket) {
       ticket.updated_at = nowIso();
     }
-    this.save();
     return { result: createChangeResult(1), attachment: clone(current) };
   }
 
@@ -3313,7 +2137,6 @@ export class WarehouseDatabase {
     record.status = payload.status ?? this.calculateBillingStatus(record);
     this.validateBillingInvoicePayload(record);
     this.data.billing_invoices.push(record);
-    this.save();
     return this.getBillingInvoice(record.id);
   }
 
@@ -3357,7 +2180,6 @@ export class WarehouseDatabase {
     Object.assign(current, next);
     current.status = payload.status ?? this.calculateBillingStatus(current);
     this.validateBillingInvoicePayload(current);
-    this.save();
     return this.getBillingInvoice(current.id);
   }
 
@@ -3413,7 +2235,6 @@ export class WarehouseDatabase {
 
     this.data.billing_payments.push(record);
     this.refreshBillingInvoiceStatus(invoice.id);
-    this.save();
     return clone({
       ...record,
       invoice: this.getBillingInvoice(invoice.id),
@@ -3452,7 +2273,6 @@ export class WarehouseDatabase {
 
     this.refreshBillingInvoiceStatus(previousInvoiceId);
     this.refreshBillingInvoiceStatus(invoice.id);
-    this.save();
     return clone({
       ...current,
       invoice: this.getBillingInvoice(invoice.id),
@@ -3470,7 +2290,6 @@ export class WarehouseDatabase {
       (payment) => payment.id !== id,
     );
     this.refreshBillingInvoiceStatus(invoiceId);
-    this.save();
     return createChangeResult(1);
   }
 
@@ -3512,7 +2331,6 @@ export class WarehouseDatabase {
     };
 
     this.data.import_approvals.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -3526,7 +2344,6 @@ export class WarehouseDatabase {
     approval.decided_at = nowIso();
     approval.decided_by = userId;
     approval.batch_id = batchId ?? null;
-    this.save();
     return clone(approval);
   }
 
@@ -3542,7 +2359,6 @@ export class WarehouseDatabase {
     approval.status = "rejected";
     approval.decided_at = nowIso();
     approval.decided_by = userId;
-    this.save();
     return clone(approval);
   }
 
@@ -3584,7 +2400,6 @@ export class WarehouseDatabase {
     };
 
     this.data.import_batches.push(record);
-    this.save();
     return clone(record);
   }
 
@@ -3628,7 +2443,6 @@ export class WarehouseDatabase {
     batch.rolled_back_at = nowIso();
     batch.rolled_back_by = userId;
     batch.rollback_error = null;
-    this.save();
     return clone(batch);
   }
 
@@ -3784,7 +2598,6 @@ export class WarehouseDatabase {
       invoice = this.syncInvoiceVariableAmount(activeLease.id, period);
     }
 
-    this.save();
     return {
       ...this.listMeterReadings({ unitId: unit.id, period }).find(
         (reading) => reading.id === record.id,
@@ -3866,7 +2679,6 @@ export class WarehouseDatabase {
 
     this.data.notification_events.push(event);
     this.data.notification_deliveries.push(...deliveries);
-    this.save();
     return {
       event: clone(event),
       deliveries: clone(deliveries),
@@ -3892,7 +2704,6 @@ export class WarehouseDatabase {
         payload.status === "delivered" ? nowIso() : delivery.delivered_at,
       updated_at: nowIso(),
     });
-    this.save();
     return clone(delivery);
   }
 
@@ -3937,7 +2748,6 @@ export class WarehouseDatabase {
     }
     delivery.read_at = delivery.read_at ?? nowIso();
     delivery.updated_at = nowIso();
-    this.save();
     return clone(delivery);
   }
 

@@ -116,20 +116,11 @@ export function createAccessService({
   const buildSystemReadiness = async () => {
     const storage = await safeCheck(() => fileStorage.check());
     const database = await safeCheck(async () => {
-      if (db.backend === "postgres") {
-        await db.health();
-        return {
-          ok: true,
-          backend: "postgres",
-          message: "PostgreSQL relational storage is active",
-        };
-      }
-
+      await db.health();
       return {
-        ok: false,
-        backend: "json",
-        message:
-          "Local JSON development storage; PostgreSQL is required in production",
+        ok: true,
+        backend: "postgres",
+        message: "PostgreSQL relational storage is active",
       };
     });
     const redis = await safeCheck(async () => {
@@ -137,9 +128,7 @@ export function createAccessService({
         return {
           ok: true,
           message:
-            db.backend === "postgres"
-              ? "Authentication challenges shared transactionally in PostgreSQL"
-              : "Single API process: in-memory authentication challenges",
+            "Authentication challenges shared transactionally in PostgreSQL",
         };
       const value = execFileSync(
         config.redisCliBin,
@@ -156,9 +145,7 @@ export function createAccessService({
       };
     });
     const secrets = {
-      jwtSecret: Boolean(
-        config.jwtSecret && config.jwtSecret !== "skladkontur-demo-secret",
-      ),
+      jwtSecret: Boolean(config.jwtSecret && config.jwtSecret.length >= 32),
       telegram: Boolean(config.telegramBotToken),
       vk: Boolean(config.vkGroupToken),
       smtp: Boolean(config.smtpHost),
@@ -167,7 +154,7 @@ export function createAccessService({
       {
         id: "database",
         label: "PostgreSQL",
-        ok: database.ok && database.backend === "postgres",
+        ok: database.ok,
         status: database.backend ?? "unknown",
         message: database.message,
       },
@@ -176,7 +163,7 @@ export function createAccessService({
         label: "Redis",
         ok: redis.ok,
         status: !config.redisUrl
-          ? "memory"
+          ? "postgres"
           : redis.ok
             ? "redis"
             : "unavailable",
@@ -196,10 +183,10 @@ export function createAccessService({
         id: "secrets",
         label: "Secrets",
         ok: secrets.jwtSecret,
-        status: secrets.jwtSecret ? "configured" : "demo",
+        status: secrets.jwtSecret ? "configured" : "invalid",
         message: secrets.jwtSecret
           ? "JWT secret is configured"
-          : "JWT secret uses demo fallback",
+          : "JWT secret is missing or too short",
       },
     ];
 

@@ -64,7 +64,6 @@ export function createDashboardRoutes({
         };
         if (receipt) Object.assign(receipt, values);
         else db.data.notification_reads.push(values);
-        db.save();
       }
 
       ok(response, { success: true });

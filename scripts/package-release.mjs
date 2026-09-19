@@ -11,7 +11,7 @@ const allowed = (file) =>
     "package-lock.json",
     "apps/api/package.json",
     "apps/web/package.json",
-    "scripts/bootstrap-deployment.mjs",
+    "scripts/create-initial-admin.mjs",
     "README.md",
   ].includes(file) ||
   ["apps/api/src/", "packages/contracts/", "infra/deploy/", "docs/"].some(

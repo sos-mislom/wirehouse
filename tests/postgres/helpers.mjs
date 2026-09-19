@@ -1,7 +1,12 @@
 import crypto from "node:crypto";
 import { createPool } from "../../apps/api/src/persistence/pool.js";
 import { migrate } from "../../apps/api/src/persistence/migrate.js";
-import { loadRows } from "../../apps/api/src/persistence/rows.js";
+import {
+  flushRows,
+  loadRows,
+  normalizedData,
+} from "../../apps/api/src/persistence/rows.js";
+import { emptyData } from "../../apps/api/src/persistence/schema.js";
 
 // Every suite owns a separate disposable database; never reset the supplied DB.
 export async function postgresFixture(data, { applyMigration = true } = {}) {
@@ -21,16 +26,23 @@ export async function postgresFixture(data, { applyMigration = true } = {}) {
     await admin.end();
   };
   try {
-    if (data) {
-      await pool.query(
-        "CREATE TABLE public.app_state (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now())",
-      );
-      await pool.query(
-        "INSERT INTO public.app_state (id,data) VALUES ('warehouse',$1)",
-        [JSON.stringify(data)],
-      );
-    }
     const result = applyMigration ? await migrate(pool) : null;
+    if (data) {
+      if (!applyMigration)
+        throw new Error("Fixture data requires an initialized schema");
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await flushRows(client, emptyData(), normalizedData(data));
+        await client.query("SET CONSTRAINTS ALL IMMEDIATE");
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
     return {
       pool,
       url: url.toString(),

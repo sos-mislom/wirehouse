@@ -26,8 +26,8 @@
     "package:release": "node scripts/package-release.mjs",
     "db:migrate": "node --env-file-if-exists=.env apps/api/src/persistence/cli.js migrate",
     "db:status": "node --env-file-if-exists=.env apps/api/src/persistence/cli.js status",
-    "db:rollback-legacy": "node --env-file-if-exists=.env apps/api/src/persistence/cli.js rollback-legacy",
-    "test:postgres": "node --test tests/postgres/*.test.mjs"
+    "db:create-admin": "node --env-file-if-exists=.env scripts/create-initial-admin.mjs",
+    "test:postgres": "node --test tests/api.test.mjs tests/bot-links.test.mjs tests/postgres/*.test.mjs"
   },
   "overrides": {
     "uuid": "11.1.1"

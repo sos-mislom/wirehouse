@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, "../../..");
-const defaultDbPath = path.resolve(__dirname, "../data/warehouse-data.json");
+const defaultDataPath = path.resolve(__dirname, "../data");
 
 const loadEnvFile = (filePath) => {
   if (!fs.existsSync(filePath)) {
@@ -76,23 +76,18 @@ const resolveWorkspacePath = (value, fallback) => {
     : path.resolve(workspaceRoot, candidate);
 };
 
-const resolvedDbPath = resolveWorkspacePath(
-  process.env.WAREHOUSE_DB_PATH,
-  defaultDbPath,
-);
 const resolvedDocumentsPath = resolveWorkspacePath(
   process.env.WAREHOUSE_DOCUMENTS_PATH,
-  path.resolve(path.dirname(resolvedDbPath), "documents"),
+  path.resolve(defaultDataPath, "documents"),
 );
 const resolvedTicketAttachmentsPath = resolveWorkspacePath(
   process.env.WAREHOUSE_TICKET_ATTACHMENTS_PATH,
-  path.resolve(path.dirname(resolvedDbPath), "ticket-attachments"),
+  path.resolve(defaultDataPath, "ticket-attachments"),
 );
 
 export const config = {
   host: process.env.API_HOST ?? "0.0.0.0",
   port: toNumber(process.env.API_PORT, 3001),
-  dbPath: resolvedDbPath,
   databaseUrl: process.env.DATABASE_URL ?? "",
   redisUrl: process.env.REDIS_URL ?? "",
   redisCliBin: process.env.REDIS_CLI_BIN ?? "redis-cli",
@@ -107,7 +102,7 @@ export const config = {
   s3SecretAccessKey:
     process.env.S3_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY ?? "",
   s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE !== "false",
-  jwtSecret: process.env.JWT_ACCESS_SECRET ?? "skladkontur-demo-secret",
+  jwtSecret: process.env.JWT_ACCESS_SECRET ?? "",
   tenantOtpCode: process.env.TENANT_OTP_CODE ?? null,
   tenantOtpTtlMs: toNumber(process.env.TENANT_OTP_TTL_MS, 5 * 60 * 1000),
   tenantOtpMaxAttempts: toNumber(process.env.TENANT_OTP_MAX_ATTEMPTS, 5),
@@ -154,13 +149,7 @@ if (!["local", "s3"].includes(config.fileStorageDriver))
   throw new Error("FILE_STORAGE_DRIVER must be local or s3");
 if (process.env.NODE_ENV === "production") {
   if (!config.databaseUrl) throw new Error("Production requires DATABASE_URL");
-  if (process.env.ENABLE_DEMO_SEED === "true")
-    throw new Error("Production forbids demo seed");
-  if (
-    !process.env.JWT_ACCESS_SECRET ||
-    config.jwtSecret.length < 32 ||
-    config.jwtSecret === "skladkontur-demo-secret"
-  )
+  if (!process.env.JWT_ACCESS_SECRET || config.jwtSecret.length < 32)
     throw new Error(
       "Production requires a unique JWT_ACCESS_SECRET of at least 32 characters",
     );

@@ -5,15 +5,8 @@ import { assertMigrated } from "./migrate.js";
 import { loadRows, flushRows } from "./rows.js";
 import { isDeepStrictEqual } from "node:util";
 
-export async function openDatabase({ databaseUrl, dbPath }) {
-  if (!databaseUrl) {
-    const db = new WarehouseDatabase(dbPath);
-    db.requestScope = async (_options, fn) => fn();
-    db.close = async () => {};
-    db.health = async () => true;
-    db.afterCommit = async (fn) => fn();
-    return db;
-  }
+export async function openDatabase({ databaseUrl }) {
+  if (!databaseUrl) throw new Error("DATABASE_URL is required");
   const pool = createPool(databaseUrl);
   try {
     await assertMigrated(pool);
@@ -54,15 +47,8 @@ export async function openDatabase({ databaseUrl, dbPath }) {
           // own SQL repository. Readers never take this lock or wait for writers.
           await client.query("SELECT pg_advisory_xact_lock($1,$2)", WRITE_LOCK);
         }
-        const control = await client.query(
-          "SELECT mode FROM warehouse.storage_control WHERE id",
-        );
-        if (control.rows[0]?.mode !== "relational")
-          throw new Error("Database is not in relational mode");
         const before = await loadRows(client);
-        const domain = new WarehouseDatabase(null, {
-          data: structuredClone(before),
-        });
+        const domain = new WarehouseDatabase(before);
         result = await context.run({ domain, client, afterCommit }, fn);
         if (readOnly) {
           if (!isDeepStrictEqual(before, domain.data))

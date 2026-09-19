@@ -66,7 +66,6 @@ export function createUsersRoutes({
         db.audit(user, "user_created", "user", createdUser.id, {
           user: publicUser(createdUser),
         });
-        db.save();
         created(response, {
           item: sanitizeUser(createdUser),
         });

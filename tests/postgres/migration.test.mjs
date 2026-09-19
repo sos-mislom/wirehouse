@@ -4,7 +4,6 @@ import { fixture } from "../fixtures.mjs";
 import { postgresFixture } from "./helpers.mjs";
 import {
   migrate,
-  rollbackLegacy,
   assertMigrated,
 } from "../../apps/api/src/persistence/migrate.js";
 import { normalizedData } from "../../apps/api/src/persistence/rows.js";
@@ -18,15 +17,24 @@ import { updateRenewal } from "../../apps/api/src/agenda.js";
 
 const open = (pg) => openDatabase({ databaseUrl: pg.url });
 
-test("Migration preserves all fields; repeat is safe, legacy writes blocked, rollback exports current rows", async (t) => {
+test("Migration initializes relational storage, removes transition state and is idempotent", async (t) => {
   const f = fixture();
   t.after(f.cleanup);
   const pg = await postgresFixture(f.db.data);
   assert.deepEqual(await pg.readState(), normalizedData(f.db.data));
   assert.equal((await migrate(pg.pool)).status, "already-migrated");
-  await assert.rejects(
-    pg.pool.query("UPDATE app_state SET data='{}' WHERE id='warehouse'"),
-    { code: "55000" },
+  assert.equal(
+    (await pg.pool.query("SELECT to_regclass('public.app_state') AS name"))
+      .rows[0].name,
+    null,
+  );
+  assert.equal(
+    (
+      await pg.pool.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema='warehouse' AND table_name='storage_control' AND column_name='mode'",
+      )
+    ).rows[0].count,
+    0,
   );
   const db = await open(pg);
   t.after(async () => {
@@ -36,41 +44,21 @@ test("Migration preserves all fields; repeat is safe, legacy writes blocked, rol
   await db.requestScope({}, () =>
     db.updateProperty(f.property.id, { name: "После миграции" }),
   );
-  const current = await pg.readState();
-  await rollbackLegacy(pg.pool);
-  assert.deepEqual(
-    (await pg.pool.query("SELECT data FROM app_state")).rows[0].data,
-    current,
+  assert.equal(
+    (await pg.readState()).properties.find((row) => row.id === f.property.id)
+      .name,
+    "После миграции",
   );
-  await assert.rejects(assertMigrated(pg.pool), /legacy mode/);
-  await assert.rejects(
-    db.requestScope({}, () => db.listProperties()),
-    /not in relational/,
-  );
-  await migrate(pg.pool);
-  assert.deepEqual(await pg.readState(), current);
 });
 
-test("Invalid legacy relation or unknown field aborts schema and leaves source unchanged", async (t) => {
-  const f = fixture();
-  t.after(f.cleanup);
-  f.db.data.units[0].property_id = "missing";
-  const pg = await postgresFixture(f.db.data, { applyMigration: false });
+test("Modified migration checksum stops startup and further migrations", async (t) => {
+  const pg = await postgresFixture();
   t.after(pg.cleanup);
-  await assert.rejects(migrate(pg.pool), { code: "23503" });
-  assert.equal(
-    (await pg.pool.query("SELECT to_regclass('warehouse.units') AS table_name"))
-      .rows[0].table_name,
-    null,
+  await pg.pool.query(
+    "UPDATE warehouse.schema_migrations SET checksum='tampered' WHERE name='002-remove-legacy-state.sql'",
   );
-  assert.deepEqual(
-    (await pg.pool.query("SELECT data FROM app_state")).rows[0].data,
-    f.db.data,
-  );
-  f.db.data.units[0].property_id = f.property.id;
-  f.db.data.properties[0].unknown = "do not discard";
-  await pg.pool.query("UPDATE app_state SET data=$1", [f.db.data]);
-  await assert.rejects(migrate(pg.pool), /Unknown storage fields/);
+  await assert.rejects(assertMigrated(pg.pool), /schema differs/);
+  await assert.rejects(migrate(pg.pool), /modified migration/);
 });
 
 test("Separate connections serialize changes, readers remain fresh, failed commit and thrown operation roll back", async (t) => {

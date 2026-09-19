@@ -13,7 +13,7 @@ npm run dev:api
 npm run dev:web
 ```
 
-Локальная база по умолчанию — JSON в `apps/api/data/`. Для демонстрационных данных используйте `.env.demo.example` вместо `.env.example`. Это отдельный режим разработки; production запрещает демонстрационное заполнение, фиксированный OTP и вход без доставки. Реальные ключи в Git не добавляются.
+API всегда использует PostgreSQL. После настройки `DATABASE_URL` выполните `npm run db:migrate`. Для новой пустой установки создайте первого администратора командой `npm run db:create-admin` с переменными `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL` и `INITIAL_ADMIN_PASSWORD`. Тестовые данные автоматически не создаются.
 
 ```sh
 npm run check                  # типы, доменные/API-тесты, production-сборка web
@@ -21,9 +21,9 @@ npx playwright install chromium
 npm run test:browser           # изолированные данные; без сообщений реальным пользователям
 ```
 
-Для PostgreSQL: задайте `DATABASE_URL`, выполните `npm run db:migrate`, затем запускайте API. Инструкции и откат: [DATABASE.md](docs/DATABASE.md).
+Инструкции по схеме, обновлению и резервным копиям: [DATABASE.md](docs/DATABASE.md).
 
-`TEST_POSTGRES_URL` включает проверки API и браузера на отдельных временных базах. `npm run test:postgres` проверяет перенос, откат и параллельную работу двух API; для него эта переменная обязательна, пользователь тестовой БД должен иметь право CREATE DATABASE. GitHub Actions запускает проверки на PostgreSQL 16. Дополнительные оболочки Android и Windows находятся в `apps/`; для запуска Electron после установки с `--ignore-scripts` выполните `npm rebuild electron`.
+`TEST_POSTGRES_URL` включает проверки API и браузера на отдельных временных базах. `npm run test:postgres` проверяет миграции, ограничения и параллельную работу двух API; пользователь тестовой БД должен иметь право `CREATE DATABASE`. Дополнительные оболочки Android и Windows находятся в `apps/`; для запуска Electron после установки с `--ignore-scripts` выполните `npm rebuild electron`.
 
 ## Состав
 

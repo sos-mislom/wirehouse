@@ -75,6 +75,8 @@ test("Enrollment requires an own Telegram contact or a scoped, expiring, single-
 });
 
 test("Webhook authentication, verified enrollment, OTP delivery, login and replay protection", async (t) => {
+  if (!process.env.TEST_POSTGRES_URL)
+    return t.skip("TEST_POSTGRES_URL is required for API integration tests");
   const f = fixture();
   t.after(f.cleanup);
   const outbox = path.join(f.dir, "outbox.jsonl");
@@ -86,11 +88,8 @@ test("Webhook authentication, verified enrollment, OTP delivery, login and repla
   await once(listener, "listening");
   const port = listener.address().port;
   await new Promise((r) => listener.close(r));
-  const pg = process.env.TEST_POSTGRES_URL
-    ? await postgresFixture(f.db.data)
-    : null;
-  const readState = async () =>
-    pg ? pg.readState() : JSON.parse(fs.readFileSync(f.dbPath));
+  const pg = await postgresFixture(f.db.data);
+  const readState = () => pg.readState();
   const child = spawn(
     process.execPath,
     ["--import", "./tests/bot-fetch-fixture.mjs", "apps/api/src/index.js"],
@@ -99,10 +98,8 @@ test("Webhook authentication, verified enrollment, OTP delivery, login and repla
         ...process.env,
         API_HOST: "127.0.0.1",
         API_PORT: String(port),
-        WAREHOUSE_DB_PATH: f.dbPath,
-        DATABASE_URL: pg?.url ?? "",
+        DATABASE_URL: pg.url,
         POSTGRES_URL: "",
-        ENABLE_DEMO_SEED: "false",
         REDIS_URL: "",
         JWT_ACCESS_SECRET: secret,
         TEST_BOT_OUTBOX: outbox,
@@ -126,7 +123,7 @@ test("Webhook authentication, verified enrollment, OTP delivery, login and repla
       child.kill("SIGTERM");
       await once(child, "exit");
     }
-    if (pg) await pg.cleanup();
+    await pg.cleanup();
   });
   const base = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {

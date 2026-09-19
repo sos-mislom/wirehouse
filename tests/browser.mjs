@@ -11,6 +11,8 @@ import { createToken } from "../apps/api/src/auth.js";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
+if (!process.env.TEST_POSTGRES_URL)
+  throw new Error("TEST_POSTGRES_URL is required for browser tests");
 fs.mkdirSync(".deploy", { recursive: true });
 const f = fixture();
 const secret = "browser-test-secret";
@@ -35,18 +37,14 @@ f.db.createBillingInvoice({
   variableAmount: 50,
   dueDate: `${period}-01`,
 });
-const pg = process.env.TEST_POSTGRES_URL
-  ? await postgresFixture(f.db.data)
-  : null;
+const pg = await postgresFixture(f.db.data);
 const child = spawn(process.execPath, ["apps/api/src/index.js"], {
   env: {
     ...process.env,
     API_HOST: "127.0.0.1",
     API_PORT: "3001",
-    WAREHOUSE_DB_PATH: f.dbPath,
-    DATABASE_URL: pg?.url ?? "",
+    DATABASE_URL: pg.url,
     POSTGRES_URL: "",
-    ENABLE_DEMO_SEED: "false",
     REDIS_URL: "",
     JWT_ACCESS_SECRET: secret,
     NOTIFICATION_CHANNELS: "in_app",

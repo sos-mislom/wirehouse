@@ -1,4 +1,3 @@
-import { config } from "../config.js";
 export function createSystemRoutes({
   ok,
   db,
@@ -20,16 +19,13 @@ export function createSystemRoutes({
       ok(response, {
         status: "ok",
         service: "warehouse-api",
-        databaseBackend: db.backend,
-        databaseSchema: db.backend === "postgres" ? "relational-v1" : undefined,
-        databasePath: db.backend === "json" ? config.dbPath : undefined,
+        databaseBackend: "postgres",
+        databaseSchema: "relational-v2",
         fileStorage: fileStorage.driver,
         volatileStore:
-          otpStore.redisEnabled && mfaChallengeStore.redisEnabled
+          otpStore.backend === "redis" && mfaChallengeStore.backend === "redis"
             ? "redis"
-            : db.backend === "postgres"
-              ? "postgres"
-              : "memory",
+            : "postgres",
       });
       return true;
     }

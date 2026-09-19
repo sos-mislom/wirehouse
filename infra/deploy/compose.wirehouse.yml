@@ -28,7 +28,6 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://wirehouse:${DB_PASSWORD}@db:5432/wirehouse
-      ENABLE_DEMO_SEED: "false"
       ALLOW_OTP_WITHOUT_DELIVERY: "false"
       REDIS_URL: ""
       NOTIFICATION_CHANNELS: in_app

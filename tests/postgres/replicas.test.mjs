@@ -20,7 +20,6 @@ async function startApi(url) {
       DATABASE_URL: url,
       API_HOST: "127.0.0.1",
       API_PORT: String(port),
-      ENABLE_DEMO_SEED: "false",
       REDIS_URL: "",
       JWT_ACCESS_SECRET: "replica-test-secret",
       NOTIFICATION_CHANNELS: "in_app",

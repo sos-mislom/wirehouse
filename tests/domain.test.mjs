@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import {
   isCriticalTicket,
   isOpenTicket,
@@ -70,7 +69,7 @@ test("Lease succession permits nonoverlapping periods, rejects overlap and inval
   );
 });
 
-test("PPR creates one task per date and persists its checklist and occurrence across restart", (t) => {
+test("PPR creates one task per date and preserves its checklist and occurrence", (t) => {
   const f = fixture();
   t.after(f.cleanup);
   const day = new Date().toISOString().slice(0, 10);
@@ -94,7 +93,7 @@ test("PPR creates one task per date and persists its checklist and occurrence ac
   });
   assert.equal(runMaintenance(f.db, day).length, 1);
   assert.equal(runMaintenance(f.db, day).length, 0);
-  const reloaded = new WarehouseDatabase(f.dbPath);
+  const reloaded = new WarehouseDatabase(f.db.data);
   assert.equal(runMaintenance(reloaded, day).length, 0);
   const task = reloaded.data.tickets[0];
   assert.equal(task.equipment_id, eq.id);
@@ -246,21 +245,18 @@ test("Work costs freeze the service tariff; closed tickets and foreign links are
   );
 });
 
-test("Corrupt state fails closed; transaction rollback leaves the persisted state intact", (t) => {
+test("A failed transaction restores the complete domain snapshot", (t) => {
   const f = fixture();
   t.after(f.cleanup);
-  const before = fs.readFileSync(f.dbPath, "utf8");
+  const before = structuredClone(f.db.data);
   assert.throws(() =>
     f.db.transaction(() => {
       f.db.data.users = [];
       throw new Error("cancel");
     }),
   );
-  assert.equal(fs.readFileSync(f.dbPath, "utf8"), before);
+  assert.deepEqual(f.db.data, before);
   assert.ok(f.db.data.users.length);
-  fs.writeFileSync(f.dbPath, "{broken");
-  assert.throws(() => new WarehouseDatabase(f.dbPath));
-  assert.equal(fs.readFileSync(f.dbPath, "utf8"), "{broken");
 });
 
 test("Failed tenant creation rolls back and referenced records cannot be deleted", (t) => {

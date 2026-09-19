@@ -3,7 +3,8 @@ import {fixture} from './fixtures.mjs';
 import {getAgenda,updateRenewal,agendaIcs} from '../apps/api/src/agenda.js';
 import {parseDto,parseJsonBody} from '../apps/api/src/http/body.js';
 import {propertyCreate,operationSchemas,renewalUpdate} from '../packages/contracts/src/requests.ts';
-import {TtlStore} from '../apps/api/src/infrastructure/ttl-store.js';
+import {RedisTtlStore} from '../apps/api/src/infrastructure/ttl-store.js';
+import {WarehouseDatabase} from '../apps/api/src/database.js';
 import {Readable} from 'node:stream';
 
 test('DTOs reject coercion, unknown properties and malformed JSON without silently losing input',async()=>{
@@ -25,13 +26,13 @@ test('Agenda uses real outstanding sums and scoped dates; renewal decisions pers
  assert.equal(getAgenda(f.db,{...f.manager,property_id:null},{},now).items.length,0);
  const dto={status:'contacted',note:'Обсудить новый срок',version:0};const result=updateRenewal(f.db,f.manager,f.lease.id,dto);assert.equal(result.version,1);assert.throws(()=>updateRenewal(f.db,f.manager,f.lease.id,dto),e=>e.status===409);assert.throws(()=>updateRenewal(f.db,f.manager,f.otherLease.id,dto),e=>e.status===403);
  assert.equal(getAgenda(f.db,f.manager,{days:30},now).items.find(x=>x.kind==='lease').renewal.note,dto.note);assert.ok(f.db.data.audit_log.some(x=>x.action==='lease_renewal_updated'));
- const Reload=f.db.constructor;assert.equal(new Reload(f.dbPath).data.lease_followups[0].version,1);
+ const reloaded=new WarehouseDatabase(f.db.data);assert.equal(reloaded.data.lease_followups[0].version,1);
  f.db.createBillingPayment({invoiceId:invoice.id,amount:750,paidAt:now.toISOString().slice(0,7)+'-03',method:'bank_transfer'});assert.equal(getAgenda(f.db,f.manager,{days:30},now).counts.payment,0);
  const ics=agendaIcs({...agenda,items:[{...agenda.items[0],title:'Осмотр, этаж; 1\nНе событие\r\nBEGIN:VEVENT '+('Я'.repeat(100))}]},now);
  assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0'));assert.equal(ics.match(/\r\nBEGIN:VEVENT\r\n/g).length,1);assert.ok(ics.split('\r\n').every(line=>Buffer.byteLength(line)<=75));assert.ok(ics.includes('SUMMARY:Осмотр\\, этаж\\; 1\\n'));
 });
 
-test('Configured Redis failure cannot silently select memory storage',()=>{
- assert.throws(()=>new TtlStore('test','redis://invalid','/does-not-exist'));
- const store=new TtlStore('test','','');store.set('a',1,-1);assert.equal(store.get('a'),null);store.set('b',2,1000);assert.equal(store.get('b'),2);store.delete('b');assert.equal(store.get('b'),null);
+test('Configured Redis must be reachable',()=>{
+ assert.throws(()=>new RedisTtlStore('test','redis://invalid','/does-not-exist'));
+ assert.throws(()=>new RedisTtlStore('test','','redis-cli'),/required/);
 });
