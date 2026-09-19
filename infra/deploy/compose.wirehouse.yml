@@ -28,6 +28,8 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://wirehouse:${DB_PASSWORD}@db:5432/wirehouse
+      WAREHOUSE_DOCUMENTS_PATH: /data/documents
+      WAREHOUSE_TICKET_ATTACHMENTS_PATH: /data/ticket-attachments
       ALLOW_OTP_WITHOUT_DELIVERY: "false"
       REDIS_URL: ""
       NOTIFICATION_CHANNELS: in_app
