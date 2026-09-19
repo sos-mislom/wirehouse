@@ -1,11 +1,17 @@
+import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
+
 export function createTenantQueries(deps) {
   const {
+    activeLeaseStages,
     db,
     sumBy,
     roundMetric,
     money,
     formatMonthLabel,
     daysUntilIso,
+    compareByDateDesc,
+    priorityWeights,
+    notificationToneWeights,
     translateStatus,
     normalizeTenantNote,
     buildScopedCollections,

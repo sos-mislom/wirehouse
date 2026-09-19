@@ -18,6 +18,7 @@ export function createWorkspaceQueries(deps) {
     normalizeUnit,
     normalizeLease,
     normalizeTenant,
+    normalizeBillingInvoice,
     normalizeNotification,
     normalizeTicket,
     normalizeTicketComment,

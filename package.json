@@ -20,7 +20,7 @@
     "android:sync": "npm --workspace apps/android run android:sync",
     "backup:postgres": "node scripts/backup-postgres.mjs",
     "test": "node --test tests/*.test.mjs",
-    "typecheck": "tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
+    "typecheck": "tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.modules.json && tsc -p apps/web/tsconfig.json --noEmit",
     "test:browser": "node tests/browser.mjs",
     "check": "npm run typecheck && npm test && npm run build:web",
     "package:release": "node scripts/package-release.mjs",
