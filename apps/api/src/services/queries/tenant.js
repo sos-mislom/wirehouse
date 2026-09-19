@@ -2,6 +2,7 @@ export function createTenantQueries(deps) {
   const {
     db,
     sumBy,
+    roundMetric,
     money,
     formatMonthLabel,
     daysUntilIso,

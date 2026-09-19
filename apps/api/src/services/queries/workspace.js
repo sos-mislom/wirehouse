@@ -8,6 +8,7 @@ export function createWorkspaceQueries(deps) {
     activeLeaseStages,
     db,
     sumBy,
+    roundMetric,
     priorityWeights,
     daysUntilIso,
     compareNotifications,
