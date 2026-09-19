@@ -26,15 +26,13 @@ export async function assertMigrated(client) {
   const { rows } = await client.query(
     "SELECT name, checksum FROM warehouse.schema_migrations ORDER BY name",
   );
-  if (
-    !isDeepStrictEqual(
-      rows,
-      expected.map(({ name, checksum }) => ({ name, checksum })),
-    )
-  )
-    throw new Error(
-      "Database schema differs from this release; run the matching migration",
-    );
+  for (const migration of expected) {
+    const applied = rows.find((row) => row.name === migration.name);
+    if (!applied || applied.checksum !== migration.checksum)
+      throw new Error(
+        "Database schema differs from this release; run the matching migration",
+      );
+  }
   const control = await client.query(
     "SELECT mode FROM warehouse.storage_control WHERE id",
   );
