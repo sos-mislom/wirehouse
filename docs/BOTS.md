@@ -16,7 +16,7 @@
 
 ## Сервер
 
-Токены и секреты — в `/opt/wirehouse/.env` и приватном `/opt/wirehouse/bots.env`, права 600. `pass.txt` исключён из Git. Перед переключением сохранена конфигурация webhook в `/opt/wirehouse/bot-webhooks-before.json`.
+Токены и секреты — в `/opt/wirehouse/.env` и приватном `/opt/wirehouse/bots.env`, права 600. `pass.txt` исключён из Git. Webhook продолжают использовать API на `wirehouse.92.118.115.96.nip.io`; браузерный интерфейс опубликован на чистом origin `sklad-kontur.92.118.115.96.nip.io`.
 
 - Telegram webhook: `/api/integrations/telegram/webhook`, проверяется `X-Telegram-Bot-Api-Secret-Token`.
 - VK Callback API: `/api/integrations/vk/webhook`, проверяются secret и group_id, включая запрос подтверждения.

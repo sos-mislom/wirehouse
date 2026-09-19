@@ -36,8 +36,17 @@ cp "$release/infra/deploy/nginx.wirehouse.conf" /etc/nginx/sites-available/wireh
 chmod 644 /etc/nginx/sites-available/wirehouse.conf
 nginx -t
 systemctl reload nginx
+curl -fsS --resolve sklad-kontur.92.118.115.96.nip.io:443:127.0.0.1 \
+  https://sklad-kontur.92.118.115.96.nip.io/health > "$release/public-health.json"
 cp "$release/infra/deploy/backup-wirehouse.sh" backup.sh
 chmod 700 backup.sh
 cp "$release/REVISION" deployed-revision.txt
 chmod 644 deployed-revision.txt
+find /var/www/wirehouse/releases -mindepth 1 -maxdepth 1 -type d \
+  ! -name "$release_tag" -exec rm -r -- {} +
+find /opt/wirehouse/releases -mindepth 1 -maxdepth 1 -type d \
+  ! -name "$release_tag" -exec rm -r -- {} +
+while read -r image; do
+  [[ "$image" == "wirehouse-api:$release_tag" ]] || docker image rm "$image"
+done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^wirehouse-api:')
 printf 'Released %s\n' "$release_tag"

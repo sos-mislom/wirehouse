@@ -1,6 +1,6 @@
 # Развёртывание Wirehouse
 
-URL: https://wirehouse.92.118.115.96.nip.io
+URL: https://sklad-kontur.92.118.115.96.nip.io
 
 Отдельный виртуальный хост, проект Docker Compose `wirehouse`, API только на `127.0.0.1:18044`. База не опубликована на хосте. Каталоги `/opt/wirehouse` и `/var/www/wirehouse` принадлежат только этому приложению. Существующие vhost и compose-проекты не используются.
 
@@ -36,7 +36,7 @@ URL: https://wirehouse.92.118.115.96.nip.io
 - `cd /opt/wirehouse && docker compose -p wirehouse -f compose.yml -f compose.network.yml ps` (последний `-f` нужен при наличии сетевого override, см. BOTS.md)
 - `docker compose -p wirehouse -f compose.yml logs --tail=100 api`
 - `systemctl list-timers wirehouse-backup.timer`
-- `curl -fsS https://wirehouse.92.118.115.96.nip.io/health`
+- `curl -fsS https://sklad-kontur.92.118.115.96.nip.io/health`
 - `nginx -t` перед любой собственной правкой vhost.
 - Сертификат Let's Encrypt; certbot renew и deploy-hook перезагружают Nginx после продления.
 - Логи Docker ограничены 3 файлами по 10 МБ на сервис.
