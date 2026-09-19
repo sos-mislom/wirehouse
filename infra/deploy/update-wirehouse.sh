@@ -38,4 +38,6 @@ nginx -t
 systemctl reload nginx
 cp "$release/infra/deploy/backup-wirehouse.sh" backup.sh
 chmod 700 backup.sh
+cp "$release/REVISION" deployed-revision.txt
+chmod 644 deployed-revision.txt
 printf 'Released %s\n' "$release_tag"

@@ -28,6 +28,10 @@ try {
   }
   if (!fs.existsSync("apps/web/dist/index.html"))
     throw new Error("Run npm run build:web before packaging");
+  fs.writeFileSync(
+    path.join(staging, "REVISION"),
+    `${execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim()}\n`,
+  );
   fs.cpSync("apps/web/dist", path.join(staging, "apps/web/dist"), {
     recursive: true,
   });
