@@ -242,10 +242,16 @@ export function LoginPage() {
           </>
         ) : tenantConnectionOpen ? (
           <section className="messenger-setup">
-            <MessengerButtons
-              channels={tenantOnboarding?.channels ?? []}
-              showInstructions
-            />
+            {tenantOnboarding ? (
+              <MessengerButtons
+                channels={tenantOnboarding.channels}
+                showInstructions
+              />
+            ) : (
+              <p className="auth-delivery-hint" role="status">
+                Загружаем доступные способы подключения…
+              </p>
+            )}
             <Button
               variant="text"
               className="text-button messenger-back"
@@ -317,6 +323,7 @@ export function LoginPage() {
                 variant="text"
                 type="button"
                 className="text-button"
+                disabled={!tenantOnboarding}
                 onClick={() => {
                   setTenantConnectionOpen(true);
                   setError("");
