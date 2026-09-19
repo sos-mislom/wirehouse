@@ -236,6 +236,7 @@ export function TicketOperations({
             </label>
             <Button
               variant="secondary"
+              type="submit"
               disabled={busy}
               className="secondary-button"
             >

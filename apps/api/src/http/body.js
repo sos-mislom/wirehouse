@@ -40,20 +40,22 @@ export function parseDto(schema, value) {
     fields,
   );
 }
-export async function parseJsonBody(request) {
+const bodies = new WeakMap();
+export async function preloadBody(request) {
+  if (
+    !request.headers["content-length"] &&
+    !request.headers["transfer-encoding"]
+  )
+    return;
+  await readBody(request);
+}
+async function readBody(request) {
+  if (bodies.has(request)) return bodies.get(request);
   const path = new URL(request.url, "http://localhost").pathname;
   const upload =
     /\/(attachments|documents|imports)(\/|$)/.test(path) ||
     /^\/api\/operations\/floorplans/.test(path);
   const limit = upload ? 140 * 1024 * 1024 : 1024 * 1024;
-  if (
-    !/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] || "")
-  )
-    throw new RequestError(
-      "Ожидается Content-Type: application/json",
-      415,
-      "UNSUPPORTED_MEDIA_TYPE",
-    );
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {
@@ -66,9 +68,23 @@ export async function parseJsonBody(request) {
       );
     chunks.push(chunk);
   }
+  const body = Buffer.concat(chunks).toString("utf8");
+  bodies.set(request, body);
+  return body;
+}
+export async function parseJsonBody(request) {
+  const path = new URL(request.url, "http://localhost").pathname;
+  if (
+    !/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] || "")
+  )
+    throw new RequestError(
+      "Ожидается Content-Type: application/json",
+      415,
+      "UNSUPPORTED_MEDIA_TYPE",
+    );
   let value;
   try {
-    value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    value = JSON.parse(await readBody(request));
   } catch {
     throw new RequestError("Некорректный JSON", 400, "INVALID_JSON");
   }

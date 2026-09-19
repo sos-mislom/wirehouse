@@ -295,7 +295,7 @@ export function createBillingRoutes({
           totalAmount: body.totalAmount,
           dueDate: String(body.dueDate),
         });
-        ok(response, { item: normalizeBillingInvoice(item) }, 201);
+        created(response, { item: normalizeBillingInvoice(item) });
       } catch (error) {
         badRequest(
           response,
@@ -336,7 +336,7 @@ export function createBillingRoutes({
           method: body.method ? String(body.method) : undefined,
           reference: body.reference ? String(body.reference) : undefined,
         });
-        ok(response, { item: normalizeBillingPayment(item) }, 201);
+        created(response, { item: normalizeBillingPayment(item) });
       } catch (error) {
         badRequest(
           response,

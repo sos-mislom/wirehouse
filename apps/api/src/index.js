@@ -30,36 +30,36 @@ import { createStorageUtilsService } from "./services/storage-utils.js";
 import { runMaintenance } from "./operations.js";
 
 import { config } from "./config.js";
-import { WarehouseDatabase } from "./database.js";
+import { openDatabase } from "./persistence/database.js";
+import { PostgresTtlStore } from "./infrastructure/postgres-ttl-store.js";
+import { bufferedResponse } from "./http/buffered-response.js";
+import { preloadBody } from "./http/body.js";
 import { createFileStorage } from "./file-storage.js";
 import { TtlStore } from "./infrastructure/ttl-store.js";
 
-const db = new WarehouseDatabase(config.dbPath);
+const db = await openDatabase(config);
 const importApprovalThreshold = Number.parseInt(
   process.env.IMPORT_APPROVAL_THRESHOLD ?? "25",
   10,
 );
-const fileStorage = createFileStorage(config);
+const storageDriver = createFileStorage(config);
+const fileStorage = {
+  ...storageDriver,
+  // Never remove a referenced file before the metadata deletion is committed.
+  delete: (file) => db.afterCommit(() => storageDriver.delete(file)),
+};
 if (fileStorage.driver === "local") {
   fs.mkdirSync(config.documentStoragePath, { recursive: true });
   fs.mkdirSync(config.ticketAttachmentStoragePath, { recursive: true });
 }
 
-const otpStore = new TtlStore(
-  "warehouse:otp",
-  config.redisUrl,
-  config.redisCliBin,
-);
-const mfaChallengeStore = new TtlStore(
-  "warehouse:mfa",
-  config.redisUrl,
-  config.redisCliBin,
-);
-const chatContextStore = new TtlStore(
-  "warehouse:chat-context",
-  config.redisUrl,
-  config.redisCliBin,
-);
+const createChallengeStore = (namespace) =>
+  db.backend === "postgres" && !config.redisUrl
+    ? new PostgresTtlStore(namespace, db)
+    : new TtlStore(namespace, config.redisUrl, config.redisCliBin);
+const otpStore = createChallengeStore("warehouse:otp");
+const mfaChallengeStore = createChallengeStore("warehouse:mfa");
+const chatContextStore = createChallengeStore("warehouse:chat-context");
 const chatContextTtlMs = 30 * 24 * 60 * 60 * 1000;
 
 const {
@@ -573,13 +573,47 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    for (const route of routes) {
-      if (await route(request, response, url)) return;
+    if (pathname === "/health" && method === "GET") {
+      await routes[0](request, response, url);
+      return;
     }
-
-    notFound(response);
+    await preloadBody(request);
+    const pending = bufferedResponse(response);
+    await db.requestScope(
+      { readOnly: method === "GET" || method === "HEAD" },
+      async () => {
+        for (const route of routes) {
+          if (await route(request, pending, url)) return;
+        }
+        notFound(pending);
+      },
+    );
+    pending.flush();
   } catch (error) {
-    console.error("warehouse-api error", error);
+    console.error("warehouse-api error", {
+      code: error.code,
+      message: error.message,
+      constraint: error.constraint,
+    });
+    if (["23505", "23503", "23514", "23P01"].includes(error.code)) {
+      json(response, 409, {
+        error:
+          "Изменение нарушает связи или уникальность данных. Обновите страницу и проверьте запись.",
+        code: "DATA_CONFLICT",
+      });
+      return;
+    }
+    if (
+      ["55P03", "57014", "57P01", "ECONNREFUSED", "ECONNRESET"].includes(
+        error.code,
+      )
+    ) {
+      json(response, 503, {
+        error: "Хранилище временно занято или недоступно. Повторите запрос.",
+        code: "DATABASE_UNAVAILABLE",
+      });
+      return;
+    }
     json(response, error.status ?? (error instanceof SyntaxError ? 400 : 500), {
       error:
         error.status || error instanceof SyntaxError
@@ -591,34 +625,36 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
+let maintenanceRunning;
+const performMaintenance = () => {
+  if (maintenanceRunning) return maintenanceRunning;
+  maintenanceRunning = db
+    .requestScope({ readOnly: false }, () => runMaintenance(db))
+    .catch((error) =>
+      console.error("Maintenance generation failed", {
+        code: error.code,
+        message: error.message,
+      }),
+    )
+    .finally(() => {
+      maintenanceRunning = null;
+    });
+  return maintenanceRunning;
+};
+await performMaintenance();
+const maintenanceTimer = setInterval(performMaintenance, 60_000);
+maintenanceTimer.unref();
 server.listen(config.port, config.host, () => {
   console.log(
     `warehouse-api listening on http://${config.host}:${config.port}`,
   );
 });
-
-const maintenanceTimer = setInterval(() => {
-  if (
-    db.data.maintenance_plans.some(
-      (p) => p.active && p.nextDate <= new Date().toISOString().slice(0, 10),
-    )
-  ) {
-    try {
-      runMaintenance(db);
-    } catch (error) {
-      console.error("Maintenance generation failed", error.message);
-    }
-  }
-}, 60_000);
-maintenanceTimer.unref();
-if (
-  db.data.maintenance_plans.some(
-    (p) => p.active && p.nextDate <= new Date().toISOString().slice(0, 10),
-  )
-)
-  runMaintenance(db);
 for (const signal of ["SIGTERM", "SIGINT"])
-  process.on(signal, () => {
+  process.once(signal, () => {
     clearInterval(maintenanceTimer);
-    server.close(() => process.exit(0));
+    server.close(async () => {
+      await maintenanceRunning;
+      await db.close();
+      process.exit(0);
+    });
   });

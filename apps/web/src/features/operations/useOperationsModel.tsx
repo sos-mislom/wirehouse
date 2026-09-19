@@ -51,7 +51,9 @@ export function useOperationsModel({
   const change = (key: string, value: unknown) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const create = () => {
+    if (busy) return;
     setError("");
+    setNotice("");
     setDraft({
       propertyId: property || overview.properties[0]?.id || "",
       name: "",
@@ -94,7 +96,7 @@ export function useOperationsModel({
       );
       await load();
       await onRefresh();
-      setDraft(null);
+      setDraft((current) => (current === draft ? null : current));
       setNotice("Изменения сохранены");
     } catch (error) {
       setError((error as Error).message);

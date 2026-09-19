@@ -70,6 +70,7 @@ export function Operations(props: Props) {
               type="button"
               className={`mvp-tab ${tab === key ? "mvp-tab--active" : ""}`}
               key={key}
+              disabled={busy}
               onClick={() => {
                 setTab(key);
                 setDraft(null);
@@ -120,7 +121,7 @@ export function Operations(props: Props) {
             className="primary-button"
             type="button"
             onClick={tab === "users" ? onCreateUser : create}
-            disabled={tab === "users" && !onCreateUser}
+            disabled={busy || (tab === "users" && !onCreateUser)}
           >
             Добавить
           </Button>
@@ -164,6 +165,7 @@ export function Operations(props: Props) {
             <Button
               variant="primary"
               className="primary-button"
+              type="submit"
               disabled={busy}
             >
               Сохранить показание

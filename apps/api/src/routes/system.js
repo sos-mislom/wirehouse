@@ -16,16 +16,20 @@ export function createSystemRoutes({
     const pathname = url.pathname;
     const method = request.method;
     if (method === "GET" && pathname === "/health") {
+      await db.health();
       ok(response, {
         status: "ok",
         service: "warehouse-api",
         databaseBackend: db.backend,
+        databaseSchema: db.backend === "postgres" ? "relational-v1" : undefined,
         databasePath: db.backend === "json" ? config.dbPath : undefined,
         fileStorage: fileStorage.driver,
         volatileStore:
           otpStore.redisEnabled && mfaChallengeStore.redisEnabled
             ? "redis"
-            : "memory",
+            : db.backend === "postgres"
+              ? "postgres"
+              : "memory",
       });
       return true;
     }

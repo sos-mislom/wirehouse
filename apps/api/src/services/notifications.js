@@ -7,9 +7,9 @@ export function createNotificationsService({ db, sendEmail }) {
   } = {}) => {
     const users = db.listUsers().filter((user) => user.is_active === 1);
     return users.filter((user) => {
-      if (["admin", "manager"].includes(user.role)) {
-        return true;
-      }
+      if (user.role === "admin") return true;
+      if (user.role === "manager")
+        return Boolean(user.property_id && user.property_id === propertyId);
       if (user.role === "worker") {
         return Boolean(user.property_id && user.property_id === propertyId);
       }

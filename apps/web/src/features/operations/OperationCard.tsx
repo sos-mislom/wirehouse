@@ -31,6 +31,7 @@ export function OperationCard({
     setReadingMeter,
     setReadingValue,
     token,
+    busy,
   } = model;
   return (
     <article className="mvp-card operation-card" key={row.id}>
@@ -48,6 +49,7 @@ export function OperationCard({
             variant="secondary"
             type="button"
             className="secondary-button"
+            disabled={busy}
             onClick={() => {
               setDraft({ ...row, password: "" });
               setError("");

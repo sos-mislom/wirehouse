@@ -21,7 +21,9 @@ npx playwright install chromium
 npm run test:browser           # изолированные данные; без сообщений реальным пользователям
 ```
 
-GitHub Actions запускает обе проверки. Дополнительные оболочки Android и Windows находятся в `apps/`; для запуска Electron после установки с `--ignore-scripts` выполните `npm rebuild electron`.
+Для PostgreSQL: задайте `DATABASE_URL`, выполните `npm run db:migrate`, затем запускайте API. Инструкции и откат: [DATABASE.md](docs/DATABASE.md).
+
+`TEST_POSTGRES_URL` включает проверки API и браузера на отдельных временных базах. `npm run test:postgres` проверяет перенос, откат и параллельную работу двух API; для него эта переменная обязательна, пользователь тестовой БД должен иметь право CREATE DATABASE. GitHub Actions запускает проверки на PostgreSQL 16. Дополнительные оболочки Android и Windows находятся в `apps/`; для запуска Electron после установки с `--ignore-scripts` выполните `npm rebuild electron`.
 
 ## Состав
 
@@ -30,6 +32,7 @@ GitHub Actions запускает обе проверки. Дополнител�
 - `apps/web/src/state` — состояние, вычисляемые представления, эффекты и действия по функциям.
 - `apps/web/src/ui` — общие контролы и дизайн-токены.
 - `apps/api/src/routes` — HTTP-маршруты по предметным областям.
+- `apps/api/src/persistence` — SQL-миграции, пул соединений, транзакции и хранение записей.
 - `apps/api/src/services` — выборки, доставка, боты, документы и импорт/экспорт.
 - `packages/contracts/src` — строгие схемы запросов и общие DTO ответов.
 - `tests` — автоматические проверки; `infra/deploy` — актуальное развёртывание и резервные копии.

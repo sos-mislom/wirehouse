@@ -117,11 +117,11 @@ export function createAccessService({
     const storage = await safeCheck(() => fileStorage.check());
     const database = await safeCheck(async () => {
       if (db.backend === "postgres") {
-        db.runPsql(["-q", "-t", "-A", "-c", "select 1"]);
+        await db.health();
         return {
           ok: true,
           backend: "postgres",
-          message: "PostgreSQL state store is active",
+          message: "PostgreSQL relational storage is active",
         };
       }
 
@@ -137,7 +137,9 @@ export function createAccessService({
         return {
           ok: true,
           message:
-            "Single API process: in-memory expiring authentication challenges",
+            db.backend === "postgres"
+              ? "Authentication challenges shared transactionally in PostgreSQL"
+              : "Single API process: in-memory authentication challenges",
         };
       const value = execFileSync(
         config.redisCliBin,
