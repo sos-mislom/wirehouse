@@ -1,5 +1,5 @@
-import { isOpenTicket } from "../../../../packages/contracts/src/domain.js";
-import { config } from "../config.js";
+import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
+import { config } from "../../config.js";
 
 export function createBotContextManager(deps) {
   const {

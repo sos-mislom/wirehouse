@@ -1,6 +1,6 @@
-import { parseJsonBody } from "../http/body.js";
-import { consumeBotLink, bindBotUser } from "../bot-links.js";
-import { config } from "../config.js";
+import { parseJsonBody } from "../../http/body.js";
+import { consumeBotLink, bindBotUser } from "../../bot-links.js";
+import { config } from "../../config.js";
 
 export function createVkWebhookHandler(deps) {
   const {

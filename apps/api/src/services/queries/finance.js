@@ -1,4 +1,4 @@
-import { isOpenTicket } from "../../../../packages/contracts/src/domain.js";
+import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 
 export function createFinanceQueries(deps) {
   const {

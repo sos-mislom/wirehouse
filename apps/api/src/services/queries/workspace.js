@@ -1,7 +1,7 @@
 import {
   isCriticalTicket,
   isOpenTicket,
-} from "../../../../packages/contracts/src/domain.js";
+} from "../../../../../packages/contracts/src/domain.js";
 
 export function createWorkspaceQueries(deps) {
   const {

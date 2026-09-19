@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import path from "node:path";
-import { MAX_ATTACHMENT_BYTES } from "../../../../packages/contracts/src/domain.js";
+import { MAX_ATTACHMENT_BYTES } from "../../../../../packages/contracts/src/domain.js";
 
 export function createBotMediaHandler(deps) {
   const {
