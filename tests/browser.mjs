@@ -12,6 +12,7 @@ fs.mkdirSync('.deploy', {recursive:true});
 const f=fixture();const secret='browser-test-secret';
 saveOperation(f.db,f.admin,'meters',null,{name:'Счётчик исполнителя',propertyId:f.property.id,unitId:f.unit.id,scope:'individual',resource:'water',tariff:1,initialValue:10,responsibleId:f.worker.id});
 const period = new Date().toISOString().slice(0,7);
+f.db.updateLease(f.lease.id,{endDate:new Date(Date.now()+14*86400000).toISOString().slice(0,10)});
 f.db.createBillingInvoice({leaseId:f.lease.id,period,rentAmount:1000,variableAmount:50,dueDate:`${period}-01`});
 const child=spawn(process.execPath,['apps/api/src/index.js'],{env:{...process.env,API_HOST:'127.0.0.1',API_PORT:'3001',WAREHOUSE_DB_PATH:f.dbPath,DATABASE_URL:'',POSTGRES_URL:'',ENABLE_DEMO_SEED:'false',REDIS_URL:'',JWT_ACCESS_SECRET:secret,NOTIFICATION_CHANNELS:'in_app'},stdio:['ignore','pipe','pipe']});
 let apiLogs='';child.stderr.on('data',d=>apiLogs+=d);
@@ -36,6 +37,20 @@ try {
   await loginPage.getByRole('button',{name:'← Ко входу',exact:true}).click();assert.equal(await loginPage.locator('input[name=phone]').inputValue(),'+79990000101');
   await page.addInitScript(token=>localStorage.setItem('warehouse-platform-token',token),createToken({sub:f.admin.id,role:'admin'},secret));
   await page.goto('http://127.0.0.1:5173');await page.getByRole('heading',{name:'Дашборд',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Сроки и работы',exact:true}).click();
+  await page.getByRole('heading',{name:'Сроки и работы',exact:true}).waitFor();
+  await page.getByLabel('Период',{exact:true}).selectOption('90');
+  await page.locator('.renewal-editor summary').first().waitFor();
+  await page.locator('.renewal-editor summary').first().click();
+  await page.getByLabel('Следующий шаг',{exact:true}).first().selectOption('contacted');
+  await page.getByLabel('Заметка по продлению',{exact:true}).first().fill('Обсудить срок до конца недели');
+  await page.getByRole('button',{name:'Сохранить решение',exact:true}).first().click();
+  await page.getByText('Решение сохранено',{exact:true}).waitFor();
+  await page.reload();await page.locator('.renewal-editor summary').first().waitFor();
+  assert.match(await page.locator('.renewal-editor summary').first().innerText(),/Обсуждаем условия/);
+  const calendar=page.waitForEvent('download');await page.getByRole('button',{name:'Скачать календарь',exact:true}).click();assert.equal((await calendar).suggestedFilename(),'wirehouse-agenda.ics');
+  await page.setViewportSize({width:320,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Agenda fits mobile');
+  await page.screenshot({path:'.deploy/agenda-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:'Арендаторы',exact:true}).click();await page.getByRole('heading',{name:'Арендаторы',exact:true}).waitFor();
   await page.getByRole('button',{name:'Договоры',exact:true}).click();await page.getByRole('heading',{name:'Договоры',exact:true}).waitFor();
   await page.goBack();await page.getByRole('heading',{name:'Арендаторы',exact:true}).waitFor();
@@ -77,9 +92,9 @@ try {
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'Billing fits mobile');
   for (const width of [320,360,390,768,1024]) {
     await page.setViewportSize({width,height:844});
-    for (const section of ['Дашборд','Арендаторы','Договоры','Помещения','Эксплуатация','Биллинг','Пользователи','Объекты','Чат','Уведомления','Импорт / экспорт','Профиль']) {
+    for (const section of ['Дашборд','Сроки и работы','Арендаторы','Договоры','Помещения','Эксплуатация','Биллинг','Пользователи','Объекты','Чат','Уведомления','Импорт / экспорт','Профиль']) {
       await page.getByRole('button',{name:'Меню',exact:true}).click();
-      await page.locator('#workspace-navigation').getByRole('button',{name:section,exact:true}).click();
+      await page.locator('#workspace-navigation').getByRole('button',{name:new RegExp('^'+section+'(?:\\s|$)')}).click();
       await page.waitForTimeout(100);
       assert.equal(await page.getByRole('button',{name:'Меню',exact:true}).getAttribute('aria-expanded'),'false');
       const overflow = await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth, offenders:Array.from(document.querySelectorAll('main *')).filter(e=>{const r=e.getBoundingClientRect();return r.width>0 && (r.right>innerWidth+2||r.left < -2);}).slice(0,8).map(e=>e.className)}));

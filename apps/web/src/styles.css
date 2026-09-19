@@ -1,3 +1,4 @@
+@layer legacy {
 
 :root {
   color-scheme: light;
@@ -3645,3 +3646,5 @@ label > span, .form-grid label > span { color: var(--ink-soft); font-weight: 500
 .auth-connect-link { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; }
 .auth-connect-link > span { color: var(--ink-muted); }
 .auth-connect-link .text-button { font-size: 13px; min-height: 36px; padding: 0; }
+
+}

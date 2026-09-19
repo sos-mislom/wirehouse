@@ -1,11 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs";
 import os from "node:os";
+import path from "node:path";
 
+import { isOpenTicket,leaseOverlaps,requireDate,requireNumber } from "../../../packages/contracts/src/domain.js";
 import { hashPassword } from "./auth.js";
-import { isOpenTicket, requireNumber, requireDate, leaseOverlaps } from "../../../packages/contracts/src/domain.js";
 
 const nowIso = () => new Date().toISOString();
 const createId = () => crypto.randomUUID();
@@ -78,6 +78,7 @@ const createEmptyData = () => ({
   tenant_notes: [],
   tenant_note_attachments: [],
   lease_documents: [],
+  lease_followups: [],
   billing_invoices: [],
   billing_payments: [],
   meter_readings: [],
@@ -169,7 +170,7 @@ const buildChecklistItems = (category) =>
 export class WarehouseDatabase {
   constructor(dbPath) {
     this.dbPath = dbPath;
-    this.databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "";
+    this.databaseUrl = process.env.DATABASE_URL ?? "";
     this.backend = this.databaseUrl ? "postgres" : "json";
     this.psqlBin = process.env.PSQL_BIN ?? "psql";
     this.persistLoadedData = false;

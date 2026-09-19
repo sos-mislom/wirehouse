@@ -14,7 +14,7 @@ URL: https://wirehouse.92.118.115.96.nip.io
 
 1. Локально: `npm run check && npm run test:browser`. Для установки без сборки desktop: `npm ci --ignore-scripts --workspace apps/web --workspace apps/api --workspace packages/contracts --include-workspace-root`.
    На чистой машине установите Chromium: `npx playwright install --with-deps chromium`.
-2. Архивировать package.json, package-lock.json, apps/api/package.json, apps/api/src, apps/web/package.json, apps/web/dist, packages/contracts, scripts/bootstrap-deployment.mjs, infra/deploy и docs.
+2. Добавить исходники релиза в индекс Git и выполнить `npm run package:release`. Архив `.deploy/release.tar.gz` содержит только рабочие файлы из Git и собранный web; локальные заметки, инструменты и секреты не попадают в образ.
 3. Загрузить архив как `/opt/wirehouse/release.tar.gz` и `infra/deploy/update-wirehouse.sh` как `/opt/wirehouse/update.sh`.
 4. На сервере: `bash /opt/wirehouse/update.sh YYYYMMDDTHHMMSSZ`. Тег каждый раз новый.
 5. Проверить `/health`, вход, основные разделы, журнал и здоровое состояние контейнеров.
@@ -33,8 +33,8 @@ URL: https://wirehouse.92.118.115.96.nip.io
 
 ## Эксплуатация
 
-- `cd /opt/wirehouse && docker compose ps`
-- `docker compose logs --tail=100 api`
+- `cd /opt/wirehouse && docker compose -p wirehouse -f compose.yml -f compose.network.yml ps` (последний `-f` нужен при наличии сетевого override, см. BOTS.md)
+- `docker compose -p wirehouse -f compose.yml logs --tail=100 api`
 - `systemctl list-timers wirehouse-backup.timer`
 - `curl -fsS https://wirehouse.92.118.115.96.nip.io/health`
 - `nginx -t` перед любой собственной правкой vhost.
@@ -46,3 +46,7 @@ URL: https://wirehouse.92.118.115.96.nip.io
 - На хосте устаревшая Ubuntu 18.04; обновление хоста требует отдельного плана для всех соседних проектов.
 
 Исходное состояние соседних сайтов и конфигов сохранено в `/opt/wirehouse/predeploy`. Уже до развёртывания `www.yondex.tech` отвечал HTTP 500; этот проект не исправлялся и его конфигурация не изменялась.
+
+## Требования к релизу
+
+Node.js 24.11+ нужен для общих TypeScript DTO. Новые клиенты передают строгие JSON-типы; старые клиенты с числами-строками или неизвестными полями получат 400. UI и API выпускаются вместе. Данные контроля продления добавляются совместимо к существующему состоянию; старые записи сохраняются.

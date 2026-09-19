@@ -11,7 +11,7 @@
     "desktop:release:win": "node ../../scripts/check-release-env.mjs windows && npm run build:web && electron-builder --win nsis portable --x64 --publish never"
   },
   "devDependencies": {
-    "electron": "^37.4.0",
+    "electron": "44.4.3",
     "electron-builder": "^26.0.12"
   },
   "build": {

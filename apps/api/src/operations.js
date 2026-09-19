@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
+import { isOpenTicket,requireDate,requireNumber } from '../../../packages/contracts/src/domain.js';
 import { hashPassword } from './auth.js';
-import { isOpenTicket, requireNumber, requireDate } from '../../../packages/contracts/src/domain.js';
 
 const id = () => crypto.randomUUID();
 const today = () => new Date().toISOString().slice(0, 10);
@@ -24,7 +24,7 @@ export function operationsScope(db, user) {
   const leases = db.data.leases.filter(l => l.tenant_id === user.tenant_id && l.stage !== 'terminated');
   const unitIds = new Set(leases.map(l => l.unit_id));
   const propertyIds = new Set(db.data.units.filter(u => unitIds.has(u.id)).map(u => u.property_id));
-  return propertyId => user.role === 'admin' || (user.role === 'tenant' ? propertyIds.has(propertyId) : !user.property_id || propertyId === user.property_id);
+  return propertyId => user.role === 'admin' || (user.role === 'tenant' ? propertyIds.has(propertyId) : Boolean(user.property_id && propertyId === user.property_id));
 }
 function checkProperty(db, user, propertyId) {
   db.requireProperty(propertyId);

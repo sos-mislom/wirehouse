@@ -40,3 +40,26 @@ infra/deploy/keys/
 pass.txt
 пасс.txt
 пасс.тхт
+
+# Local design/audit notes and retired prototypes (kept on the developer machine).
+AGENTS.md
+**/AGENTS.md
+.codex/
+.agents/
+.claude/
+.playwright-cli/
+output/playwright/
+.local/
+DEMO_README.md
+docs/REVIEW.md
+docs/UI_AUDIT.md
+docs/VALIDATION.md
+/services/
+apps/api/src/project-definition.js
+apps/api/src/sql/
+infra/deploy/warehouse-platform-*.service
+infra/deploy/warehouse-platform-*.timer
+infra/deploy/deploy-web.sh
+
+# Obsolete parallel entry point; TypeScript is the canonical contracts source.
+/packages/contracts/src/index.js

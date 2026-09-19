@@ -37,7 +37,9 @@ const loadEnvFile = (filePath) => {
 
 const toNumber = (value, fallback) => {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  if (value === undefined) return fallback;
+  if (!String(value).trim() || !Number.isFinite(parsed) || parsed <= 0) throw new Error("Invalid numeric configuration value");
+  return parsed;
 };
 
 const toList = (value) =>
@@ -53,9 +55,10 @@ const toJsonObject = (value) => {
 
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Expected JSON object configuration");
+    return parsed;
   } catch {
-    return {};
+    throw new Error("Invalid JSON configuration");
   }
 };
 
@@ -83,8 +86,8 @@ export const config = {
   host: process.env.API_HOST ?? "0.0.0.0",
   port: toNumber(process.env.API_PORT, 3001),
   dbPath: resolvedDbPath,
-  databaseUrl: process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? "",
-  redisUrl: process.env.REDIS_URL ?? "redis://127.0.0.1:6379",
+  databaseUrl: process.env.DATABASE_URL ?? "",
+  redisUrl: process.env.REDIS_URL ?? "",
   redisCliBin: process.env.REDIS_CLI_BIN ?? "redis-cli",
   psqlBin: process.env.PSQL_BIN ?? "psql",
   documentStoragePath: resolvedDocumentsPath,
@@ -97,7 +100,7 @@ export const config = {
   s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY ?? "",
   s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE !== "false",
   jwtSecret: process.env.JWT_ACCESS_SECRET ?? "skladkontur-demo-secret",
-  tenantOtpCode: process.env.TENANT_OTP_CODE ?? process.env.DEMO_TENANT_OTP ?? null,
+  tenantOtpCode: process.env.TENANT_OTP_CODE ?? null,
   tenantOtpTtlMs: toNumber(process.env.TENANT_OTP_TTL_MS, 5 * 60 * 1000),
   tenantOtpMaxAttempts: toNumber(process.env.TENANT_OTP_MAX_ATTEMPTS, 5),
   passwordResetTtlMs: toNumber(process.env.PASSWORD_RESET_TTL_MS, 10 * 60 * 1000),
@@ -105,12 +108,12 @@ export const config = {
   totpIssuer: process.env.TOTP_ISSUER ?? "склад контур",
   otpDeliveryChannels: toList(process.env.OTP_DELIVERY_CHANNELS ?? "telegram,vk"),
   allowOtpWithoutDelivery: process.env.ALLOW_OTP_WITHOUT_DELIVERY === "true",
-  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? process.env.TELEGRAM_BOT ?? "",
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "",
   telegramOtpChatIds: toJsonObject(process.env.TELEGRAM_OTP_CHAT_IDS_JSON),
   telegramBotUrl: process.env.TENANT_TELEGRAM_BOT_URL ?? "https://t.me/warehousecontourbot",
   telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? "",
   vkGroupId: process.env.VK_GROUP_ID ?? "",
-  vkGroupToken: process.env.VK_GROUP_TOKEN ?? process.env.VK_BOT ?? "",
+  vkGroupToken: process.env.VK_GROUP_TOKEN ?? "",
   vkApiVersion: process.env.VK_API_VERSION ?? "5.199",
   vkOtpUserIds: toJsonObject(process.env.VK_OTP_USER_IDS_JSON),
   vkBotUrl: process.env.TENANT_VK_BOT_URL ?? "https://vk.com/club239116063",
@@ -130,7 +133,10 @@ export const config = {
   notificationChannels: toList(process.env.NOTIFICATION_CHANNELS ?? "in_app,email")
 };
 
+if (!["local", "s3"].includes(config.fileStorageDriver)) throw new Error("FILE_STORAGE_DRIVER must be local or s3");
 if (process.env.NODE_ENV === "production") {
+  if (!config.databaseUrl) throw new Error("Production requires DATABASE_URL");
+  if (process.env.ENABLE_DEMO_SEED === "true") throw new Error("Production forbids demo seed");
   if (!process.env.JWT_ACCESS_SECRET || config.jwtSecret.length < 32 || config.jwtSecret === "skladkontur-demo-secret") throw new Error("Production requires a unique JWT_ACCESS_SECRET of at least 32 characters");
   if (config.tenantOtpCode || config.allowOtpWithoutDelivery) throw new Error("Production forbids fixed OTP and OTP without delivery");
 }

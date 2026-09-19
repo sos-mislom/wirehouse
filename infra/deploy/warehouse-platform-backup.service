@@ -1,8 +1,0 @@
-[Unit]
-Description=warehouse-platform PostgreSQL backup
-
-[Service]
-Type=oneshot
-WorkingDirectory=/var/www/warehouse-platform
-EnvironmentFile=/var/www/warehouse-platform/.env
-ExecStart=/usr/bin/npm run backup:postgres

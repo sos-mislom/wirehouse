@@ -1,0 +1,68 @@
+.agenda-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.agenda-day {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.agenda-day > h3 {
+  font-size: 15px;
+  font-weight: 600;
+  padding-top: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.agenda-items {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.agenda-item {
+  display: grid;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.agenda-item h4 {
+  font-size: 17px;
+  font-weight: 650;
+}
+.agenda-item p,
+.agenda-kind {
+  color: var(--ui-muted);
+}
+.agenda-item-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.renewal-editor {
+  border-top: 1px solid var(--ui-border);
+  padding-top: 12px;
+}
+.renewal-editor summary {
+  padding: 8px 0;
+  cursor: pointer;
+  font-weight: 500;
+}
+.renewal-editor form {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .agenda-filters {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .agenda-day {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .agenda-day > h3 {
+    padding-top: 0;
+  }
+}

@@ -15,6 +15,8 @@ test('API regression: scoped finance, persisted notification reads, validation a
   f.db.createBillingPayment({invoiceId:invoice.id,amount:250,paidAt:`${period}-02`,method:'bank_transfer',reference:'test'});
   f.db.createBillingInvoice({leaseId:f.otherLease.id,period,rentAmount:9000,variableAmount:0,dueDate:`${period}-01`});
   saveOperation(f.db,f.admin,'expenses',null,{name:'Ремонт',propertyId:f.property.id,date:`${period}-03`,amount:100});
+  const unassigned=f.db.createUser({fullName:'Без объекта',email:'unassigned@test.local',password:'test-password-123',role:'manager',propertyId:f.property.id});
+  f.db.getById('users',unassigned.id).property_id=null;f.db.save();
   const task=f.db.createTicket({unitId:f.unit.id,createdBy:f.admin.id,tenantId:f.tenant.id,assignedTo:f.worker.id,category:'electrical',priority:'urgent',title:'Проверить щит',description:'Проверка'});
   const socket=net.createServer();socket.listen(0,'127.0.0.1');await once(socket,'listening');const port=socket.address().port;await new Promise(r=>socket.close(r));
   const env={...process.env,API_HOST:'127.0.0.1',API_PORT:String(port),WAREHOUSE_DB_PATH:f.dbPath,ENABLE_DEMO_SEED:'false',DATABASE_URL:'',POSTGRES_URL:'',REDIS_URL:'',JWT_ACCESS_SECRET:secret,NOTIFICATION_CHANNELS:'in_app',TELEGRAM_BOT_TOKEN:'',VK_GROUP_TOKEN:''};
@@ -23,6 +25,17 @@ test('API regression: scoped finance, persisted notification reads, validation a
   const stop=async()=>{if(child && child.exitCode===null){child.kill('SIGTERM');await once(child,'exit');}};t.after(stop);
   const call=async(path,user=f.manager,method='GET',body)=>{const r=await fetch(`http://127.0.0.1:${port}${path}`,{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${createToken({sub:user.id,role:user.role},secret)}`},body:body?JSON.stringify(body):undefined});return {status:r.status,body:await r.json()};};
   await start();
+  assert.equal((await call('/api/solution-contour')).status,404);
+  const invalid=await call('/api/properties',f.admin,'POST',{name:'A',address:'A',totalArea:'100',rentableArea:80,warehouseClass:'A'});
+  assert.equal(invalid.status,400);assert.equal(invalid.body.code,'VALIDATION_ERROR');assert.ok(invalid.body.fields.some(field=>field.path==='totalArea'));
+  assert.equal((await call('/api/agenda',f.worker)).status,403);
+  assert.equal((await call('/api/dashboard/overview',unassigned)).body.properties.length,0);
+  assert.equal((await call('/api/operations',unassigned)).body.equipment.length,0);
+  assert.equal((await call('/api/properties',unassigned,'POST',{name:'Нельзя',address:'Москва',totalArea:100,rentableArea:80,warehouseClass:'A'})).status,403);
+  assert.equal((await call('/api/agenda?days=365',f.manager)).status,400);
+  assert.equal((await call('/api/agenda?days=90',f.manager)).status,200);
+  assert.equal((await call(`/api/leases/${f.lease.id}/renewal`,f.manager,'PUT',{status:'contacted',note:'Тест API',version:0})).body.item.version,1);
+  assert.equal((await call(`/api/leases/${f.lease.id}/renewal`,f.manager,'PUT',{status:'renewing',note:'Конкурентное изменение',version:0})).status,409);
   let overview=(await call('/api/dashboard/overview')).body;
   assert.equal(overview.finance.collectionBilled,1000);assert.equal(overview.finance.collectionPaid,250);assert.equal(overview.finance.collectionRate,25);assert.equal(overview.finance.noi,150);
   const tenant=(await call(`/api/tenants/${f.tenant.id}/detail`)).body;
