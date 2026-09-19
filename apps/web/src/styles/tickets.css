@@ -1,0 +1,355 @@
+.ticket-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-card,
+.focus-card {
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.ticket-detail {
+  display: grid;
+  gap: 18px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+  gap: 18px;
+}
+
+.detail-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-meta span {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+}
+
+.inline-form {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.inline-save-hint {
+  align-self: center;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.comment-block {
+  display: grid;
+  gap: 14px;
+}
+
+.comment-block h4 {
+  font-family: var(--display-font);
+  font-size: 1.2rem;
+}
+
+.comment-list {
+  display: grid;
+  gap: 10px;
+}
+
+.comment-card {
+  padding: 14px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.attachment-block {
+  display: grid;
+  gap: 12px;
+}
+
+.attachment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.attachment-head h4 {
+  margin: 0;
+  font-family: var(--display-font);
+  font-size: 1.05rem;
+}
+
+.attachment-head span,
+.attachment-card small,
+.attachment-hint {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.attachment-hint {
+  display: block;
+  margin-top: 4px;
+  max-width: 520px;
+}
+
+.attachment-upload {
+  position: relative;
+  overflow: hidden;
+}
+
+.attachment-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.attachment-card {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 82px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.attachment-card strong,
+.attachment-card small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-card .text-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.attachment-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  aspect-ratio: 1;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.attachment-card--image .attachment-preview {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.attachment-card--video .attachment-preview {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.ticket-ops {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.ticket-ops-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticket-ops-summary strong,
+.ticket-ops-summary small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-ops-summary small {
+  color: var(--ink-muted);
+}
+
+.checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.checklist-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  color: var(--ink);
+}
+
+.checklist-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.checkbox input,
+.checklist-item input {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.checkbox input::before,
+.checklist-item input::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  transform: scale(0);
+  transition: transform 0.15s ease;
+  clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 18%, 84% 4%, 38% 66%);
+  background: var(--surface);
+}
+
+.checkbox input:checked,
+.checklist-item input:checked {
+  border-color: var(--primary-500);
+  background: var(--primary-500);
+}
+
+.checkbox input:checked::before,
+.checklist-item input:checked::before {
+  transform: scale(1);
+}
+
+.checkbox input:focus-visible,
+.checklist-item input:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.checkbox input:disabled,
+.checklist-item input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.checklist-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.checklist-item small {
+  color: var(--ink-muted);
+}
+
+.checklist-item--done span {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.priority-pill,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.priority-pill--urgent,
+.priority-pill--high,
+.status-pill--critical,
+.status-pill--overdue,
+.status-pill--maintenance {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.priority-pill--medium,
+.status-pill--warning,
+.status-pill--late,
+.status-pill--attention,
+.status-pill--waiting_tenant,
+.status-pill--prolongation {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.priority-pill--low,
+.status-pill--accepted,
+.status-pill--new,
+.status-pill--draft,
+.status-pill--vacant,
+.status-pill--scheduled,
+.status-pill--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.status-pill--in_progress,
+.status-pill--active,
+.status-pill--occupied,
+.status-pill--paid,
+.status-pill--stable,
+.status-pill--success,
+.status-pill--ready,
+.status-pill--completed,
+.status-pill--resolved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-pill--rejected,
+.status-pill--closed,
+.status-pill--terminated {
+  background: var(--neutral-100);
+  color: var(--ink-soft);
+}
+
+.empty-state {
+  padding: 24px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+  text-align: center;
+}

@@ -1,13 +1,14 @@
 :root {
-  --ui-bg: #f5f7fa;
+  --ui-bg: #f6f6f6;
   --ui-surface: #ffffff;
-  --ui-text: #182533;
-  --ui-muted: #566575;
-  --ui-border: #d6dde4;
-  --ui-accent: #176b5b;
-  --ui-accent-hover: #105447;
-  --ui-danger: #b42318;
-  --ui-radius: 6px;
+  --ui-text: #222222;
+  --ui-muted: #666666;
+  --ui-border: #e5e5e5;
+  --ui-border-strong: #d5d5d5;
+  --ui-accent: #008060;
+  --ui-accent-hover: #006a50;
+  --ui-danger: #d70c17;
+  --ui-radius: 4px;
   --ui-control-height: 44px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;
@@ -18,13 +19,13 @@
   --surface: var(--ui-surface);
   --ink: var(--ui-text);
   --ink-soft: var(--ui-muted);
-  --ink-muted: var(--ui-muted);
+  --ink-muted: #999999;
   --line: var(--ui-border);
   --accent: var(--ui-accent);
-  --radius-xl: 12px;
-  --radius-lg: 8px;
-  --radius-md: var(--ui-radius);
-  --radius-sm: var(--ui-radius);
+  --radius-xl: 8px;
+  --radius-lg: 6px;
+  --radius-md: 4px;
+  --radius-sm: 4px;
 }
 body {
   font-size: 14px;
@@ -67,22 +68,22 @@ body {
   border-color: var(--ui-border) !important;
 }
 .ui-button--secondary:hover:not(:disabled) {
-  background: #eef2f5;
+  background: #f0f0f0;
 }
 .ui-button--danger {
-  background: #fff1f0;
+  background: #fee8e7;
   color: var(--ui-danger);
-  border-color: #f4bcb6 !important;
+  border-color: #f8a5a5 !important;
 }
 .ui-button--danger:hover:not(:disabled) {
-  background: #ffe1de;
+  background: #fdd8d7;
 }
 .ui-button--text {
   background: transparent;
   color: var(--ui-accent);
 }
 .ui-button--text:hover:not(:disabled) {
-  background: #eaf4f0;
+  background: #f0f0f0;
 }
 .ui-button:disabled {
   cursor: not-allowed;
@@ -112,13 +113,15 @@ a:focus-visible {
   box-shadow: none;
 }
 .ui-control:hover:not(:disabled) {
-  border-color: #92a2af;
+  border-color: #aaaaaa;
 }
 .ui-control:focus {
   border-color: var(--ui-accent);
+  box-shadow: 0 0 0 2px rgba(0, 128, 96, 0.2);
+  outline: none;
 }
 .ui-control:disabled {
-  background: #edf0f3;
+  background: #f0f0f0;
   color: var(--ui-muted);
   cursor: not-allowed;
 }
@@ -126,7 +129,7 @@ a:focus-visible {
   border-color: var(--ui-danger);
 }
 .ui-control::placeholder {
-  color: #667788;
+  color: #999999;
   opacity: 1;
 }
 .ui-textarea {
@@ -165,21 +168,21 @@ a:focus-visible {
 .ui-alert {
   padding: 12px 16px;
   border: 1px solid;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow-wrap: anywhere;
 }
 .ui-alert--error {
-  color: #8a1c13;
-  background: #fff1f0;
-  border-color: #f4bcb6;
+  color: #9b1110;
+  background: #fee8e7;
+  border-color: #f8a5a5;
 }
 .ui-alert--success {
-  color: #145343;
-  background: #eef8f2;
-  border-color: #b6daca;
+  color: #006a2f;
+  background: #e3f5e9;
+  border-color: #8ed6a3;
 }
 .ui-alert--info {
-  color: #214e75;
+  color: #1a5276;
   background: #eef5fc;
   border-color: #bfd5e7;
 }
@@ -187,29 +190,29 @@ a:focus-visible {
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
-  background: #edf0f3;
-  color: #415265;
+  background: #f0f0f0;
+  color: #666666;
 }
 .ui-badge--success {
-  background: #e6f3eb;
-  color: #175b3a;
+  background: #e3f5e9;
+  color: #006a2f;
 }
 .ui-badge--warning {
-  background: #fff3d6;
-  color: #795500;
+  background: #fff0d9;
+  color: #9b5300;
 }
 .ui-badge--danger {
-  background: #ffebe8;
-  color: #a3261a;
+  background: #fee8e7;
+  color: #9b1110;
 }
 .ui-badge--info {
-  background: #e9f2fd;
-  color: #225d90;
+  background: #eef5fc;
+  color: #1a5276;
 }
 .ui-page-header {
   display: flex;
@@ -219,10 +222,9 @@ a:focus-visible {
   gap: 16px;
 }
 .ui-page-header h2 {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.25;
-  letter-spacing: -0.02em;
-  font-weight: 650;
+  font-weight: 600;
 }
 .ui-actions {
   display: flex;
@@ -233,12 +235,12 @@ a:focus-visible {
 .ui-card {
   padding: 20px;
   border: 1px solid var(--ui-border);
-  border-radius: 8px;
+  border-radius: 4px;
   background: white;
   min-width: 0;
 }
 .ui-empty {
-  padding: 32px 16px;
+  padding: 24px 16px;
   text-align: center;
   color: var(--ui-muted);
   display: grid;

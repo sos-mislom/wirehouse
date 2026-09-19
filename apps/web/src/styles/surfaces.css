@@ -1,0 +1,255 @@
+.surface {
+  grid-column: span 4;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 20px;
+  min-width: 0;
+}
+
+.surface--wide {
+  grid-column: span 8;
+}
+
+.surface--hero {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border-left: 3px solid var(--primary-500);
+  color: var(--ink);
+}
+
+.surface--board {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.surface--hero .section-label,
+.surface--board .section-label,
+.surface--hero .surface-copy,
+.surface--board .surface-copy {
+  color: var(--ink-soft);
+}
+
+.surface--board h3 {
+  color: var(--ink);
+}
+
+.surface--board .chip-button {
+  border-color: var(--line);
+  background: var(--surface-muted);
+  color: var(--ink-soft);
+}
+
+.surface--board .chip-button--active {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.surface-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.surface-copy {
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.mvp-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tenant-note-card {
+  display: grid;
+  gap: 12px;
+}
+
+.tenant-note-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tenant-note-top > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.tenant-note-top strong {
+  overflow-wrap: anywhere;
+}
+
+.tenant-note-top small {
+  color: var(--ink-muted);
+}
+
+.tenant-note-card p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tenant-note-expanded {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.tenant-note-upload {
+  width: max-content;
+}
+
+.mvp-card--wide {
+  grid-column: span 2;
+}
+
+.mvp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.mvp-grid--dashboard {
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+}
+
+.mvp-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mvp-metrics--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mvp-metric {
+  min-width: 0;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.mvp-metric span {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.mvp-metric strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.mvp-metric small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+}
+
+.mvp-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.mvp-list-button,
+.mvp-thread {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.mvp-list-button:hover,
+.mvp-thread:hover {
+  border-color: var(--primary-400);
+}
+
+.mvp-thread--active {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.mvp-thread-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mvp-thread-head span {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--primary-500);
+  color: var(--surface);
+  font-size: 0.68rem;
+  display: inline-grid;
+  place-items: center;
+}
+
+.mvp-list-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mvp-list-row:last-child {
+  border-bottom: 0;
+}
+
+.mvp-list-row strong,
+.mvp-list-button strong,
+.mvp-thread strong {
+  display: block;
+  color: var(--ink);
+}
+
+.mvp-list-row p,
+.mvp-list-button p,
+.mvp-thread p {
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+}
+
+.mvp-list-row small,
+.mvp-list-button small,
+.mvp-thread small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+}
+
+.mvp-list-aside {
+  min-width: 100px;
+  text-align: right;
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+}

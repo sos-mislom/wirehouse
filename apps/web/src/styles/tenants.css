@@ -1,0 +1,58 @@
+.tenant-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tenant-detail-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.tenant-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.detail-card {
+  padding: 16px;
+  background: linear-gradient(180deg, #fff 0%, #f9fbfd 100%);
+}
+
+.detail-card-head {
+  margin-bottom: 12px;
+}
+
+.stack-list {
+  display: grid;
+  gap: 10px;
+}
+
+.list-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
+
+.list-row--stacked {
+  align-items: stretch;
+}
+
+.list-aside {
+  min-width: 120px;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  color: var(--ink-soft);
+}
+
+.service-grid .surface--wide,
+.admin-grid .surface--wide {
+  grid-column: span 8;
+}

@@ -1,0 +1,95 @@
+.board-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.board-floor {
+  display: grid;
+  gap: 10px;
+}
+
+.board-floor-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.board-floor-track {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.board-unit {
+  padding: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--neutral-300);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.board-unit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.board-unit-head strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.board-unit-head span {
+  color: var(--ink-soft);
+}
+
+.board-unit p {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+}
+
+.board-unit small {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.board-unit--occupied {
+  border-left-color: var(--success);
+}
+
+.board-unit--vacant {
+  border-left-color: var(--neutral-300);
+}
+
+.board-unit--warning,
+.board-unit--maintenance {
+  border-left-color: var(--warning);
+}
+
+.board-unit--critical {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.lease-rail,
+.property-rail,
+.property-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.lease-node,
+.property-stat,
+.property-card,
+.team-card,
+.export-card,
+.focus-card,
+.ticket-card {
+  padding: 16px;
+}

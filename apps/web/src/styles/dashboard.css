@@ -1,0 +1,259 @@
+.industrial-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1.15fr);
+  gap: 18px;
+  align-items: end;
+}
+
+.industrial-hero-copy h2 {
+  margin-top: 18px;
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-panel,
+.summary-tile,
+.summary-chip,
+.team-card,
+.export-card,
+.property-stat,
+.property-card,
+.focus-card,
+.ticket-card,
+.notification-card,
+.detail-card {
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.metric-panel {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+.metric-panel span {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.metric-panel strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.45rem;
+  font-weight: 600;
+}
+
+.metric-panel small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.metric-panel--alert {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+}
+
+.finance-chart {
+  min-height: 260px;
+  padding: 12px 4px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: end;
+}
+
+.finance-bar {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.finance-bar-track {
+  position: relative;
+  overflow: hidden;
+  width: min(100%, 220px);
+  min-height: 200px;
+  padding: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--neutral-50);
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 12px;
+}
+
+.finance-bar-fill {
+  width: 48px;
+  min-height: 14px;
+  border-radius: 2px 2px 0 0;
+}
+
+.finance-bar-fill--billed {
+  background: var(--neutral-300);
+}
+
+.finance-bar-fill--forecast {
+  background: var(--primary-500);
+}
+
+.finance-value {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 14px;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.finance-value strong {
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.finance-value span {
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.finance-bar small {
+  color: var(--ink-soft);
+}
+
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summary-strip--vertical {
+  display: grid;
+  gap: 10px;
+}
+
+.summary-chip,
+.summary-tile {
+  padding: 14px 16px;
+}
+
+.summary-chip span,
+.summary-tile span {
+  display: block;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.summary-chip strong,
+.summary-tile strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.15rem;
+}
+
+.summary-chip small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+}
+
+.notification-stack,
+.team-stack,
+.export-stack,
+.focus-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-card,
+.focus-card,
+.ticket-card,
+.property-stat,
+.property-card {
+  width: 100%;
+  text-align: left;
+}
+
+.notification-card {
+  padding: 14px 16px;
+  border-left: 4px solid var(--accent);
+  background: var(--surface);
+}
+
+.notification-card-top,
+.team-card-top,
+.export-card-top,
+.ticket-card-top,
+.focus-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.notification-card p,
+.team-card p,
+.export-card p,
+.property-stat p,
+.property-card p,
+.focus-card p,
+.ticket-card p,
+.comment-card p,
+.list-row p {
+  margin-top: 8px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.notification-card small,
+.team-card small,
+.export-card small,
+.focus-card small,
+.ticket-card small {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink-muted);
+}
+
+.notification-card--critical {
+  color: var(--danger);
+  background: linear-gradient(180deg, #fff6f4 0%, #fff 100%);
+}
+
+.notification-card--warning {
+  color: var(--warning);
+  background: linear-gradient(180deg, #fff9f2 0%, #fff 100%);
+}
+
+.notification-card--info,
+.notification-card--success {
+  color: var(--accent);
+}
