@@ -79,19 +79,45 @@ export function createFinanceQueries(deps) {
       const date = addMonths(startOfMonth(), offset);
       const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       const periodInvoices = invoices.filter((i) => i.period === period);
-      const billed = periodInvoices.length
-        ? sumBy(periodInvoices, (i) => i.total_amount)
-        : sumBy(
-            scoped.leases.filter(
-              (l) =>
-                activeLeaseStages.has(l.stage) &&
-                l.startDate <= `${period}-31` &&
-                l.endDate >= `${period}-01`,
+      const daysInMonth = new Date(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        0,
+      ).getDate();
+      const lastDay = `${period}-${daysInMonth}`;
+      const details = scoped.leases.flatMap((lease) => {
+        const actual = periodInvoices.filter((i) => i.lease_id === lease.id);
+        if (
+          !actual.length &&
+          (!activeLeaseStages.has(lease.stage) ||
+            lease.startDate > lastDay ||
+            lease.endDate < `${period}-01`)
+        )
+          return [];
+        const unit = scoped.units.find((u) => u.id === lease.unitId);
+        const first =
+          lease.startDate > `${period}-01` ? lease.startDate : `${period}-01`;
+        const last = lease.endDate < lastDay ? lease.endDate : lastDay;
+        const days = Math.max(
+          0,
+          1 + (Date.parse(last) - Date.parse(first)) / 86400000,
+        );
+        return [
+          {
+            leaseId: lease.id,
+            contractNumber: lease.contractNumber,
+            unitNumber: unit?.number ?? "",
+            basis: actual.length ? "invoice" : "contract",
+            amount: money(
+              actual.length
+                ? sumBy(actual, (i) => i.total_amount)
+                : ((unit?.area ?? 0) * lease.ratePerSqm * days) / daysInMonth,
             ),
-            (l) =>
-              (scoped.units.find((u) => u.id === l.unitId)?.area ?? 0) *
-              l.ratePerSqm,
-          );
+            days,
+          },
+        ];
+      });
+      const billed = sumBy(details, (d) => d.amount);
       const costs = sumBy(
         expenses.filter((e) => e.date.startsWith(period)),
         (e) => e.amount,
@@ -102,6 +128,20 @@ export function createFinanceQueries(deps) {
         billed: money(billed),
         collected: money(sumBy(periodInvoices, (i) => i.paid_amount)),
         forecast: money(billed - costs),
+        expenses: money(costs),
+        invoiceAmount: money(
+          sumBy(
+            details.filter((d) => d.basis === "invoice"),
+            (d) => d.amount,
+          ),
+        ),
+        contractAmount: money(
+          sumBy(
+            details.filter((d) => d.basis === "contract"),
+            (d) => d.amount,
+          ),
+        ),
+        details,
       };
     });
     return {

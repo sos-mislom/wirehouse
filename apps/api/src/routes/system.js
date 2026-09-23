@@ -20,7 +20,7 @@ export function createSystemRoutes({
         status: "ok",
         service: "warehouse-api",
         databaseBackend: "postgres",
-        databaseSchema: "relational-v2",
+        databaseSchema: "relational-v3",
         fileStorage: fileStorage.driver,
         volatileStore:
           otpStore.backend === "redis" && mfaChallengeStore.backend === "redis"

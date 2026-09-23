@@ -122,6 +122,7 @@ export function usePortfolioActions(
   const resetUnitForm = () =>
     setUnitForm((current) => ({
       ...current,
+      floorId: "",
       building: "",
       entrance: "",
       photoUrl: "",
@@ -232,6 +233,7 @@ export function usePortfolioActions(
       unit: unit.id,
     }));
     setUnitForm({
+      floorId: unit.floorId,
       propertyId: unit.propertyId,
       building: unit.building ?? "",
       entrance: unit.entrance ?? "",

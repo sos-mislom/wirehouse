@@ -163,7 +163,8 @@ test("Concurrent planners and renewal versions do not create duplicates or overw
     propertyId: f.property.id,
     unitId: f.unit.id,
     nextDate: day,
-    intervalDays: 30,
+    recurrence: "days",
+    intervalCount: 30,
     checklist: ["Осмотр"],
   });
   const pg = await postgresFixture(f.db.data);

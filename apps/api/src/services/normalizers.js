@@ -1,3 +1,4 @@
+import { permissionsFor } from "../../../../packages/contracts/src/permissions.ts";
 export function createNormalizersService({}) {
   const coerceBoolean = (value) => {
     if (typeof value === "boolean") {
@@ -19,6 +20,7 @@ export function createNormalizersService({}) {
   });
 
   const normalizeUnit = (record) => ({
+    floorId: record.floor_id,
     id: record.id,
     propertyId: record.property_id,
     number: record.number,
@@ -289,6 +291,7 @@ export function createNormalizersService({}) {
   });
 
   const sanitizeUser = (user) => ({
+    permissions: permissionsFor(user),
     id: user.id,
     email: user.email,
     phone: user.phone,

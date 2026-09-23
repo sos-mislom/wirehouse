@@ -4,7 +4,11 @@ import { isDeepStrictEqual } from "node:util";
 import { loadRows } from "./rows.js";
 import { WRITE_LOCK } from "./pool.js";
 
-const migrations = ["001-relational.sql", "002-remove-legacy-state.sql"];
+const migrations = [
+  "001-relational.sql",
+  "002-remove-legacy-state.sql",
+  "003-operations-platform.sql",
+];
 
 async function sources() {
   return Promise.all(

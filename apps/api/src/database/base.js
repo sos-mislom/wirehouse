@@ -68,6 +68,9 @@ export class WarehouseDatabaseBase {
       createdAt: nowIso(),
     });
   }
+  setAuditActor(actor) {
+    this.auditActor = actor;
+  }
 
   ensureUnique(collection, predicate, message) {
     if (collection.some(predicate)) {
@@ -240,5 +243,4 @@ export class WarehouseDatabaseBase {
     const next = this.data.tickets.length + 1;
     return `SD-${year}-${String(next).padStart(4, "0")}`;
   }
-
 }

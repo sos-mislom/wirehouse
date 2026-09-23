@@ -1,4 +1,14 @@
 import { apiRequest } from "../../api/client";
+import type { Permission } from "../../../../../packages/contracts/src/permissions";
+export const tabPermission: Record<string, Permission> = {
+  equipment: "equipment.write",
+  plans: "maintenance.write",
+  services: "services.write",
+  meters: "meters.write",
+  news: "news.write",
+  expenses: "expenses.write",
+  users: "users.manage",
+};
 export type Row = {
   id: string;
   propertyId?: string;
@@ -7,6 +17,7 @@ export type Row = {
 };
 
 export type Unit = {
+  floorId?: string;
   id: string;
   propertyId: string;
   number: string;
@@ -132,6 +143,10 @@ export async function request<T>(
 }
 
 export const tabs: Record<string, string> = {
+  estimates: "Сметы и акты",
+  templates: "Регламенты",
+  materials: "Материалы",
+  contractors: "Подрядчики",
   equipment: "Оборудование",
   plans: "ППР",
   services: "Услуги",
@@ -144,7 +159,7 @@ export const tabs: Record<string, string> = {
 
 export type Props = {
   token: string;
-  user: { role: string; id: string };
+  user: { role: string; id: string; permissions?: string[] };
   overview: Overview;
   tickets: Ticket[];
   onRefresh: () => Promise<unknown>;

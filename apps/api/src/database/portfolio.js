@@ -1,4 +1,5 @@
 import { AuthDatabase } from "./auth.js";
+import { locationForUnit } from "../domain/structure.js";
 import {
   activeLeaseStages,
   clone,
@@ -170,14 +171,13 @@ export class PortfolioDatabase extends AuthDatabase {
 
   createUnit(payload) {
     this.requireProperty(payload.propertyId);
+    const location = locationForUnit(this, payload.propertyId, payload);
     this.ensureUnique(
       this.data.units,
       (unit) =>
         unit.property_id === payload.propertyId &&
         unit.number === payload.number &&
-        (unit.building ?? "") === (payload.building ?? "") &&
-        (unit.entrance ?? "") === (payload.entrance ?? "") &&
-        Number(unit.floor) === Number(payload.floor),
+        unit.floor_id === location.floor_id,
       "Номер помещения должен быть уникальным в пределах этажа и секции",
     );
 
@@ -202,6 +202,7 @@ export class PortfolioDatabase extends AuthDatabase {
       updated_at: nowIso(),
     };
 
+    Object.assign(record, location);
     this.validateUnitPayload(record);
     this.data.units.push(record);
     return clone(record);
@@ -215,6 +216,20 @@ export class PortfolioDatabase extends AuthDatabase {
 
     const nextPropertyId = payload.propertyId ?? current.property_id;
     this.requireProperty(nextPropertyId);
+    if (nextPropertyId !== current.property_id)
+      throw new Error("Перенос помещения между объектами запрещён");
+    const location = locationForUnit(this, nextPropertyId, {
+      building: payload.building ?? current.building,
+      entrance: payload.entrance ?? current.entrance,
+      floor: payload.floor ?? current.floor,
+      floorId:
+        payload.floorId ??
+        (payload.building === undefined &&
+        payload.entrance === undefined &&
+        payload.floor === undefined
+          ? current.floor_id
+          : undefined),
+    });
 
     this.ensureUnique(
       this.data.units,
@@ -222,11 +237,7 @@ export class PortfolioDatabase extends AuthDatabase {
         unit.id !== id &&
         unit.property_id === nextPropertyId &&
         unit.number === (payload.number ?? current.number) &&
-        (unit.building ?? "") ===
-          (payload.building ?? current.building ?? "") &&
-        (unit.entrance ?? "") ===
-          (payload.entrance ?? current.entrance ?? "") &&
-        Number(unit.floor) === Number(payload.floor ?? current.floor),
+        unit.floor_id === location.floor_id,
       "Номер помещения должен быть уникальным в пределах этажа и секции",
     );
 
@@ -272,6 +283,7 @@ export class PortfolioDatabase extends AuthDatabase {
       updated_at: nowIso(),
     };
 
+    Object.assign(next, location);
     this.validateUnitPayload(next);
     Object.assign(current, next);
     return clone(current);
@@ -311,6 +323,9 @@ export class PortfolioDatabase extends AuthDatabase {
 
     const created = {
       id: createId(),
+      floor_id: current.floor_id,
+      building: current.building,
+      entrance: current.entrance,
       property_id: current.property_id,
       number: newNumber,
       floor: current.floor,
@@ -379,5 +394,4 @@ export class PortfolioDatabase extends AuthDatabase {
     this.data.units = this.data.units.filter((unit) => unit.id !== id);
     return createChangeResult(1);
   }
-
 }

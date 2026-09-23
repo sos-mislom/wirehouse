@@ -9,7 +9,7 @@
   --ui-accent-hover: #006a50;
   --ui-danger: #d70c17;
   --ui-radius: 4px;
-  --ui-control-height: 44px;
+  --ui-control-height: 36px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;
   --ui-space-3: 12px;
@@ -32,9 +32,9 @@ body {
 }
 .ui-button {
   font: inherit;
-  font-weight: 600;
+  font-weight: 400;
   min-height: var(--ui-control-height);
-  min-width: 44px;
+  min-width: 36px;
   border-radius: var(--ui-radius);
   cursor: pointer;
   touch-action: manipulation;
@@ -51,7 +51,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 7px 16px;
   border: 1px solid transparent;
   box-shadow: none;
 }
@@ -247,6 +247,12 @@ a:focus-visible {
   gap: 12px;
 }
 @media (max-width: 600px) {
+  :root {
+    --ui-control-height: 44px;
+  }
+  .ui-button {
+    min-width: 44px;
+  }
   .ui-card {
     padding: 16px;
   }
@@ -262,14 +268,14 @@ a:focus-visible {
     transition: none;
   }
 }
-/* Existing feature layouts consume the same primitives during gradual layout cleanup. */
+/* Shared page typography. Feature styles own layout, not control geometry. */
 .mvp-page-header h2,
 .workspace-header h1,
 .surface-head h2 {
   font-size: 24px;
   line-height: 1.25;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: normal;
 }
 .status-pill {
   border-radius: 4px;

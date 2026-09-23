@@ -57,21 +57,25 @@ export function useWorkspaceView(state: WorkspaceState) {
   const isWorker = session?.user.role === "worker";
   const isTenant = session?.user.role === "tenant";
   const canManagePortfolio = session
-    ? ["admin", "manager"].includes(session.user.role)
+    ? session.user.permissions.includes("portfolio.write")
     : false;
   const canManageDocuments = session
-    ? ["admin", "manager"].includes(session.user.role)
+    ? session.user.permissions.includes("leases.write")
     : false;
   const isManagerShell = session
     ? ["admin", "manager"].includes(session.user.role)
     : false;
   const canUpdateTickets = session
-    ? ["admin", "manager", "worker"].includes(session.user.role)
+    ? session.user.permissions.includes("tickets.write") &&
+      session.user.role !== "tenant"
     : false;
   const canAssignTickets = session
-    ? ["admin", "manager"].includes(session.user.role)
+    ? session.user.permissions.includes("tickets.write") &&
+      ["admin", "manager"].includes(session.user.role)
     : false;
-  const canDeletePortfolioItems = session?.user.role === "admin";
+  const canDeletePortfolioItems =
+    session?.user.role === "admin" &&
+    session.user.permissions.includes("portfolio.write");
   const visibleSections: Section[] = isWorker
     ? ["service"]
     : isTenant
@@ -362,7 +366,10 @@ export function useWorkspaceView(state: WorkspaceState) {
       return {
         ...tenant,
         propertyIds: [...new Set(tenantUnits.map((unit) => unit.propertyId))],
-        unitLabel: tenantUnits.map((unit) => unit.number).join(", ") || "—",
+        unitLabel:
+          tenantUnits
+            .map((unit) => `${unit.propertyName} · ${unit.number}`)
+            .join("; ") || "—",
         totalArea: tenantUnits.reduce((total, unit) => total + unit.area, 0),
         monthlyRent,
         nextExpiry,

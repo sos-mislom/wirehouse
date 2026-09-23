@@ -1,8 +1,15 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { formatArea } from "../../shared/format";
 import { Button } from "../../ui";
+import { StructureWorkspace } from "../platform/StructureWorkspace";
+import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 export function ManagerObjects() {
   const {
+    session,
+    overview,
+    tickets,
+    operations,
+    openTicketDetail,
     managerUi,
     setManagerScreen,
     locale,
@@ -17,10 +24,9 @@ export function ManagerObjects() {
     openManagerPropertyEdit,
     adminEditLabel,
     canDeletePortfolioItems,
+    canManagePortfolio,
     handleDelete,
-    boardFloors,
     openUnitDetail,
-    propertyScopedUnits,
   } = useWorkspace();
   return (
     <section className="mvp-page">
@@ -28,28 +34,30 @@ export function ManagerObjects() {
         <div>
           <h2>{managerUi.titles.objects}</h2>
         </div>
-        <div className="mvp-actions">
-          <Button
-            variant="primary"
-            className="primary-button"
-            onClick={() => setManagerScreen("object-launch")}
-            type="button"
-          >
-            {locale === "ru" ? "Запустить объект" : "Launch"}
-          </Button>
-          <Button
-            variant="secondary"
-            className="secondary-button"
-            onClick={() => {
-              cancelAdminEdit("property");
-              setAdminPanel("property");
-              setManagerScreen("property-add");
-            }}
-            type="button"
-          >
-            {managerUi.add}
-          </Button>
-        </div>
+        {canManagePortfolio && (
+          <div className="mvp-actions">
+            <Button
+              variant="primary"
+              className="primary-button"
+              onClick={() => setManagerScreen("object-launch")}
+              type="button"
+            >
+              {locale === "ru" ? "Запустить объект" : "Launch"}
+            </Button>
+            <Button
+              variant="secondary"
+              className="secondary-button"
+              onClick={() => {
+                cancelAdminEdit("property");
+                setAdminPanel("property");
+                setManagerScreen("property-add");
+              }}
+              type="button"
+            >
+              {managerUi.add}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="property-rail">
@@ -153,16 +161,16 @@ export function ManagerObjects() {
         </article>
       ) : null}
 
-      <div className="mvp-grid">
+      <div className="platform-section">
         <article
-          className="surface surface--board selection-stage"
+          className="mvp-card platform-section"
           key={`manager-objects-board-${selectedPropertyId}`}
         >
           <div className="surface-head">
             <div>
               <h3>{selectedProperty?.name ?? t.sections.twin}</h3>
             </div>
-            {selectedProperty ? (
+            {selectedProperty && canManagePortfolio ? (
               <div className="mvp-actions">
                 <Button
                   variant="secondary"
@@ -189,80 +197,20 @@ export function ManagerObjects() {
               </div>
             ) : null}
           </div>
-          <div className="board-shell">
-            {boardFloors.length > 0 ? (
-              boardFloors.map((entry) => (
-                <div className="board-floor" key={entry.floor}>
-                  <div className="board-floor-label">
-                    {entry.floor > 0 ? `${t.fields.floor} ${entry.floor}` : "G"}
-                  </div>
-                  <div className="board-floor-track">
-                    {entry.units.map((unit) => (
-                      <Button
-                        variant="plain"
-                        className={`board-unit board-unit--${unit.status}`}
-                        key={unit.id}
-                        onClick={() => openUnitDetail(unit.id)}
-                        type="button"
-                      >
-                        <div className="board-unit-head">
-                          <strong>{unit.number}</strong>
-                          <span>{formatArea(unit.area, locale)}</span>
-                        </div>
-                        <p>{unit.tenantName ?? t.hints.noData}</p>
-                        <small>
-                          {
-                            t.unitStatuses[
-                              unit.status as keyof typeof t.unitStatuses
-                            ]
-                          }
-                        </small>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state">{t.hints.noData}</div>
+          <StructureWorkspace
+            embedded
+            key={selectedPropertyId}
+            token={session.token}
+            properties={overview.properties.filter(
+              (p) => !selectedPropertyId || p.id === selectedPropertyId,
             )}
-          </div>
-        </article>
-
-        <article
-          className="mvp-card selection-stage"
-          key={`manager-objects-units-${selectedPropertyId}`}
-        >
-          <div className="mvp-card-head">
-            <div>
-              <h3>{t.fields.unit}</h3>
-            </div>
-            <Button
-              variant="secondary"
-              className="secondary-button"
-              onClick={() => setManagerScreen("units")}
-              type="button"
-            >
-              {managerUi.open}
-            </Button>
-          </div>
-          <div className="mvp-stack">
-            {propertyScopedUnits.map((unit) => (
-              <Button
-                variant="plain"
-                className="mvp-list-button"
-                key={unit.id}
-                onClick={() => openUnitDetail(unit.id)}
-                type="button"
-              >
-                <strong>{unit.number}</strong>
-                <p>{unit.tenantName ?? t.hints.noData}</p>
-                <small>
-                  {formatArea(unit.area, locale)} ·{" "}
-                  {t.unitStatuses[unit.status as keyof typeof t.unitStatuses]}
-                </small>
-              </Button>
-            ))}
-          </div>
+            units={overview.units}
+            tickets={tickets}
+            equipment={operations?.equipment ?? []}
+            onUnit={openUnitDetail}
+            onTicket={openTicketDetail}
+            canWrite={hasPermission(session.user, "plans.write")}
+          />
         </article>
       </div>
     </section>

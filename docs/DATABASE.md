@@ -11,7 +11,7 @@ SQL-миграции версионируются и проверяются по
 1. Создать отдельную базу и задать `DATABASE_URL`.
 2. Выполнить `npm run db:migrate`.
 3. Задать `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD` длиной от 16 символов и один раз выполнить `npm run db:create-admin`.
-4. Запустить API и проверить `/health`: `databaseBackend` должен быть `postgres`, `databaseSchema` — `relational-v2`.
+4. Запустить API и проверить `/health`: `databaseBackend` должен быть `postgres`, `databaseSchema` — `relational-v3`.
 
 Команда создания администратора работает только с пустым списком пользователей и не создаёт тестовые объекты, договоры или аккаунты.
 

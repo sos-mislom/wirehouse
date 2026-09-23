@@ -69,7 +69,7 @@ export function ManagerChat() {
           </div>
         </article>
 
-        <article className="mvp-card mvp-card--wide">
+        <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
               <h3>{selectedChatThread?.tenantName ?? managerUi.nav.chat}</h3>

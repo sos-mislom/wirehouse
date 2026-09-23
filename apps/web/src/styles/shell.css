@@ -318,8 +318,12 @@
 
 .mvp-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
   min-width: 0;
+}
+.mvp-page > .mvp-card--wide {
+  grid-column: 1 / -1;
 }
 
 .mvp-page-header,
@@ -425,7 +429,7 @@
 }
 
 .action-card--primary span {
-  color: rgba(255,255,255,0.8);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .action-card--warning {

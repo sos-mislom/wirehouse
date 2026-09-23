@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { permissionKeys } from "./permissions.ts";
+import { platformContracts, planGeometry } from "./operations-platform.ts";
 
 // Wire DTOs are strict: IDs and dates are strings, quantities are JSON numbers.
 // Form-string conversion belongs to the browser, never to the API boundary.
@@ -84,6 +86,7 @@ export const propertyCreate = z.strictObject({
   description: text.optional(),
 });
 export const unitCreate = z.strictObject({
+  floorId: id.optional(),
   propertyId: id,
   number: name,
   floor: z.number().int().min(-10).max(300),
@@ -147,12 +150,10 @@ export const ticketCreate = z.strictObject({
   slaHours: number.positive().max(8760).optional(),
   slaDueAt: timestamp.optional(),
 });
-export const ticketUpdate = ticketCreate
-  .partial()
-  .extend({
-    reopenReason: text.optional(),
-    resetChecklist: z.boolean().optional(),
-  });
+export const ticketUpdate = ticketCreate.partial().extend({
+  reopenReason: text.optional(),
+  resetChecklist: z.boolean().optional(),
+});
 export const userCreate = z.strictObject({
   fullName: name,
   email,
@@ -162,6 +163,10 @@ export const userCreate = z.strictObject({
   propertyId: optionalId,
 });
 export const userUpdate = z.strictObject({
+  permissions: z
+    .array(z.enum(permissionKeys))
+    .max(permissionKeys.length)
+    .optional(),
   fullName: name.optional(),
   email: email.or(z.literal("")).nullable().optional(),
   password: password.optional(),
@@ -196,11 +201,16 @@ export const operationSchemas = {
   }),
   plans: z.strictObject({
     ...base,
+    templateId: optionalId,
+    templateVersion: z.number().int().positive().nullable().optional(),
+    recurrence: z.enum(["days", "weeks", "months", "years"]),
+    intervalCount: z.number().int().min(1).max(3660),
+    leadDays: z.number().int().min(0).max(90).optional(),
+    endDate: optionalDate,
     unitId: id,
     responsibleId: optionalId,
     equipmentId: optionalId,
     nextDate: date,
-    intervalDays: z.number().int().min(1).max(3660),
     checklist: z.array(name).min(1).max(100),
     instructions: text.optional(),
     active: z.boolean().optional(),
@@ -232,6 +242,12 @@ export const operationSchemas = {
   }),
   floorplans: z.strictObject({
     ...base,
+    floorId: optionalId,
+    kind: z.enum(["site", "floor"]).optional(),
+    sourceName: text.optional(),
+    geometry: planGeometry.optional(),
+    layers: z.array(name).max(200).optional(),
+    version: z.number().int().min(0).optional(),
     image: photo,
     markers: z
       .array(
@@ -274,6 +290,7 @@ export const requestContracts: {
   path: RegExp;
   schema: z.ZodType;
 }[] = [
+  ...platformContracts,
   {
     method: "POST",
     path: /^\/api\/auth\/staff\/login$/,

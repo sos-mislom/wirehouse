@@ -130,6 +130,14 @@ export const createEmptyData = () => ({
   operating_expenses: [],
   import_approvals: [],
   auth_challenges: [],
+  buildings: [],
+  entrances: [],
+  floors: [],
+  maintenance_templates: [],
+  contractors: [],
+  materials: [],
+  estimates: [],
+  service_acts: [],
 });
 
 export const assertEnum = (value, allowedValues, field) => {
@@ -281,4 +289,3 @@ export const buildChecklistItems = (category) =>
     completed_by: null,
     completed_by_name: null,
   }));
-

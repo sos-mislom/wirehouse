@@ -1,5 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { operationFormDto } from "../../api/operation-form";
+import {
+  hasPermission,
+  rolePermissions,
+} from "../../../../../packages/contracts/src/permissions";
 import { Input, Select, Textarea } from "../../ui";
 import {
   OperationsData,
@@ -49,7 +53,13 @@ export function useOperationsModel({
     };
   }, [token]);
   const change = (key: string, value: unknown) =>
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "role"
+        ? { permissions: rolePermissions[String(value)] }
+        : {}),
+    }));
   const create = () => {
     if (busy) return;
     setError("");
@@ -62,7 +72,9 @@ export function useOperationsModel({
       type: "",
       cost: 0,
       status: "active",
-      intervalDays: 30,
+      recurrence: "months",
+      intervalCount: 1,
+      leadDays: 0,
       nextDate: new Date().toISOString().slice(0, 10),
       checklist: "",
       active: true,
@@ -86,13 +98,19 @@ export function useOperationsModel({
     setBusy(true);
     setError("");
     try {
+      const dto = operationFormDto(tab, draft);
+      if (
+        tab === "users" &&
+        (!hasPermission(user, "permissions.manage") || draft.id === user.id)
+      )
+        delete dto.permissions;
       await request(
         tab === "users"
           ? `/api/users/${draft.id}`
           : `/api/operations/${tab}${draft.id ? `/${draft.id}` : ""}`,
         token,
         draft.id ? "PUT" : "POST",
-        operationFormDto(tab, draft),
+        dto,
       );
       await load();
       await onRefresh();

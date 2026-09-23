@@ -9,12 +9,16 @@ import {
   decodeRow,
 } from "./schema.js";
 
-export async function loadRows(client) {
+export async function loadRows(client, { auditLimit = null } = {}) {
   const names = Object.keys(tables);
   // One round trip; REPEATABLE READ or the write lock gives one consistent view.
   const results = await client.query(
     names
-      .map((name) => `SELECT * FROM ${relation(name)} ORDER BY _sequence`)
+      .map((name) =>
+        name === "audit_log" && auditLimit !== null
+          ? `SELECT * FROM (SELECT * FROM ${relation(name)} ORDER BY _sequence DESC LIMIT ${Number(auditLimit)}) recent ORDER BY _sequence`
+          : `SELECT * FROM ${relation(name)} ORDER BY _sequence`,
+      )
       .join(";"),
   );
   return Object.fromEntries(

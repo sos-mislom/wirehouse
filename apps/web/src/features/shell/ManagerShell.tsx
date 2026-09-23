@@ -20,7 +20,6 @@ export function ManagerShell() {
     overview,
     session,
     t,
-    selectedProperty,
     handleLogout,
     error,
     notice,
@@ -65,7 +64,6 @@ export function ManagerShell() {
         <div className="mvp-brand">
           <div>
             <strong>{productBrand.name}</strong>
-            <span>Управление недвижимостью</span>
           </div>
         </div>
 
@@ -129,7 +127,11 @@ export function ManagerShell() {
           <strong>{session.user.fullName}</strong>
           <small>
             {t.roles[session.user.role]} ·{" "}
-            {selectedProperty?.name ?? productBrand.name}
+            {session.user.role === "admin"
+              ? "Все объекты"
+              : (overview.properties.find(
+                  (p) => p.id === session.user.propertyId,
+                )?.name ?? "Объект не назначен")}
           </small>
           <Button
             variant="plain"

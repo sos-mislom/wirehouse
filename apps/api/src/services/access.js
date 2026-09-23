@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { verifyToken } from "../auth.js";
 import { config } from "../config.js";
+import { hasPermission } from "../../../../packages/contracts/src/permissions.ts";
+import { routePermission } from "./permissions.js";
 export function createAccessService({
   db,
   fileStorage,
@@ -96,6 +98,15 @@ export function createAccessService({
       return null;
     }
 
+    db.setAuditActor(user);
+    const permission = routePermission(
+      request.method,
+      new URL(request.url, "http://localhost").pathname,
+    );
+    if (permission && !hasPermission(user, permission)) {
+      forbidden(response, "Нет права на это действие");
+      return null;
+    }
     return user;
   };
 

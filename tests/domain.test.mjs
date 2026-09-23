@@ -88,7 +88,8 @@ test("PPR creates one task per date and preserves its checklist and occurrence",
     equipmentId: eq.id,
     responsibleId: f.worker.id,
     nextDate: day,
-    intervalDays: 30,
+    recurrence: "days",
+    intervalCount: 30,
     checklist: ["Осмотреть", "Проверить фильтр"],
   });
   assert.equal(runMaintenance(f.db, day).length, 1);
@@ -99,6 +100,20 @@ test("PPR creates one task per date and preserves its checklist and occurrence",
   assert.equal(task.equipment_id, eq.id);
   assert.equal(task.maintenance_plan_id, plan.id);
   assert.equal(task.checklist_items.length, 2);
+  assert.throws(
+    () =>
+      reloaded.updateTicket(task.id, {
+        status: "completed",
+        updatedBy: f.worker.id,
+      }),
+    /чек-лист/,
+  );
+  for (const item of task.checklist_items) {
+    reloaded.updateTicketChecklistItem(task.id, item.id, {
+      completed: true,
+      completedBy: f.worker.id,
+    });
+  }
   reloaded.updateTicket(task.id, {
     status: "completed",
     updatedBy: f.worker.id,

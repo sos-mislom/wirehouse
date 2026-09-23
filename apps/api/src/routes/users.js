@@ -1,5 +1,6 @@
 import { parseJsonBody } from "../http/body.js";
 import { publicUser } from "../operations.js";
+import { hasPermission } from "../../../../packages/contracts/src/permissions.ts";
 export function createUsersRoutes({
   requirePortfolioWriteAccess,
   validateRequired,
@@ -37,6 +38,13 @@ export function createUsersRoutes({
       }
 
       if (user.role === "manager" && body.role !== "worker") {
+        forbidden(response);
+        return true;
+      }
+      if (
+        body.role !== "worker" &&
+        !hasPermission(user, "permissions.manage")
+      ) {
         forbidden(response);
         return true;
       }

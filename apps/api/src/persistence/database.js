@@ -4,6 +4,8 @@ import { createPool, WRITE_LOCK } from "./pool.js";
 import { assertMigrated } from "./migrate.js";
 import { loadRows, flushRows } from "./rows.js";
 import { isDeepStrictEqual } from "node:util";
+import { appendAudit } from "./audit.js";
+import { decodeRow } from "./schema.js";
 
 export async function openDatabase({ databaseUrl }) {
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -29,7 +31,31 @@ export async function openDatabase({ databaseUrl }) {
       if (!scope) throw new Error("Post-commit action outside a transaction");
       scope.afterCommit.push(fn);
     },
-    async requestScope({ readOnly = false } = {}, fn) {
+    setAuditActor(actor) {
+      const scope = context.getStore();
+      if (scope) scope.audit.actor = actor;
+    },
+    async auditPage({ query = "", entityId = null, offset = 0, limit = 50 }) {
+      const client = context.getStore()?.client;
+      if (!client) throw new Error("Audit read outside request scope");
+      const where =
+        "($1::text IS NULL OR entity_id=$1) AND ($2='' OR concat_ws(' ',actor_name,entity_type,entity_id,action) ILIKE '%' || $2 || '%')";
+      const count = await client.query(
+        `SELECT count(*)::int AS total FROM warehouse.audit_log WHERE ${where}`,
+        [entityId, query],
+      );
+      const rows = await client.query(
+        `SELECT * FROM warehouse.audit_log WHERE ${where} ORDER BY created_at DESC,_sequence DESC LIMIT $3 OFFSET $4`,
+        [entityId, query, limit, offset],
+      );
+      return {
+        items: rows.rows.map((r) => decodeRow("audit_log", r)),
+        total: count.rows[0].total,
+        offset,
+        limit,
+      };
+    },
+    async requestScope({ readOnly = false, source = "system" } = {}, fn) {
       if (context.getStore())
         throw new Error("Nested database request scopes are not supported");
       const client = await pool.connect();
@@ -47,15 +73,19 @@ export async function openDatabase({ databaseUrl }) {
           // own SQL repository. Readers never take this lock or wait for writers.
           await client.query("SELECT pg_advisory_xact_lock($1,$2)", WRITE_LOCK);
         }
-        const before = await loadRows(client);
+        const before = await loadRows(client, { auditLimit: 200 });
         const domain = new WarehouseDatabase(before);
-        result = await context.run({ domain, client, afterCommit }, fn);
+        const audit = { source, actor: null };
+        result = await context.run({ domain, client, afterCommit, audit }, fn);
         if (readOnly) {
           if (!isDeepStrictEqual(before, domain.data))
             throw new Error(
               "Read-only request attempted to change stored data",
             );
-        } else await flushRows(client, before, domain.data);
+        } else {
+          appendAudit(before, domain.data, audit);
+          await flushRows(client, before, domain.data);
+        }
         await client.query("COMMIT");
       } catch (error) {
         await client.query("ROLLBACK").catch(() => {});

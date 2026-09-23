@@ -258,4 +258,210 @@ test("API regression: scoped finance, persisted notification reads, validation a
     ),
     true,
   );
+  // Permissions are read from the current account, not from an old JWT.
+  assert.equal(
+    (
+      await call(`/api/users/${f.manager.id}`, f.admin, "PUT", {
+        permissions: ["workspace.read"],
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call("/api/operations/equipment", f.manager, "POST", {
+        name: "Denied",
+        propertyId: f.property.id,
+        unitId: f.unit.id,
+        type: "Щит",
+      })
+    ).status,
+    403,
+  );
+  assert.equal((await call("/api/audit", f.manager)).status, 403);
+  const structure = (await call("/api/structure", f.admin)).body;
+  const floor = structure.floors.find(
+    (row) => row.propertyId === f.property.id,
+  );
+  assert.ok(floor.id);
+  assert.equal(
+    (await call(`/api/structure/floors/${floor.id}`, f.admin, "DELETE")).status,
+    409,
+  );
+  assert.equal(
+    (
+      await call(`/api/structure/floors/${floor.id}`, f.admin, "PUT", {
+        propertyId: f.property.id,
+        entranceId: floor.entranceId,
+        name: "Первый этаж",
+        number: 1,
+        updatedAt: floor.updatedAt,
+      })
+    ).status,
+    200,
+  );
+  const template = (
+    await call("/api/maintenance/templates", f.admin, "POST", {
+      propertyId: f.property.id,
+      name: "Регламент",
+      instructions: "Осмотреть",
+      checklist: ["Проверить"],
+    })
+  ).body.item;
+  assert.equal(template.version, 1);
+  const plan = (
+    await call("/api/operations/plans", f.admin, "POST", {
+      propertyId: f.property.id,
+      unitId: f.unit.id,
+      name: "ППР",
+      nextDate: "2029-01-31",
+      recurrence: "months",
+      intervalCount: 1,
+      checklist: template.checklist,
+      templateId: template.id,
+      templateVersion: 1,
+    })
+  ).body.item;
+  assert.equal(plan.templateVersion, 1);
+  const dxf = [
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+    "0",
+    "LINE",
+    "8",
+    "Walls",
+    "10",
+    "0",
+    "20",
+    "0",
+    "11",
+    "100",
+    "21",
+    "100",
+    "0",
+    "ENDSEC",
+    "0",
+    "EOF",
+  ].join("\n");
+  const geometry = (
+    await call("/api/operations/floorplans/import-dxf", f.admin, "POST", {
+      content: dxf,
+    })
+  ).body.geometry;
+  const floorplan = await call("/api/operations/floorplans", f.admin, "POST", {
+    propertyId: f.property.id,
+    name: "Этаж",
+    floorId: floor.id,
+    kind: "floor",
+    image: "",
+    markers: [],
+    geometry,
+  });
+  assert.equal(floorplan.status, 201, JSON.stringify(floorplan.body));
+  assert.equal(
+    (
+      await call(
+        `/api/operations/floorplans/${floorplan.body.item.id}`,
+        f.admin,
+        "PUT",
+        { name: "Stale", version: 0 },
+      )
+    ).status,
+    409,
+  );
+  const input = {
+    propertyId: f.property.id,
+    ticketId: task.id,
+    name: "Смета API",
+    contractorId: null,
+    version: 0,
+    lines: [
+      {
+        kind: "labor",
+        catalogId: null,
+        description: "Работа",
+        unit: "ч",
+        quantity: 1,
+        unitPrice: 100,
+        vatRate: "0",
+      },
+    ],
+  };
+  const estimate = (await call("/api/estimates", f.admin, "POST", input)).body
+    .item;
+  assert.equal(estimate.total, 100);
+  assert.equal(
+    (
+      await call(`/api/estimates/${estimate.id}/submit`, f.admin, "POST", {
+        version: 1,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(`/api/estimates/${estimate.id}`, f.admin, "PUT", {
+        ...input,
+        version: 2,
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await call(`/api/estimates/${estimate.id}/approve`, f.admin, "POST", {
+        version: 2,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(`/api/estimates/${estimate.id}/act`, f.admin, "POST", {
+        version: 3,
+      })
+    ).status,
+    409,
+  );
+  const checklist = (await call("/api/tickets", f.admin)).body.items.find(
+    (t) => t.id === task.id,
+  ).checklistItems;
+  for (const item of checklist)
+    assert.equal(
+      (
+        await call(
+          `/api/tickets/${task.id}/checklist/${item.id}`,
+          f.admin,
+          "PUT",
+          { completed: true },
+        )
+      ).status,
+      200,
+    );
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}`, f.admin, "PUT", {
+        status: "completed",
+      })
+    ).status,
+    200,
+  );
+  const issued = await call(
+    `/api/estimates/${estimate.id}/act`,
+    f.admin,
+    "POST",
+    { version: 3 },
+  );
+  assert.equal(issued.status, 200, JSON.stringify(issued.body));
+  assert.equal(issued.body.act.snapshot.total, 100);
+  const audit = (await call(`/api/audit?entityId=${estimate.id}`, f.admin))
+    .body;
+  assert.equal(audit.items.length, 4);
+  assert.ok(audit.items.every((row) => row.actorId === f.admin.id));
+  assert.equal(
+    (await call("/api/maintenance", f.manager)).body.estimates.length,
+    0,
+  );
 });

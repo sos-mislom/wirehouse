@@ -44,14 +44,14 @@ export const tables = {
   ),
   units: table(
     {
-      text: "id property_id number building entrance photo_url type status temperature_regime",
+      text: "id property_id floor_id number building entrance photo_url type status temperature_regime",
       numeric: "area ceiling_height plan_x plan_y",
       integer: "floor has_ramp has_gate",
       timestamptz: "created_at updated_at",
     },
     {
       required: ["property_id", "number", "area"],
-      references: { property_id: "properties" },
+      references: { property_id: "properties", floor_id: "floors" },
       checks: ["area > 0", "has_ramp IN (0,1)", "has_gate IN (0,1)"],
     },
   ),
@@ -59,6 +59,7 @@ export const tables = {
     {
       text: "id email phone password_hash full_name role property_id tenant_id totp_secret totp_pending_secret specialty",
       integer: "is_active totp_enabled",
+      jsonb: "permissions",
       timestamptz: "created_at last_login_at updated_at",
     },
     {
@@ -344,13 +345,18 @@ export const tables = {
   }),
   floor_plans: table(
     {
-      text: "id propertyId name createdBy image",
-      jsonb: "markers",
+      text: "id propertyId name createdBy image floorId kind sourceName",
+      jsonb: "markers geometry layers",
+      integer: "version",
       timestamptz: "createdAt updatedAt",
     },
     {
       required: ["propertyId"],
-      references: { propertyId: "properties", createdBy: "users" },
+      references: {
+        propertyId: "properties",
+        createdBy: "users",
+        floorId: "floors",
+      },
     },
   ),
   equipment: table(
@@ -386,23 +392,24 @@ export const tables = {
   ),
   maintenance_plans: table(
     {
-      text: "id propertyId name createdBy unitId responsibleId equipmentId instructions",
-      integer: "intervalDays",
-      date: "nextDate",
+      text: "id propertyId name createdBy unitId responsibleId equipmentId instructions templateId recurrence",
+      integer: "intervalCount anchorDay templateVersion leadDays",
+      date: "nextDate endDate",
       boolean: "active",
       jsonb: "checklist",
       timestamptz: "createdAt updatedAt",
     },
     {
-      required: ["propertyId", "unitId", "nextDate", "intervalDays"],
+      required: ["propertyId", "unitId", "nextDate", "intervalCount"],
       references: {
         propertyId: "properties",
         unitId: "units",
         createdBy: "users",
         responsibleId: "users",
         equipmentId: "equipment",
+        templateId: "maintenance_templates",
       },
-      checks: ["interval_days BETWEEN 1 AND 3660"],
+      checks: ["interval_count BETWEEN 1 AND 3660"],
     },
   ),
   meters: table(
@@ -468,6 +475,127 @@ export const tables = {
   auth_challenges: table(
     { text: "key namespace", jsonb: "value", timestamptz: "expiresAt" },
     { key: ["namespace", "key"], required: ["value", "expiresAt"] },
+  ),
+  buildings: table(
+    { text: "id propertyId name", timestamptz: "createdAt updatedAt" },
+    {
+      required: ["propertyId", "name"],
+      references: { propertyId: "properties" },
+    },
+  ),
+  entrances: table(
+    {
+      text: "id propertyId buildingId name",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: ["propertyId", "buildingId", "name"],
+      references: { propertyId: "properties", buildingId: "buildings" },
+    },
+  ),
+  floors: table(
+    {
+      text: "id propertyId entranceId name",
+      integer: "number",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: ["propertyId", "entranceId", "number", "name"],
+      references: { propertyId: "properties", entranceId: "entrances" },
+    },
+  ),
+  maintenance_templates: table(
+    {
+      text: "id propertyId name instructions",
+      integer: "version",
+      jsonb: "checklist",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: ["propertyId", "name", "version"],
+      references: { propertyId: "properties" },
+    },
+  ),
+  contractors: table(
+    {
+      text: "id propertyId name inn contact",
+      boolean: "active",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: ["propertyId", "name"],
+      references: { propertyId: "properties" },
+    },
+  ),
+  materials: table(
+    {
+      text: "id propertyId name unit",
+      numeric: "price",
+      boolean: "active",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: ["propertyId", "name", "unit", "price"],
+      references: { propertyId: "properties" },
+      checks: ["price >= 0"],
+    },
+  ),
+  estimates: table(
+    {
+      text: "id propertyId ticketId contractorId status name createdBy submittedBy approvedBy rejectionReason",
+      integer: "version",
+      jsonb: "lines",
+      numeric: "total",
+      timestamptz: "createdAt updatedAt approvedAt",
+    },
+    {
+      required: [
+        "propertyId",
+        "ticketId",
+        "status",
+        "version",
+        "lines",
+        "total",
+      ],
+      references: {
+        propertyId: "properties",
+        ticketId: "tickets",
+        contractorId: "contractors",
+        createdBy: "users",
+        submittedBy: "users",
+        approvedBy: "users",
+      },
+      checks: [
+        "total >= 0",
+        "status IN ('draft','submitted','approved','rejected','acted')",
+      ],
+    },
+  ),
+  service_acts: table(
+    {
+      text: "id propertyId estimateId ticketId number issuedBy",
+      integer: "estimateVersion",
+      jsonb: "snapshot",
+      numeric: "total",
+      date: "date",
+      timestamptz: "createdAt",
+    },
+    {
+      required: [
+        "propertyId",
+        "estimateId",
+        "ticketId",
+        "number",
+        "snapshot",
+        "total",
+      ],
+      references: {
+        propertyId: "properties",
+        estimateId: "estimates",
+        ticketId: "tickets",
+        issuedBy: "users",
+      },
+    },
   ),
 };
 export const emptyData = () =>

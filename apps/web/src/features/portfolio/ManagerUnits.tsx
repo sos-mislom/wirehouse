@@ -1,5 +1,6 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { UnitStructure } from "../../Operations";
+import { StructureWorkspace } from "../platform/StructureWorkspace";
+import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { unitStatusOptions, unitTypeOptions } from "../../projectData";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import { countLabel, formatArea } from "../../shared/format";
@@ -27,6 +28,7 @@ export function ManagerUnits() {
     tickets,
     operations,
     openUnitDetail,
+    openTicketDetail,
     openManagerUnitEdit,
     adminEditLabel,
     canDeletePortfolioItems,
@@ -128,13 +130,18 @@ export function ManagerUnits() {
         ))}
       </div>
 
-      <UnitStructure
+      <StructureWorkspace
         token={session.token}
-        properties={overview.properties}
-        units={propertyScopedUnits}
+        canWrite={hasPermission(session.user, "plans.write")}
+        key={selectedPropertyId}
+        properties={overview.properties.filter(
+          (p) => !selectedPropertyId || p.id === selectedPropertyId,
+        )}
+        units={overview.units}
         tickets={tickets}
         equipment={operations?.equipment ?? []}
         onUnit={openUnitDetail}
+        onTicket={openTicketDetail}
       />
       <article
         className="mvp-card selection-stage"

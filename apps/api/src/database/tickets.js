@@ -205,6 +205,12 @@ export class TicketsDatabase extends LeasesDatabase {
         nextStatus === "closed" ? (current.closed_at ?? nowIso()) : null,
     };
 
+    if (
+      next.maintenance_plan_id &&
+      ["completed", "resolved", "closed"].includes(next.status) &&
+      next.checklist_items.some((item) => item.required && !item.completed)
+    )
+      throw new Error("Завершите обязательный чек-лист ППР");
     this.validateTicketPayload(next);
     Object.assign(current, next);
     if (current.status !== previousStatus) {
@@ -377,5 +383,4 @@ export class TicketsDatabase extends LeasesDatabase {
     }
     return { result: createChangeResult(1), attachment: clone(current) };
   }
-
 }

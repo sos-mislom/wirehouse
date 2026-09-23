@@ -1,5 +1,6 @@
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 import { config } from "../../config.js";
+import { hasPermission } from "../../../../../packages/contracts/src/permissions.ts";
 
 export function createBotContextManager(deps) {
   const {
@@ -159,17 +160,23 @@ export function createBotContextManager(deps) {
     return true;
   };
 
-
   const createCrossChannelTenantMessage = async ({
     channel,
     binding,
     text,
   }) => {
     const user = binding.user_id ? db.getUserById(binding.user_id) : null;
-    if (!user || user.role !== "tenant" || !user.tenant_id) {
+    if (
+      !user ||
+      !user.is_active ||
+      !hasPermission(user, "tickets.write") ||
+      user.role !== "tenant" ||
+      !user.tenant_id
+    ) {
       return null;
     }
 
+    db.setAuditActor(user);
     const scopedTickets = db
       .listTickets()
       .filter((ticket) => ticket.tenant_id === user.tenant_id)
@@ -243,11 +250,12 @@ export function createBotContextManager(deps) {
 
   const resolveBotTicketTarget = async ({ channel, binding }) => {
     const user = binding.user_id ? db.getUserById(binding.user_id) : null;
-    if (!user) {
+    if (!user || !user.is_active || !hasPermission(user, "tickets.write")) {
       return { user: null, ticket: null };
     }
 
     if (user.role === "tenant" && user.tenant_id) {
+      db.setAuditActor(user);
       const contexts = buildTenantChatContexts(user);
       if (contexts.length === 0) {
         return { user, ticket: null };
@@ -317,6 +325,7 @@ export function createBotContextManager(deps) {
     }
 
     if (user.role === "worker") {
+      db.setAuditActor(user);
       const tickets = db
         .listTickets()
         .filter((ticket) => ticket.assigned_to === user.id)
@@ -336,7 +345,6 @@ export function createBotContextManager(deps) {
 
     return { user, ticket: null };
   };
-
 
   return {
     tenantOnboardingPayload,

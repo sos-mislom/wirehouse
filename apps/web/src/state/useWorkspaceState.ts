@@ -152,6 +152,7 @@ export function useWorkspaceState() {
     riskLevel: "medium",
   });
   const [unitForm, setUnitForm] = useState({
+    floorId: "",
     propertyId: "",
     building: "",
     entrance: "",

@@ -26,6 +26,12 @@ const fields: Record<OperationKind | "users", readonly string[]> = {
     "active",
   ],
   plans: [
+    "templateId",
+    "templateVersion",
+    "recurrence",
+    "intervalCount",
+    "leadDays",
+    "endDate",
     "propertyId",
     "name",
     "updatedAt",
@@ -33,7 +39,6 @@ const fields: Record<OperationKind | "users", readonly string[]> = {
     "responsibleId",
     "equipmentId",
     "nextDate",
-    "intervalDays",
     "checklist",
     "instructions",
     "active",
@@ -64,6 +69,7 @@ const fields: Record<OperationKind | "users", readonly string[]> = {
   expenses: ["propertyId", "name", "updatedAt", "amount", "date", "category"],
   floorplans: ["propertyId", "name", "updatedAt", "image", "markers"],
   users: [
+    "permissions",
     "fullName",
     "email",
     "password",
@@ -75,15 +81,18 @@ const fields: Record<OperationKind | "users", readonly string[]> = {
   ],
 };
 const numericFields = new Set([
+  "intervalCount",
+  "leadDays",
   "cost",
   "hourlyRate",
   "basePrice",
-  "intervalDays",
   "tariff",
   "initialValue",
   "amount",
 ]);
 const nullableFields = new Set([
+  "templateId",
+  "endDate",
   "unitId",
   "responsibleId",
   "equipmentId",

@@ -1,4 +1,5 @@
 export type SessionUser = {
+  permissions: string[];
   id: string;
   email: string | null;
   phone: string | null;
@@ -21,6 +22,7 @@ export type Property = {
 };
 
 export type Unit = {
+  floorId: string;
   id: string;
   propertyId: string;
   building: string;
@@ -170,6 +172,17 @@ export type TicketAttachment = {
 };
 
 export type FinancePoint = {
+  expenses: number;
+  invoiceAmount: number;
+  contractAmount: number;
+  details: {
+    leaseId: string;
+    contractNumber: string;
+    unitNumber: string;
+    basis: string;
+    amount: number;
+    days: number;
+  }[];
   id: string;
   label: string;
   billed: number;

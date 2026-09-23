@@ -247,31 +247,73 @@ try {
     .first()
     .waitFor();
   await page.getByRole("button", { name: "Помещения", exact: true }).click();
-  await page.getByRole("heading", { name: "Структура объекта" }).waitFor();
-  assert.ok(
-    (await page.getByText("Основной корпус", { exact: false }).count()) >= 0,
-  );
-  const planImage = await page.screenshot();
-  await page
-    .getByRole("button", { name: "Планы объекта", exact: true })
-    .click();
-  await page.locator(".unit-structure input[type=file]").setInputFiles({
-    name: "test-plan.png",
-    mimeType: "image/png",
-    buffer: planImage,
+  await page.getByRole("heading", { name: "Структура и планы" }).waitFor();
+  await page.getByRole("button", { name: "Объект А", exact: true }).click();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await page.getByRole("button", { name: "Новый план", exact: true }).click();
+  const dxf = [
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+    "0",
+    "LINE",
+    "8",
+    "Walls",
+    "10",
+    "0",
+    "20",
+    "0",
+    "11",
+    "100",
+    "21",
+    "100",
+    "0",
+    "ENDSEC",
+    "0",
+    "EOF",
+  ].join("\n");
+  await page.locator(".plan-upload input").setInputFiles({
+    name: "floor.dxf",
+    mimeType: "application/dxf",
+    buffer: Buffer.from(dxf),
   });
-  await page.locator(".floor-plan img").waitFor();
+  await page.getByText(/Импортировано 1 элементов/).waitFor();
   await page
-    .getByLabel("Разместить помещение", { exact: true })
-    .selectOption({ index: 1 });
-  await page.locator(".floor-plan").click({ position: { x: 1, y: 1 } });
-  await page.locator(".plan-marker").waitFor();
+    .getByRole("button", { name: "Нарисовать контур", exact: true })
+    .click();
+  for (const position of [
+    { x: 100, y: 100 },
+    { x: 300, y: 100 },
+    { x: 300, y: 300 },
+  ])
+    await page.locator(".plan-canvas").click({ position });
+  await page
+    .getByRole("button", { name: "Замкнуть контур", exact: true })
+    .click();
+  await page
+    .getByLabel("Помещение на плане", { exact: true })
+    .selectOption(f.unit.id);
+  await page
+    .getByRole("button", { name: "Сохранить план", exact: true })
+    .click();
+  await page.getByText("План сохранён", { exact: true }).waitFor();
+  await page.screenshot({
+    path: ".deploy/plan-editor-desktop.png",
+    fullPage: true,
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await page
+    .getByLabel("Выбор плана", { exact: true })
+    .selectOption({ label: "Новый план" });
+  await page.locator(".plan-canvas polygon").waitFor();
   await page.setViewportSize({ width: 320, height: 844 });
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 2,
     ),
-    "Plan edge markers fit mobile",
+    "Plan editor fits mobile",
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Эксплуатация", exact: true }).click();
@@ -291,7 +333,10 @@ try {
   await page
     .getByRole("heading", { name: "Тестовая вентиляция", exact: true })
     .waitFor();
-  await page.getByRole("button", { name: "ППР", exact: true }).click();
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "ППР", exact: true })
+    .click();
   await page.getByRole("button", { name: "Добавить", exact: true }).click();
   await page.getByLabel("Название *", { exact: true }).fill("Тестовое ППР");
   await page.getByLabel(/^Объект \*/).selectOption(f.property.id);
@@ -303,6 +348,111 @@ try {
   await page
     .getByRole("heading", { name: "Тестовое ППР", exact: true })
     .waitFor();
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "Услуги", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Материалы", exact: true }).click();
+  await page.getByRole("button", { name: "Добавить", exact: true }).click();
+  await page.getByLabel(/^Название/).fill("Кабель ВВГ");
+  await page.getByLabel(/^Объект/).selectOption(f.property.id);
+  await page.getByLabel(/^Единица измерения/).fill("м");
+  await page.getByLabel(/^Цена без НДС/).fill("125.50");
+  await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+  await page
+    .locator(".platform-row")
+    .getByText("Кабель ВВГ", { exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: "Сметы и акты", exact: true }).click();
+  await page.getByRole("button", { name: "Новая смета", exact: true }).click();
+  await page.getByLabel(/^Название/).fill("Проверка тарификации");
+  await page.getByLabel(/^Объект/).selectOption(f.property.id);
+  await page.getByLabel(/^Заявка/).selectOption({ index: 1 });
+  const estimateTicketId = await page.getByLabel(/^Заявка/).inputValue();
+  await page.getByLabel(/^Наименование/).fill("Проверка оборудования");
+  await page.getByLabel(/^Количество/).fill("2");
+  await page.getByLabel(/^Цена, ₽/).fill("100");
+  await page
+    .getByRole("button", { name: "Сохранить черновик", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Проверка тарификации", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "На согласование", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Утвердить", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Выпустить акт", exact: true })
+    .click();
+  await page
+    .getByText("Акт доступен после выполнения заявки", { exact: true })
+    .waitFor();
+  await page.screenshot({
+    path: ".deploy/estimate-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 2,
+    ),
+    "Estimate fits mobile",
+  );
+  await page.screenshot({
+    path: ".deploy/estimate-mobile.png",
+    fullPage: true,
+  });
+  const authorization = {
+    Authorization: `Bearer ${createToken({ sub: f.admin.id, role: "admin" }, secret)}`,
+  };
+  const ticketResponse = await page.request.get(
+    "http://127.0.0.1:3001/api/tickets",
+    { headers: authorization },
+  );
+  const estimateTicket = (await ticketResponse.json()).items.find(
+    (t) => t.id === estimateTicketId,
+  );
+  for (const item of estimateTicket.checklistItems) {
+    const response = await page.request.put(
+      `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/checklist/${item.id}`,
+      {
+        headers: authorization,
+        data: { completed: true },
+      },
+    );
+    assert.equal(response.status(), 200);
+  }
+  const completed = await page.request.put(
+    `http://127.0.0.1:3001/api/tickets/${estimateTicketId}`,
+    {
+      headers: authorization,
+      data: { status: "completed" },
+    },
+  );
+  assert.equal(completed.status(), 200);
+  await page
+    .getByRole("button", { name: "Выпустить акт", exact: true })
+    .click();
+  await page.getByRole("button", { name: /^Открыть АКТ-/ }).click();
+  await page.locator("#service-act").waitFor();
+  await page.emulateMedia({ media: "print" });
+  assert.equal(
+    await page
+      .locator("#service-act table")
+      .evaluate((el) => getComputedStyle(el).display),
+    "table",
+  );
+  assert.equal(
+    await page
+      .locator("#service-act thead")
+      .evaluate((el) => getComputedStyle(el).position),
+    "static",
+  );
+  await page.pdf({ path: ".deploy/service-act.pdf", preferCSSPageSize: true });
+  await page.emulateMedia({ media: "screen" });
+  await page.getByRole("button", { name: "Закрыть акт", exact: true }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page
     .getByRole("button", { name: /^Заявки/ })
     .first()
@@ -460,7 +610,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "Browser checks passed: navigation, cancel, equipment, PPR, kanban, users, mobile, tenant login.",
+    "Browser checks passed: navigation, DXF editing and persistence, catalogs, estimate approval and printed act, PPR, kanban, users, mobile, tenant login.",
   );
 } catch (error) {
   if (browser) {

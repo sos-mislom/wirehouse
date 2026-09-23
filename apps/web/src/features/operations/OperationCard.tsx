@@ -11,6 +11,8 @@ import {
   statusNames,
 } from "./shared";
 import type { OperationsModel } from "./useOperationsModel";
+import { tabPermission } from "./shared";
+import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 export function OperationCard({
   row,
   model,
@@ -44,20 +46,21 @@ export function OperationCard({
           )}
           <h3>{row.name || row.fullName || auditLabel(row.action)}</h3>
         </div>
-        {tab !== "audit" && (
-          <Button
-            variant="secondary"
-            type="button"
-            className="secondary-button"
-            disabled={busy}
-            onClick={() => {
-              setDraft({ ...row, password: "" });
-              setError("");
-            }}
-          >
-            Изменить
-          </Button>
-        )}
+        {tabPermission[tab] &&
+          hasPermission(model.user, tabPermission[tab]) && (
+            <Button
+              variant="secondary"
+              type="button"
+              className="secondary-button"
+              disabled={busy}
+              onClick={() => {
+                setDraft({ ...row, password: "" });
+                setError("");
+              }}
+            >
+              Изменить
+            </Button>
+          )}
       </div>
       {tab === "equipment" && (
         <>
@@ -130,8 +133,12 @@ export function OperationCard({
             >
               {row.active ? "По расписанию" : "Приостановлено"}
             </span>{" "}
-            · Следующая дата: {date(row.nextDate)} · каждые {row.intervalDays}{" "}
-            дн.
+            · Следующая дата: {date(row.nextDate)} · каждые {row.intervalCount}{" "}
+            {
+              { days: "дн.", weeks: "нед.", months: "мес.", years: "г." }[
+                row.recurrence as string
+              ]
+            }
           </p>
           <Button
             variant="text"

@@ -1,4 +1,5 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
+import { FloorSelect } from "../platform/FloorSelect";
 import {
   leaseStageOptions,
   riskLevelOptions,
@@ -8,6 +9,7 @@ import {
 import { Button, Input, Select, Textarea } from "../../ui";
 export function AdminForm() {
   const {
+    session,
     adminPanel,
     submitAdminSave,
     propertyForm,
@@ -242,7 +244,15 @@ export function AdminForm() {
           <span>{t.fields.property}</span>
           <Select
             name="propertyId"
-            onChange={handleFieldChange(setUnitForm)}
+            onChange={(e) =>
+              setUnitForm((f) => ({
+                ...f,
+                propertyId: e.target.value,
+                floorId: "",
+                building: "",
+                entrance: "",
+              }))
+            }
             value={unitForm.propertyId}
           >
             {overview.properties.map((property) => (
@@ -260,24 +270,12 @@ export function AdminForm() {
             value={unitForm.number}
           />
         </label>
-        <label>
-          <span>Корпус</span>
-          <Input
-            name="building"
-            value={unitForm.building}
-            onChange={handleFieldChange(setUnitForm)}
-            placeholder="Корпус А"
-          />
-        </label>
-        <label>
-          <span>Подъезд / секция</span>
-          <Input
-            name="entrance"
-            value={unitForm.entrance}
-            onChange={handleFieldChange(setUnitForm)}
-            placeholder="Секция 1"
-          />
-        </label>
+        <FloorSelect
+          token={session.token}
+          propertyId={unitForm.propertyId}
+          value={unitForm.floorId}
+          onChange={(location) => setUnitForm((f) => ({ ...f, ...location }))}
+        />
         <label>
           <span>Фото помещения (HTTPS)</span>
           <Input
@@ -285,15 +283,6 @@ export function AdminForm() {
             type="url"
             value={unitForm.photoUrl}
             onChange={handleFieldChange(setUnitForm)}
-          />
-        </label>
-        <label>
-          <span>{t.fields.floor}</span>
-          <Input
-            name="floor"
-            onChange={handleFieldChange(setUnitForm)}
-            type="number"
-            value={unitForm.floor}
           />
         </label>
         <label>

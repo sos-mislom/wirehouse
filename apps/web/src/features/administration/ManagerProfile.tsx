@@ -1,12 +1,17 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { Button, Input } from "../../ui";
+import {
+  permissionLabels,
+  Permission,
+} from "../../../../../packages/contracts/src/permissions";
 export function ManagerProfile() {
   const {
     managerUi,
     session,
     t,
     selectedProperty,
+    overview,
     handleLogout,
     totpSetup,
     busyAction,
@@ -44,13 +49,29 @@ export function ManagerProfile() {
             </div>
             <div className="mvp-info-row">
               <span>{managerUi.profileScope}</span>
-              <strong>{t.scopeByRole[session.user.role]}</strong>
+              <strong>
+                {session.user.permissions.length} разрешённых действий
+              </strong>
             </div>
             <div className="mvp-info-row">
               <span>{managerUi.objectScope}</span>
-              <strong>{selectedProperty?.name ?? managerUi.allObjects}</strong>
+              <strong>
+                {session.user.propertyId
+                  ? overview.properties.find(
+                      (p) => p.id === session.user.propertyId,
+                    )?.name
+                  : "Все объекты"}
+              </strong>
             </div>
           </div>
+          <details>
+            <summary>Мои права доступа</summary>
+            <ul>
+              {session.user.permissions.map((p) => (
+                <li key={p}>{permissionLabels[p as Permission]}</li>
+              ))}
+            </ul>
+          </details>
           <Button
             variant="secondary"
             className="secondary-button profile-logout"

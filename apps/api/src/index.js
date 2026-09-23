@@ -8,6 +8,7 @@ import { createExportsRoutes } from "./routes/exports.js";
 import { createImportsRoutes } from "./routes/imports.js";
 import { createLeasesRoutes } from "./routes/leases.js";
 import { createOperationsRoutes } from "./routes/operations.js";
+import { createPlatformRoutes } from "./routes/platform.js";
 import { createPropertiesRoutes } from "./routes/properties.js";
 import { createSystemRoutes } from "./routes/system.js";
 import { createTenantsRoutes } from "./routes/tenants.js";
@@ -439,6 +440,7 @@ const routes = [
     normalizeImportBatch,
     buildImportBatchAuditFile,
   }),
+  createPlatformRoutes({ requireAuth, ok, db, json }),
   createOperationsRoutes({ requireAuth, ok, db, created, notFound, json }),
   createUsersRoutes({
     requirePortfolioWriteAccess,
@@ -580,7 +582,10 @@ const server = http.createServer(async (request, response) => {
     await preloadBody(request);
     const pending = bufferedResponse(response);
     await db.requestScope(
-      { readOnly: method === "GET" || method === "HEAD" },
+      {
+        readOnly: method === "GET" || method === "HEAD",
+        source: `${method} ${pathname}`,
+      },
       async () => {
         for (const route of routes) {
           if (await route(request, pending, url)) return;

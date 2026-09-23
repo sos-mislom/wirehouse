@@ -1,6 +1,12 @@
 import { Button, Input, Select } from "../../ui";
 import { resourceNames, specialtyNames, tabs } from "./shared";
 import type { OperationsModel } from "./useOperationsModel";
+import {
+  permissionLabels,
+  rolePermissions,
+  hasPermission,
+} from "../../../../../packages/contracts/src/permissions";
+import { TemplateSelect } from "../platform/TemplateSelect";
 export function OperationEditor({ model }: { model: OperationsModel }) {
   const {
     draft,
@@ -65,6 +71,38 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
             {draft.role !== "tenant" &&
               select("specialty", "Специализация", specialtyNames)}
             {check("isActive", "Учётная запись активна")}
+            {hasPermission(user, "permissions.manage") &&
+              draft.id !== user.id && (
+                <fieldset className="platform-permissions">
+                  <legend>Права доступа</legend>
+                  {(rolePermissions[draft.role] ?? []).map((p) => (
+                    <label key={p}>
+                      <Input
+                        type="checkbox"
+                        checked={(
+                          draft.permissions ?? rolePermissions[draft.role]
+                        ).includes(p)}
+                        onChange={(e) =>
+                          change(
+                            "permissions",
+                            e.target.checked
+                              ? [
+                                  ...(draft.permissions ??
+                                    rolePermissions[draft.role]),
+                                  p,
+                                ]
+                              : (
+                                  draft.permissions ??
+                                  rolePermissions[draft.role]
+                                ).filter((v: string) => v !== p),
+                          )
+                        }
+                      />
+                      {permissionLabels[p]}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
           </>
         ) : (
           <>
@@ -145,6 +183,24 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
             )}
             {tab === "plans" && (
               <>
+                <TemplateSelect
+                  token={model.token}
+                  propertyId={draft.propertyId}
+                  value={draft.templateId ?? ""}
+                  onSelect={(template) =>
+                    setDraft({
+                      ...draft,
+                      templateId: template?.id ?? null,
+                      templateVersion: template?.version ?? null,
+                      ...(template
+                        ? {
+                            checklist: template.checklist!.join("\n"),
+                            instructions: template.instructions,
+                          }
+                        : {}),
+                    })
+                  }
+                />
                 {select(
                   "equipmentId",
                   "Оборудование",
@@ -158,7 +214,20 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
                   ),
                 )}
                 {input("nextDate", "Следующее выполнение", "date", true)}
-                {input("intervalDays", "Повторять через, дней", "number", true)}
+                {select(
+                  "recurrence",
+                  "Повторение",
+                  {
+                    days: "Дни",
+                    weeks: "Недели",
+                    months: "Месяцы",
+                    years: "Годы",
+                  },
+                  true,
+                )}
+                {input("intervalCount", "Каждые N периодов", "number", true)}
+                {input("leadDays", "Создавать за, дней", "number", true)}
+                {input("endDate", "Последняя дата графика", "date")}
                 {area("checklist", "Чек-лист: один пункт на строку", true)}
                 {area("instructions", "Инструкция")}
                 {check("active", "Генерировать заявки автоматически")}

@@ -43,7 +43,7 @@ export function ManagerBilling() {
     : 0;
 
   return (
-    <section className="mvp-page">
+    <section className="mvp-page billing-page">
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.billing}</h2>
@@ -285,7 +285,7 @@ export function ManagerBilling() {
         </article>
       ) : null}
 
-      <div className="mvp-grid">
+      <div className="mvp-grid billing-grid">
         <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>

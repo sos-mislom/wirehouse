@@ -17,3 +17,4 @@
 @import "./styles/chat.css" layer(application);
 @import "./styles/kanban.css" layer(application);
 @import "./styles/responsive.css" layer(application);
+@import "./styles/platform.css" layer(application);
