@@ -175,7 +175,7 @@ export function ManagerDashboard() {
           </div>
         </article>
 
-        <article className="mvp-card">
+        <article className="mvp-card mvp-card--wide">
           <div className="mvp-card-head">
             <div>
               <h3>{ui.team}</h3>

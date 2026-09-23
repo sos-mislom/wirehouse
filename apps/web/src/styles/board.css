@@ -24,7 +24,6 @@
   padding: 14px;
   border-radius: 4px;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--neutral-300);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
@@ -60,20 +59,21 @@
 }
 
 .board-unit--occupied {
-  border-left-color: var(--success);
+  background: var(--surface);
 }
 
 .board-unit--vacant {
-  border-left-color: var(--neutral-300);
+  background: var(--neutral-50);
 }
 
 .board-unit--warning,
 .board-unit--maintenance {
-  border-left-color: var(--warning);
+  border-color: var(--warning-line);
+  background: var(--warning-soft);
 }
 
 .board-unit--critical {
-  border-left-color: var(--danger);
+  border-color: var(--danger-line);
   background: var(--danger-soft);
 }
 

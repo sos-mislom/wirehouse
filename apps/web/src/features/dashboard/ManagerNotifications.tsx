@@ -11,14 +11,10 @@ export function ManagerNotifications() {
     ui,
   } = useWorkspace();
   return (
-    <section className="mvp-page">
+    <section className="mvp-page notifications-page">
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.notifications}</h2>
-          <p>
-            Красный — критично; жёлтый — требует внимания; синий — информация;
-            зелёный — успешно.
-          </p>
         </div>
         {overview.notifications.some((item) => item.unread) ? (
           <Button

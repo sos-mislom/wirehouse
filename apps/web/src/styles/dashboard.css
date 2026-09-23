@@ -61,7 +61,7 @@
 }
 
 .metric-panel--alert {
-  border-left: 3px solid var(--danger);
+  border-color: var(--danger-line);
   background: var(--danger-soft);
 }
 
@@ -196,7 +196,7 @@
 
 .notification-card {
   padding: 14px 16px;
-  border-left: 4px solid var(--accent);
+  color: var(--ink);
   background: var(--surface);
 }
 
@@ -211,11 +211,22 @@
   gap: 10px;
 }
 
+.notification-card-top {
+  justify-content: flex-start;
+  align-items: baseline;
+}
+
+.notification-card-top strong,
+.notification-card-top h4 {
+  flex: 1;
+  text-align: left;
+}
+
 .notification-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: currentColor;
+  background: var(--info);
   flex-shrink: 0;
 }
 
@@ -244,16 +255,26 @@
 }
 
 .notification-card--critical {
-  color: var(--danger);
-  background: linear-gradient(180deg, #fff6f4 0%, #fff 100%);
+  color: var(--ink);
 }
 
 .notification-card--warning {
-  color: var(--warning);
-  background: linear-gradient(180deg, #fff9f2 0%, #fff 100%);
+  color: var(--ink);
 }
 
 .notification-card--info,
 .notification-card--success {
-  color: var(--accent);
+  color: var(--ink);
+}
+
+.notification-card--critical .notification-dot {
+  background: var(--danger);
+}
+
+.notification-card--warning .notification-dot {
+  background: var(--warning);
+}
+
+.notification-card--success .notification-dot {
+  background: var(--success);
 }

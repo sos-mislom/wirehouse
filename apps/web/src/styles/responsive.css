@@ -466,16 +466,21 @@
 .finance-chart { justify-content: flex-start; gap: clamp(20px, 5vw, 64px); }
 .finance-bar { flex: 0 1 130px; }
 .finance-bar-track { max-height: 240px; }
-.lease-expired { background: #fff0ed; box-shadow: inset 3px 0 #ba4a36; }
+.lease-expired { background: #fff0ed; }
 .lease-expired small { color: #9f3423; }
 .field-hint { display: block; color: #64748b; font-size: 12px; line-height: 1.55; margin: 6px 0; }
 
 @media (min-width: 1081px) {
   .mvp-sidebar { height: 100dvh; overflow-y: auto; }
   .mvp-shell { grid-template-columns: 220px minmax(0, 1fr); }
-  .mvp-main { padding: 28px 24px; }
+  .mvp-main { padding: 28px clamp(24px, 2vw, 36px); }
+  .mvp-page { width: 100%; max-width: 1600px; margin-inline: auto; }
+  .mvp-page-header > .mvp-actions { flex-wrap: nowrap; justify-content: flex-end; }
+  .mvp-page-header > .mvp-actions > select { width: 220px; flex: 0 0 220px; }
+  .mvp-page-header > .mvp-actions > input { width: 280px; flex: 0 1 280px; }
+  .notifications-page { max-width: 1080px; margin-inline: 0 auto; }
 }
-@media (max-width: 1360px) and (min-width: 761px) {
+@media (max-width: 1360px) and (min-width: 821px) {
   .kanban-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 1080px) {
@@ -575,10 +580,6 @@
 .forecast-track { height: 6px; background: #e7eeeb; border-radius: 3px; overflow: hidden; }
 .forecast-track i { display: block; height: 100%; background: var(--accent); }
 .forecast-track .forecast-negative { background: #a23c30; }
-.notification-card-top { justify-content: flex-start; align-items: baseline; }
-.notification-card-top strong { flex: 1; text-align: left; }
-.notification-card--critical { color: #a0352e; border-left-color: #a0352e; background: #fffaf8; }
-.notification-card--warning { color: #835400; border-left-color: #a87617; background: #fffdf7; }
 @media (max-width: 760px) {
   .forecast-comparison { gap: 16px; grid-template-columns: minmax(0, 1fr); }
   .forecast-month { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }

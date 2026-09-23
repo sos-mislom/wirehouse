@@ -11,7 +11,10 @@ export function TenantServices({ data }: { data: OperationsData | null }) {
             className={`notification-card notification-card--${n.tone}`}
             key={n.id}
           >
-            <h4>{n.name}</h4>
+            <div className="notification-card-top">
+              <span className="notification-dot" />
+              <h4>{n.name}</h4>
+            </div>
             <p className="preserve-lines">{n.content}</p>
             <small>{date(n.createdAt)}</small>
           </article>

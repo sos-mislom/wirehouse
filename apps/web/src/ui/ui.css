@@ -104,7 +104,7 @@ a:focus-visible {
   min-height: var(--ui-control-height);
   padding: 10px 12px;
   font: inherit;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.4;
   color: var(--ui-text);
   background: white;
@@ -252,6 +252,9 @@ a:focus-visible {
   }
   .ui-page-header h2 {
     font-size: 22px;
+  }
+  .ui-control {
+    font-size: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

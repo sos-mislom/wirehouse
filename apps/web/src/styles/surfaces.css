@@ -14,7 +14,6 @@
 .surface--hero {
   grid-column: 1 / -1;
   background: var(--surface);
-  border-left: 3px solid var(--primary-500);
   color: var(--ink);
 }
 
@@ -128,7 +127,7 @@
 
 .mvp-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
