@@ -1,4 +1,5 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
+import { PageBoundary } from "../../app/PageBoundary";
 import {
   managerPrimaryNav,
   managerSecondaryNav,
@@ -157,7 +158,9 @@ export function ManagerShell() {
         ) : null}
         {<DocumentPanel />}
 
-        {<ManagerScreen />}
+        <PageBoundary>
+          <ManagerScreen />
+        </PageBoundary>
       </section>
     </main>
   );
