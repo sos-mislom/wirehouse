@@ -1,3 +1,4 @@
+import { maintenanceImportContracts } from "./maintenance-import.ts";
 import { z } from "zod";
 import { permissionKeys } from "./permissions.ts";
 import { platformContracts, planGeometry } from "./operations-platform.ts";
@@ -291,6 +292,7 @@ export const requestContracts: {
   schema: z.ZodType;
 }[] = [
   ...platformContracts,
+  ...maintenanceImportContracts,
   {
     method: "POST",
     path: /^\/api\/auth\/staff\/login$/,

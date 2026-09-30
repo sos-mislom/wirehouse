@@ -440,6 +440,7 @@ export function saveOperation(db, user, kind, recordId, body) {
       throw new Error("Неизвестная специализация");
   }
   if (kind === "plans") {
+    record.importKey = existing?.importKey ?? null;
     const template = input.templateId
       ? db.getById("maintenance_templates", input.templateId)
       : null;

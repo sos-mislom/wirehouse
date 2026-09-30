@@ -4,6 +4,7 @@ export function routePermission(method, path) {
   if (/^\/api\/(auth|integrations)\//.test(path)) return null;
   if (method === "GET" || method === "HEAD")
     return path.startsWith("/api/audit") ? "audit.read" : "workspace.read";
+  if (/^\/api\/maintenance-import\//.test(path)) return "maintenance.write";
   if (/^\/api\/users/.test(path)) return "users.manage";
   if (/^\/api\/structure|^\/api\/operations\/floorplans/.test(path))
     return "plans.write";

@@ -392,7 +392,7 @@ export const tables = {
   ),
   maintenance_plans: table(
     {
-      text: "id propertyId name createdBy unitId responsibleId equipmentId instructions templateId recurrence",
+      text: "id propertyId name createdBy unitId responsibleId equipmentId instructions templateId recurrence importKey",
       integer: "intervalCount anchorDay templateVersion leadDays",
       date: "nextDate endDate",
       boolean: "active",

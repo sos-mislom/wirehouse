@@ -15,6 +15,9 @@
     "src/services/bots.js",
     "src/services/bots/**/*.js",
     "src/services/queries.js",
-    "src/services/queries/**/*.js"
+    "src/services/queries/**/*.js",
+    "src/services/maintenance-import.js",
+    "src/services/maintenance-sheet.js",
+    "src/routes/maintenance-import.js"
   ]
 }

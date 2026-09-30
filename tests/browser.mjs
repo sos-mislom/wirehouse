@@ -1,3 +1,4 @@
+import { scheduleFile } from "./maintenance-fixtures.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import http from "node:http";
@@ -348,6 +349,62 @@ try {
   await page
     .getByRole("heading", { name: "Тестовое ППР", exact: true })
     .waitFor();
+  await page.getByText("Импорт графика ППР", { exact: true }).click();
+  const schedule = scheduleFile(f);
+  await page
+    .getByLabel("Файл графика ППР", { exact: true })
+    .setInputFiles({
+      name: schedule.fileName,
+      mimeType: "text/csv",
+      buffer: Buffer.from(schedule.contentBase64, "base64"),
+    });
+  await page
+    .getByRole("button", { name: "Проверить файл", exact: true })
+    .click();
+  await page
+    .getByText("Строк: 1. Готово: 1. Уже загружено: 0. Ошибок: 0.", {
+      exact: true,
+    })
+    .waitFor();
+  await page.screenshot({
+    path: ".deploy/maintenance-import-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 2,
+    ),
+    "PPR import fits mobile",
+  );
+  await page.screenshot({
+    path: ".deploy/maintenance-import-mobile.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Загрузить графики (1)", exact: true })
+    .click();
+  await page
+    .getByText("Загружено графиков: 1. Уже существовали: 0.", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", { name: "Проверка фильтра", exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Проверить файл", exact: true })
+    .click();
+  await page
+    .getByText("Строк: 1. Готово: 0. Уже загружено: 1. Ошибок: 0.", {
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Загрузить графики (0)", exact: true })
+      .isDisabled(),
+    true,
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page
     .locator(".operations-nav")
     .getByRole("button", { name: "Услуги", exact: true })

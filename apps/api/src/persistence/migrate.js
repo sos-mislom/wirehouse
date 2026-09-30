@@ -8,6 +8,7 @@ const migrations = [
   "001-relational.sql",
   "002-remove-legacy-state.sql",
   "003-operations-platform.sql",
+  "004-maintenance-import.sql",
 ];
 
 async function sources() {

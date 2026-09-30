@@ -55,11 +55,13 @@ async function readBody(request) {
   const upload =
     /\/(attachments|documents|imports)(\/|$)/.test(path) ||
     /^\/api\/operations\/floorplans/.test(path);
-  const limit = /^\/api\/operations\/floorplans/.test(path)
-    ? 12 * 1024 * 1024
-    : upload
-      ? 140 * 1024 * 1024
-      : 1024 * 1024;
+  const limit = /^\/api\/maintenance-import\//.test(path)
+    ? 4 * 1024 * 1024
+    : /^\/api\/operations\/floorplans/.test(path)
+      ? 12 * 1024 * 1024
+      : upload
+        ? 140 * 1024 * 1024
+        : 1024 * 1024;
   const chunks = [];
   let size = 0;
   for await (const chunk of request) {

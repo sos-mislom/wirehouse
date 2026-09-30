@@ -1,3 +1,4 @@
+import { scheduleFile } from "./maintenance-fixtures.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -119,6 +120,54 @@ test("API regression: scoped finance, persisted notification reads, validation a
     return { status: r.status, body: await r.json() };
   };
   await start();
+  const schedule = scheduleFile(f);
+  assert.equal(
+    (await call("/api/maintenance-import/preview", f.worker, "POST", schedule))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await call("/api/maintenance-import/preview", f.admin, "POST", {
+        ...schedule,
+        unexpected: true,
+      })
+    ).status,
+    400,
+  );
+  const importPreview = await call(
+    "/api/maintenance-import/preview",
+    f.admin,
+    "POST",
+    schedule,
+  );
+  assert.equal(importPreview.status, 200);
+  assert.equal(importPreview.body.summary.ready, 1);
+  assert.equal((await call("/api/operations", f.admin)).body.plans.length, 0);
+  const applied = await call(
+    "/api/maintenance-import/commit",
+    f.admin,
+    "POST",
+    { ...schedule, previewHash: importPreview.body.previewHash },
+  );
+  assert.equal(applied.status, 200);
+  assert.equal(applied.body.created, 1);
+  const repeatPreview = await call(
+    "/api/maintenance-import/preview",
+    f.admin,
+    "POST",
+    schedule,
+  );
+  assert.equal(repeatPreview.body.summary.existing, 1);
+  assert.equal(
+    (
+      await call("/api/maintenance-import/commit", f.admin, "POST", {
+        ...schedule,
+        previewHash: importPreview.body.previewHash,
+      })
+    ).status,
+    409,
+  );
   assert.equal((await call("/api/solution-contour")).status, 404);
   const invalid = await call("/api/properties", f.admin, "POST", {
     name: "A",

@@ -449,3 +449,22 @@
     margin: 12mm;
   }
 }
+
+.maintenance-import > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.maintenance-import[open] > summary {
+  margin-bottom: 24px;
+}
+.maintenance-import .table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.maintenance-import td {
+  vertical-align: top;
+  white-space: normal;
+}
+.maintenance-import td p {
+  margin: 4px 0 0;
+}

@@ -1,3 +1,4 @@
+import { MaintenanceImport } from "../platform/MaintenanceImport";
 import { Button, Input, Select } from "../../ui";
 import { OperationCard } from "./OperationCard";
 import { OperationEditor } from "./OperationEditor";
@@ -152,6 +153,17 @@ export function Operations(props: Props) {
           {notice}
         </div>
       )}
+      {tab === "plans" &&
+        hasPermission(user, "maintenance.write") &&
+        hasPermission(user, "imports.write") && (
+          <MaintenanceImport
+            token={token}
+            onImported={async () => {
+              await model.load();
+              await model.onRefresh();
+            }}
+          />
+        )}
       {tab === "audit" ? (
         <AuditLog token={token} />
       ) : tab === "estimates" ? (

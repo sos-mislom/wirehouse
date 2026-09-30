@@ -1,3 +1,4 @@
+import { createMaintenanceImportRoutes } from "./routes/maintenance-import.js";
 import fs from "node:fs";
 import http from "node:http";
 import { createAgendaRoutes } from "./routes/agenda.js";
@@ -440,6 +441,7 @@ const routes = [
     normalizeImportBatch,
     buildImportBatchAuditFile,
   }),
+  createMaintenanceImportRoutes({ requireAuth, ok, db, json }),
   createPlatformRoutes({ requireAuth, ok, db, json }),
   createOperationsRoutes({ requireAuth, ok, db, created, notFound, json }),
   createUsersRoutes({
