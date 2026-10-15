@@ -26,18 +26,25 @@ export function ManagerTickets() {
           <h2>{managerUi.titles.tickets}</h2>
         </div>
         <div className="mvp-actions">
-          <Button
-            variant="secondary"
-            className="secondary-button"
-            onClick={() =>
-              setTicketView(ticketView === "board" ? "table" : "board")
-            }
-            type="button"
-          >
-            {ticketView === "board" ? "Таблица" : "Канбан"}
-          </Button>
+          <div className="view-switch" role="group" aria-label="Вид заявок">
+            <Button
+              variant="plain"
+              aria-pressed={ticketView === "table"}
+              onClick={() => setTicketView("table")}
+            >
+              Список
+            </Button>
+            <Button
+              variant="plain"
+              aria-pressed={ticketView === "board"}
+              onClick={() => setTicketView("board")}
+            >
+              Канбан
+            </Button>
+          </div>
           <Select
             className="filter-select"
+            aria-label="Статус заявки"
             onChange={(event) =>
               setTicketFilter(event.target.value as TicketFilter)
             }
@@ -58,7 +65,7 @@ export function ManagerTickets() {
             onClick={() => setManagerScreen("ticket-create")}
             type="button"
           >
-            {managerUi.add}
+            Создать заявку
           </Button>
         </div>
       </div>

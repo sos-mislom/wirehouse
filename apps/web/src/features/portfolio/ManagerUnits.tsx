@@ -107,7 +107,7 @@ export function ManagerUnits() {
             }}
             type="button"
           >
-            {managerUi.add}
+            Добавить помещение
           </Button>
         </div>
       </div>
@@ -130,19 +130,6 @@ export function ManagerUnits() {
         ))}
       </div>
 
-      <StructureWorkspace
-        token={session.token}
-        canWrite={hasPermission(session.user, "plans.write")}
-        key={selectedPropertyId}
-        properties={overview.properties.filter(
-          (p) => !selectedPropertyId || p.id === selectedPropertyId,
-        )}
-        units={overview.units}
-        tickets={tickets}
-        equipment={operations?.equipment ?? []}
-        onUnit={openUnitDetail}
-        onTicket={openTicketDetail}
-      />
       <article
         className="mvp-card selection-stage"
         key={`manager-units-${selectedPropertyId}`}
@@ -209,6 +196,23 @@ export function ManagerUnits() {
           <div className="empty-state">{t.hints.noData}</div>
         ) : null}
       </article>
+      <details className="workspace-disclosure">
+        <summary>Структура и планы объекта</summary>
+        <StructureWorkspace
+          embedded
+          token={session.token}
+          canWrite={hasPermission(session.user, "plans.write")}
+          key={selectedPropertyId}
+          properties={overview.properties.filter(
+            (p) => !selectedPropertyId || p.id === selectedPropertyId,
+          )}
+          units={overview.units}
+          tickets={tickets}
+          equipment={operations?.equipment ?? []}
+          onUnit={openUnitDetail}
+          onTicket={openTicketDetail}
+        />
+      </details>
     </section>
   );
 }

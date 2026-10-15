@@ -87,7 +87,7 @@ export function ManagerTenants() {
             }}
             type="button"
           >
-            {managerUi.add}
+            Добавить арендатора
           </Button>
         </div>
       </div>

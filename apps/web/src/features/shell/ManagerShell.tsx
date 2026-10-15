@@ -1,9 +1,7 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { PageBoundary } from "../../app/PageBoundary";
-import {
-  managerPrimaryNav,
-  managerSecondaryNav,
-} from "../../shared/navigation";
+import { managerNavGroups, managerMobileNav } from "../../shared/navigation";
+import { NavigationIcon } from "./NavigationIcon";
 import { Button } from "../../ui";
 import { DocumentPanel } from "../leases/DocumentPanel";
 import { ManagerScreen } from "./ManagerScreen";
@@ -28,7 +26,7 @@ export function ManagerShell() {
   return (
     <main className="mvp-shell">
       <header className="mobile-app-bar">
-        <strong>{productBrand.name}</strong>
+        <strong>{managerUi.nav[activeManagerNav]}</strong>
         <Button
           variant="secondary"
           type="button"
@@ -68,61 +66,48 @@ export function ManagerShell() {
           </div>
         </div>
 
-        <div className="mvp-nav-group">
-          {managerPrimaryNav.map((screen) => (
-            <Button
-              variant="plain"
-              className={
-                activeManagerNav === screen
-                  ? "mvp-nav-button mvp-nav-button--active"
-                  : "mvp-nav-button"
-              }
-              key={screen}
-              onClick={() => {
-                setManagerScreen(screen);
-                setMobileNavOpen(false);
-              }}
-              type="button"
-            >
-              <span>{managerUi.nav[screen]}</span>
-              {screen === "tickets" && openTicketCount > 0 ? (
-                <small>{openTicketCount}</small>
-              ) : null}
-              {screen === "chat" && chatThreads.length > 0 ? (
-                <small>{chatThreads.length}</small>
-              ) : null}
-              {screen === "notifications" &&
-              overview.notifications.some((item) => item.unread) ? (
-                <small>
-                  {overview.notifications.filter((item) => item.unread).length}
-                </small>
-              ) : null}
-            </Button>
+        <nav
+          aria-label="Разделы приложения"
+          className="workspace-navigation-groups"
+        >
+          {managerNavGroups.map((group) => (
+            <div className="mvp-nav-group" key={group.label}>
+              <h2 className="navigation-group-label">{group.label}</h2>
+              {group.screens.map((screen) => {
+                const count =
+                  screen === "tickets"
+                    ? openTicketCount
+                    : screen === "notifications"
+                      ? overview.notifications.filter((item) => item.unread)
+                          .length
+                      : screen === "chat"
+                        ? chatThreads.reduce(
+                            (total, thread) => total + thread.unreadCount,
+                            0,
+                          )
+                        : 0;
+                return (
+                  <Button
+                    variant="plain"
+                    type="button"
+                    key={screen}
+                    className={`mvp-nav-button ${activeManagerNav === screen ? "mvp-nav-button--active" : ""}`}
+                    aria-current={
+                      activeManagerNav === screen ? "page" : undefined
+                    }
+                    onClick={() => {
+                      setManagerScreen(screen);
+                      setMobileNavOpen(false);
+                    }}
+                  >
+                    <span>{managerUi.nav[screen]}</span>
+                    {count > 0 && <small>{count}</small>}
+                  </Button>
+                );
+              })}
+            </div>
           ))}
-        </div>
-
-        <div className="mvp-nav-divider" />
-
-        <div className="mvp-nav-group">
-          {managerSecondaryNav.map((screen) => (
-            <Button
-              variant="plain"
-              className={
-                activeManagerNav === screen
-                  ? "mvp-nav-button mvp-nav-button--active"
-                  : "mvp-nav-button"
-              }
-              key={screen}
-              onClick={() => {
-                setManagerScreen(screen);
-                setMobileNavOpen(false);
-              }}
-              type="button"
-            >
-              <span>{managerUi.nav[screen]}</span>
-            </Button>
-          ))}
-        </div>
+        </nav>
 
         <div className="mvp-user">
           <strong>{session.user.fullName}</strong>
@@ -145,7 +130,7 @@ export function ManagerShell() {
         </div>
       </aside>
 
-      <section className="mvp-main">
+      <section className="mvp-main" inert={mobileNavOpen || undefined}>
         {error ? (
           <div className="banner banner--error" role="alert">
             {error}
@@ -162,6 +147,27 @@ export function ManagerShell() {
           <ManagerScreen />
         </PageBoundary>
       </section>
+      <nav
+        className="mobile-primary-nav"
+        aria-label="Быстрые переходы"
+        inert={mobileNavOpen || undefined}
+      >
+        {managerMobileNav.map((screen) => (
+          <Button
+            variant="plain"
+            type="button"
+            key={screen}
+            aria-current={activeManagerNav === screen ? "page" : undefined}
+            onClick={() => {
+              setManagerScreen(screen);
+              setMobileNavOpen(false);
+            }}
+          >
+            <NavigationIcon name={screen} />
+            <span>{managerUi.nav[screen]}</span>
+          </Button>
+        ))}
+      </nav>
     </main>
   );
 }

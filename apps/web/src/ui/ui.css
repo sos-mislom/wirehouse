@@ -19,7 +19,7 @@
   --surface: var(--ui-surface);
   --ink: var(--ui-text);
   --ink-soft: var(--ui-muted);
-  --ink-muted: #999999;
+  --ink-muted: var(--ui-muted);
   --line: var(--ui-border);
   --accent: var(--ui-accent);
   --radius-xl: 8px;
@@ -28,7 +28,7 @@
   --radius-sm: 4px;
 }
 body {
-  font-size: 14px;
+  font-size: 15px;
 }
 .ui-button {
   font: inherit;
@@ -246,7 +246,7 @@ a:focus-visible {
   display: grid;
   gap: 12px;
 }
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   :root {
     --ui-control-height: 44px;
   }
@@ -300,10 +300,20 @@ label.secondary-button {
   font-weight: 600;
   cursor: pointer;
 }
-@media (max-width: 600px) {
+@media (max-width: 760px) {
   .mvp-page-header h2,
   .workspace-header h1,
   .surface-head h2 {
     font-size: 22px;
   }
+}
+
+.ui-control::placeholder {
+  color: var(--ui-muted);
+  opacity: 1;
+}
+.ui-field-hint,
+.ui-field-error {
+  font-size: 13px;
+  line-height: 1.5;
 }

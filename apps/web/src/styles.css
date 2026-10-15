@@ -18,3 +18,4 @@
 @import "./styles/kanban.css" layer(application);
 @import "./styles/responsive.css" layer(application);
 @import "./styles/platform.css" layer(application);
+@import "./styles/navigation.css" layer(application);

@@ -7,6 +7,7 @@ import {
   formatDateTime,
   getCollectionBasisLabel,
 } from "../../shared/format";
+import { NavigationIcon } from "../shell/NavigationIcon";
 import { Button } from "../../ui";
 export function ManagerDashboard() {
   const {
@@ -22,14 +23,46 @@ export function ManagerDashboard() {
     setManagerScreen,
     chatThreads,
     setSelectedChatTenantId,
-    productBrand,
   } = useWorkspace();
   return (
-    <section className="mvp-page">
+    <section className="mvp-page dashboard-page">
       <div className="mvp-page-header">
         <div>
           <h2>{managerUi.titles.dashboard}</h2>
         </div>
+      </div>
+
+      <div className="dashboard-work" aria-label="Текущая работа">
+        <Button variant="plain" onClick={() => setManagerScreen("tickets")}>
+          <span>
+            <strong>Открытые заявки</strong>
+            <small>
+              {serviceTickets.filter(isCriticalTicket).length} требуют срочного
+              внимания
+            </small>
+          </span>
+          <span className="dashboard-work-value">
+            {openTicketCount}
+            <NavigationIcon name="forward" />
+          </span>
+        </Button>
+        <Button variant="plain" onClick={() => setManagerScreen("agenda")}>
+          <span>
+            <strong>Сроки и работы</strong>
+            <small>Платежи, договоры и обслуживание</small>
+          </span>
+          <NavigationIcon name="forward" />
+        </Button>
+        <Button variant="plain" onClick={() => setManagerScreen("leases")}>
+          <span>
+            <strong>Договоры к продлению</strong>
+            <small>Истекают в ближайшие 45 дней</small>
+          </span>
+          <span className="dashboard-work-value">
+            {overview.expiringLeaseCount}
+            <NavigationIcon name="forward" />
+          </span>
+        </Button>
       </div>
 
       <div className="mvp-metrics">
@@ -55,61 +88,25 @@ export function ManagerDashboard() {
           <strong>
             {formatCompactMoney(overview.finance.arrearsAmount, locale)}
           </strong>
-          <small>
-            {overview.expiringLeaseCount} {t.metrics.expiring.toLowerCase()}
-          </small>
-        </article>
-        <article className="mvp-metric">
-          <span>{t.metrics.openTickets}</span>
-          <strong>{openTicketCount}</strong>
-          <small>
-            {serviceTickets.filter(isCriticalTicket).length}{" "}
-            {ui.urgent.toLowerCase()}
-          </small>
-        </article>
-        <article className="mvp-metric">
-          <span>{ui.opex}</span>
-          <strong>{overview.finance.opexRatio}%</strong>
-          <small title="Полученные платежи минус внесённые операционные расходы за месяц. Для полного расчёта внесите все расходы в Эксплуатации.">
-            Чистый операционный доход:{" "}
-            {formatCompactMoney(overview.finance.noi, locale)}
-          </small>
-        </article>
-        <article className="mvp-metric">
-          <span>{ui.forecast}</span>
-          <strong>
-            {formatCompactMoney(overview.finance.forecastQuarter, locale)}
-          </strong>
-          <small>
-            {overview.finance.forecastPeriodLabel ??
-              `${t.metrics.activeLeases}: ${overview.totals.active_lease_count}`}
-          </small>
+          <small>По просроченным счетам</small>
         </article>
       </div>
-
       <div className="mvp-grid mvp-grid--dashboard">
-        <article className="mvp-card mvp-card--wide">
-          <div className="mvp-card-head">
-            <div>
-              <h3>{ui.cashflow}</h3>
-              <p className="field-hint">
-                План начислений минус внесённые расходы. Будущая оплата не
-                гарантирована.
-              </p>
-            </div>
-          </div>
-          <ForecastChart series={overview.finance.series} />
-        </article>
-
         <article className="mvp-card">
           <div className="mvp-card-head">
             <div>
               <h3>{ui.notifications}</h3>
             </div>
+            <Button
+              variant="text"
+              onClick={() => setManagerScreen("notifications")}
+            >
+              Все уведомления
+            </Button>
           </div>
-          <div className="mvp-stack">
+          <div className="dashboard-activity-list">
             {criticalNotifications.length > 0 ? (
-              criticalNotifications.map((item) => (
+              criticalNotifications.slice(0, 3).map((item) => (
                 <Button
                   variant="plain"
                   className={`notification-card notification-card--${item.tone}`}
@@ -148,7 +145,7 @@ export function ManagerDashboard() {
               {managerUi.open}
             </Button>
           </div>
-          <div className="mvp-stack">
+          <div className="dashboard-activity-list">
             {chatThreads.length > 0 ? (
               chatThreads.slice(0, 3).map((thread) => (
                 <Button
@@ -174,39 +171,38 @@ export function ManagerDashboard() {
             )}
           </div>
         </article>
-
-        <article className="mvp-card mvp-card--wide">
+      </div>
+      <details className="workspace-disclosure dashboard-forecast">
+        <summary>Показать план доходов и расходов</summary>
+        <div className="disclosure-content">
           <div className="mvp-card-head">
             <div>
-              <h3>{ui.team}</h3>
+              <h3>{ui.cashflow}</h3>
+              <p className="field-hint">
+                План начислений минус внесённые расходы. Будущая оплата не
+                гарантирована.
+              </p>
             </div>
-            <Button
-              variant="secondary"
-              className="secondary-button"
-              onClick={() => setManagerScreen("staff")}
-              type="button"
-            >
-              {managerUi.open}
-            </Button>
           </div>
-          <div className="mvp-stack">
-            {overview.team.slice(0, 4).map((member) => (
-              <div className="mvp-list-row" key={member.id}>
-                <div>
-                  <strong>{member.fullName}</strong>
-                  <p>{t.roles[member.role]}</p>
-                </div>
-                <div className="mvp-list-aside">
-                  <span title="Количество назначенных открытых заявок">
-                    {member.assignedTicketCount} открытых заявок
-                  </span>
-                  <small>{member.propertyName ?? productBrand.name}</small>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </div>
+          <dl className="forecast-summary">
+            <div>
+              <dt>Доля операционных расходов</dt>
+              <dd>{overview.finance.opexRatio}%</dd>
+            </div>
+            <div>
+              <dt>Чистый операционный доход</dt>
+              <dd>{formatCompactMoney(overview.finance.noi, locale)}</dd>
+            </div>
+            <div>
+              <dt>Плановый остаток за 3 месяца</dt>
+              <dd>
+                {formatCompactMoney(overview.finance.forecastQuarter, locale)}
+              </dd>
+            </div>
+          </dl>
+          <ForecastChart series={overview.finance.series} />
+        </div>
+      </details>
     </section>
   );
 }

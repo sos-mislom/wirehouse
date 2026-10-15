@@ -468,3 +468,55 @@
 .maintenance-import td p {
   margin: 4px 0 0;
 }
+
+.workspace-disclosure {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.workspace-disclosure > summary {
+  padding: 16px 20px;
+  min-height: 52px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+}
+.workspace-disclosure[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.workspace-disclosure > .platform-section,
+.disclosure-content {
+  padding: 20px;
+}
+.view-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.view-switch > button {
+  padding: 7px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+}
+.view-switch > button[aria-pressed="true"] {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 600;
+}
+@media (max-width: 760px) {
+  .operations-page .operations-subnav {
+    display: none;
+  }
+  .workspace-disclosure > summary {
+    padding: 16px;
+  }
+  .workspace-disclosure > .platform-section,
+  .disclosure-content {
+    padding: 16px;
+  }
+}

@@ -380,14 +380,6 @@ label > span,
   font-size: 12px;
   line-height: 1.5;
 }
-.mvp-nav-button span {
-  overflow-wrap: normal;
-  word-break: normal;
-}
-.mvp-nav-button small {
-  background: #3c5650;
-  font-variant-numeric: tabular-nums;
-}
 .mvp-user small,
 .mvp-brand span {
   color: var(--ink-soft);

@@ -167,3 +167,27 @@
     transform: translateY(0);
   }
 }
+
+.chat-back {
+  display: none !important;
+}
+@media (max-width: 760px) {
+  .mvp-chat-layout .chat-conversation-pane {
+    display: none;
+  }
+  .chat-conversation-open .chat-thread-pane {
+    display: none;
+  }
+  .chat-conversation-open .chat-conversation-pane {
+    display: block;
+  }
+  .chat-back {
+    display: inline-flex !important;
+    margin-bottom: 16px;
+  }
+  .chat-conversation-pane .mvp-chat-body {
+    min-height: 180px;
+    height: auto;
+    max-height: 48dvh;
+  }
+}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import {
   formatChannel,
@@ -26,6 +27,9 @@ export function ManagerChat() {
     chatDraft,
     busyAction,
   } = useWorkspace();
+  const [conversationOpen, setConversationOpen] = useState(
+    Boolean(selectedChatTenantId),
+  );
   return (
     <section className="mvp-page">
       <div className="mvp-page-header">
@@ -34,8 +38,10 @@ export function ManagerChat() {
         </div>
       </div>
 
-      <div className="mvp-chat-layout">
-        <article className="mvp-card">
+      <div
+        className={`mvp-chat-layout ${conversationOpen ? "chat-conversation-open" : ""}`}
+      >
+        <article className="mvp-card chat-thread-pane">
           <div className="mvp-thread-list">
             {chatThreads.length > 0 ? (
               chatThreads.map((thread) => (
@@ -47,7 +53,10 @@ export function ManagerChat() {
                       : "mvp-thread"
                   }
                   key={thread.tenantId}
-                  onClick={() => setSelectedChatTenantId(thread.tenantId)}
+                  onClick={() => {
+                    setSelectedChatTenantId(thread.tenantId);
+                    setConversationOpen(true);
+                  }}
                   type="button"
                 >
                   <div className="mvp-thread-head">
@@ -69,7 +78,14 @@ export function ManagerChat() {
           </div>
         </article>
 
-        <article className="mvp-card">
+        <article className="mvp-card chat-conversation-pane">
+          <Button
+            variant="text"
+            className="chat-back"
+            onClick={() => setConversationOpen(false)}
+          >
+            К списку чатов
+          </Button>
           <div className="mvp-card-head">
             <div>
               <h3>{selectedChatThread?.tenantName ?? managerUi.nav.chat}</h3>
@@ -115,6 +131,7 @@ export function ManagerChat() {
           <form className="mvp-chat-form" onSubmit={handleChatSubmit}>
             {selectedChatTickets.length > 1 ? (
               <Select
+                aria-label="Заявка для сообщения"
                 onChange={(event) =>
                   setSelectedChatTicketId(event.target.value)
                 }
@@ -129,6 +146,7 @@ export function ManagerChat() {
               </Select>
             ) : null}
             <Textarea
+              aria-label="Сообщение арендатору"
               name="content"
               onChange={handleFieldChange(setChatDraft)}
               placeholder={managerUi.chatPlaceholder}

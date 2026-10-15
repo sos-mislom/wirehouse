@@ -114,6 +114,15 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
     loadSystemReadiness,
   } = model;
   useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1081px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileNavOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, [setMobileNavOpen]);
+
+  useEffect(() => {
     if (!mobileNavOpen) return;
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -150,6 +159,7 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
 
   useEffect(() => {
     setMobileNavOpen(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [managerScreen, selectedSection]);
 
   useBrowserNavigation(

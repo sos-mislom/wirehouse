@@ -17,6 +17,16 @@ if (!process.env.TEST_POSTGRES_URL)
 fs.mkdirSync(".deploy", { recursive: true });
 const f = fixture();
 const secret = "browser-test-secret";
+f.db.createTicket({
+  unitId: f.unit.id,
+  tenantId: f.tenant.id,
+  createdBy: f.admin.id,
+  assignedTo: f.worker.id,
+  title: "Проверка переписки арендатора",
+  description: "Проверить переход между списком и перепиской",
+  category: "maintenance",
+  priority: "medium",
+});
 saveOperation(f.db, f.admin, "meters", null, {
   name: "Счётчик исполнителя",
   propertyId: f.property.id,
@@ -180,7 +190,7 @@ try {
     createToken({ sub: f.admin.id, role: "admin" }, secret),
   );
   await page.goto("http://127.0.0.1:5173");
-  await page.getByRole("heading", { name: "Дашборд", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
   await page
     .getByRole("button", { name: "Сроки и работы", exact: true })
     .click();
@@ -248,6 +258,7 @@ try {
     .first()
     .waitFor();
   await page.getByRole("button", { name: "Помещения", exact: true }).click();
+  await page.getByText("Структура и планы объекта", { exact: true }).click();
   await page.getByRole("heading", { name: "Структура и планы" }).waitFor();
   await page.getByRole("button", { name: "Объект А", exact: true }).click();
   await page.getByRole("button", { name: "Планы", exact: true }).click();
@@ -304,6 +315,7 @@ try {
     fullPage: true,
   });
   await page.reload();
+  await page.getByText("Структура и планы объекта", { exact: true }).click();
   await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page
     .getByLabel("Выбор плана", { exact: true })
@@ -351,13 +363,11 @@ try {
     .waitFor();
   await page.getByText("Импорт графика ППР", { exact: true }).click();
   const schedule = scheduleFile(f);
-  await page
-    .getByLabel("Файл графика ППР", { exact: true })
-    .setInputFiles({
-      name: schedule.fileName,
-      mimeType: "text/csv",
-      buffer: Buffer.from(schedule.contentBase64, "base64"),
-    });
+  await page.getByLabel("Файл графика ППР", { exact: true }).setInputFiles({
+    name: schedule.fileName,
+    mimeType: "text/csv",
+    buffer: Buffer.from(schedule.contentBase64, "base64"),
+  });
   await page
     .getByRole("button", { name: "Проверить файл", exact: true })
     .click();
@@ -565,8 +575,11 @@ try {
     "false",
   );
   await page.getByRole("button", { name: "Меню", exact: true }).click();
-  await page.getByRole("button", { name: "Биллинг", exact: true }).click();
-  await page.getByRole("heading", { name: "Биллинг", exact: true }).waitFor();
+  await page
+    .locator("#workspace-navigation")
+    .getByRole("button", { name: "Платежи", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "Платежи", exact: true }).waitFor();
   await page.screenshot({ path: ".deploy/billing-mobile.png", fullPage: true });
   assert.ok(
     await page.evaluate(
@@ -577,13 +590,13 @@ try {
   for (const width of [320, 360, 390, 768, 1024]) {
     await page.setViewportSize({ width, height: 844 });
     for (const section of [
-      "Дашборд",
+      "Главная",
       "Сроки и работы",
       "Арендаторы",
       "Договоры",
       "Помещения",
       "Эксплуатация",
-      "Биллинг",
+      "Платежи",
       "Пользователи",
       "Объекты",
       "Чат",
@@ -620,6 +633,68 @@ try {
       );
     }
   }
+  await page.setViewportSize({ width: 390, height: 844 });
+  const quickNav = page.getByRole("navigation", { name: "Быстрые переходы" });
+  await quickNav.getByRole("button", { name: "Главная", exact: true }).click();
+  await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
+  assert.equal(
+    await quickNav
+      .getByRole("button", { name: "Главная", exact: true })
+      .getAttribute("aria-current"),
+    "page",
+  );
+  const forecast = page.locator(".dashboard-forecast");
+  assert.equal(await forecast.getAttribute("open"), null);
+  await forecast.locator(":scope > summary").click();
+  await forecast.locator(".forecast-summary").waitFor();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await quickNav.getByRole("button", { name: "Заявки", exact: true }).click();
+  await page.getByRole("heading", { name: "Заявки", exact: true }).waitFor();
+  assert.equal(
+    await page.evaluate(() => scrollY),
+    0,
+    "A new section opens from its heading",
+  );
+  const view = page.getByRole("group", { name: "Вид заявок" });
+  await view.getByRole("button", { name: "Канбан", exact: true }).click();
+  assert.equal(
+    await view
+      .getByRole("button", { name: "Канбан", exact: true })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  await quickNav.getByRole("button", { name: "Чат", exact: true }).click();
+  await page.getByRole("button", { name: "К списку чатов" }).click();
+  assert.equal(await page.locator(".chat-thread-pane").isVisible(), true);
+  assert.equal(
+    await page.locator(".chat-conversation-pane").isVisible(),
+    false,
+  );
+  await page.locator(".mvp-thread").first().click();
+  assert.equal(await page.locator(".chat-conversation-pane").isVisible(), true);
+  await page.getByRole("button", { name: "Меню", exact: true }).click();
+  assert.equal(await page.locator(".mvp-main").getAttribute("inert"), "");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForFunction(
+    () => !document.querySelector(".mvp-main").hasAttribute("inert"),
+  );
+  assert.equal(await page.locator("#workspace-navigation").isVisible(), true);
+  assert.equal(await quickNav.isVisible(), false);
+
+  await page.setViewportSize({ width: 1100, height: 900 });
+  await page
+    .locator("#workspace-navigation")
+    .getByRole("button", { name: "Помещения", exact: true })
+    .click();
+  await page.getByRole("heading", { name: "Помещения", exact: true }).waitFor();
+  await page.getByText("Структура и планы объекта", { exact: true }).click();
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    "Unit filters and expanded structure fit a narrow desktop",
+  );
+
   // A tenant must reach its workspace without a finance object or staff-only access.
   const tenant = f.db.data.users.find((u) => u.tenant_id === f.tenant.id);
   const tenantPage = await browser.newPage();

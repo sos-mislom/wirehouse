@@ -1,0 +1,113 @@
+.workspace-navigation-groups {
+  display: grid;
+  gap: 20px;
+  padding: 8px 12px 16px;
+}
+.navigation-group-label {
+  margin: 0 12px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.mvp-nav-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+.mvp-nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  text-align: left;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 4px;
+  font-size: 15px;
+}
+.mvp-nav-button:hover {
+  background: var(--neutral-100);
+  color: var(--ink);
+}
+.mvp-nav-button span {
+  min-width: 0;
+  overflow-wrap: normal;
+}
+.mvp-nav-button--active {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 600;
+  box-shadow: none;
+}
+.mvp-nav-button small {
+  background: var(--neutral-100);
+  color: var(--ink-soft);
+  font-size: 12px;
+  min-width: 24px;
+  text-align: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.mvp-nav-button--active small {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+.mobile-primary-nav {
+  display: none;
+}
+@media (max-width: 1080px) {
+  .mvp-shell > .mvp-main {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  .mobile-app-bar strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-primary-nav {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 60;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  .mobile-primary-nav button {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 4px;
+    min-height: 56px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 12px;
+  }
+  .mobile-primary-nav button[aria-current="page"] {
+    color: var(--primary-700);
+    background: var(--primary-50);
+    font-weight: 600;
+  }
+  .mobile-primary-nav button:hover {
+    background: var(--neutral-100);
+  }
+  .mvp-nav-button {
+    min-height: 46px;
+  }
+  .mvp-sidebar .workspace-navigation-groups {
+    gap: 16px;
+  }
+}
+@media print {
+  .mobile-primary-nav,
+  .mobile-app-bar {
+    display: none !important;
+  }
+}

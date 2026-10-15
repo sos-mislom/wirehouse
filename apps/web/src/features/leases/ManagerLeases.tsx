@@ -81,7 +81,7 @@ export function ManagerLeases() {
             }}
             type="button"
           >
-            {managerUi.add}
+            Добавить договор
           </Button>
         </div>
       </div>
