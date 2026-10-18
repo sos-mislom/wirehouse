@@ -107,14 +107,6 @@
   color: #172c3b;
   font: inherit;
 }
-.operations-page .check-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.operations-page .check-field input {
-  width: auto;
-}
 .audit-values {
   white-space: pre-wrap;
   font-size: 12px;

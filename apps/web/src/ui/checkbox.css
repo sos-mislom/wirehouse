@@ -1,0 +1,165 @@
+/* Kontur selection controls: neutral marker, caption hit area, first-line alignment. */
+label.ui-checkbox {
+  --checkbox-padding: 8px;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: var(--checkbox-padding) 0;
+  color: var(--ui-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.ui-checkbox > .ui-checkbox__input {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--checkbox-padding) + 1px);
+  left: 0;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.ui-checkbox__mark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1px solid #858585;
+  border-radius: 3px;
+  background: var(--ui-surface);
+  color: white;
+  transition:
+    background-color 120ms,
+    border-color 120ms;
+}
+.ui-checkbox__mark svg {
+  display: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ui-checkbox__mixed {
+  display: none;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+}
+.ui-checkbox__input:checked + .ui-checkbox__mark,
+.ui-checkbox__input:indeterminate + .ui-checkbox__mark {
+  border-color: #404040;
+  background: #404040;
+}
+.ui-checkbox__input:checked + .ui-checkbox__mark svg {
+  display: block;
+}
+.ui-checkbox__input:indeterminate + .ui-checkbox__mark svg {
+  display: none;
+}
+.ui-checkbox__input:indeterminate + .ui-checkbox__mark .ui-checkbox__mixed {
+  display: block;
+}
+.ui-checkbox:hover > .ui-checkbox__input:not(:disabled) + .ui-checkbox__mark {
+  border-color: #555555;
+  background: #f0f0f0;
+}
+.ui-checkbox:hover
+  > .ui-checkbox__input:is(:checked, :indeterminate):not(:disabled)
+  + .ui-checkbox__mark {
+  border-color: #222222;
+  background: #222222;
+}
+.ui-checkbox:active > .ui-checkbox__input:not(:disabled) + .ui-checkbox__mark {
+  border-color: #222222;
+  background: #e5e5e5;
+}
+.ui-checkbox:active
+  > .ui-checkbox__input:is(:checked, :indeterminate):not(:disabled)
+  + .ui-checkbox__mark {
+  background: #111111;
+}
+.ui-checkbox__input[aria-invalid="true"] + .ui-checkbox__mark {
+  border-color: var(--ui-danger) !important;
+  box-shadow: 0 0 0 1px var(--ui-danger);
+}
+.ui-checkbox__input:focus-visible + .ui-checkbox__mark {
+  outline: 2px solid var(--ui-text);
+  outline-offset: 2px;
+}
+label.ui-checkbox:has(> :disabled) {
+  cursor: not-allowed;
+  color: var(--ui-muted);
+}
+.ui-checkbox__input:disabled + .ui-checkbox__mark {
+  border-color: #d5d5d5;
+  background: #f0f0f0;
+  color: #858585;
+}
+.ui-checkbox__body {
+  min-width: 0;
+  color: inherit;
+  font: inherit;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.ui-checkbox__caption,
+.ui-checkbox__description {
+  display: block;
+}
+.ui-checkbox__caption {
+  color: inherit;
+  font: inherit;
+}
+.ui-checkbox__description {
+  margin-top: 4px;
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+@media (max-width: 760px), (pointer: coarse) {
+  label.ui-checkbox {
+    --checkbox-padding: 12px;
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-checkbox__mark {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .ui-checkbox__mark {
+    forced-color-adjust: none;
+    border-color: CanvasText !important;
+    background: Canvas !important;
+  }
+  .ui-checkbox__input:is(:checked, :indeterminate) + .ui-checkbox__mark {
+    border-color: Highlight !important;
+    background: Highlight !important;
+    color: HighlightText;
+  }
+  .ui-checkbox__input:disabled + .ui-checkbox__mark {
+    border-color: GrayText !important;
+    background: Canvas !important;
+    color: GrayText;
+  }
+  .ui-checkbox__input:focus-visible + .ui-checkbox__mark {
+    outline-color: CanvasText;
+  }
+}

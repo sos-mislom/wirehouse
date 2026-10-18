@@ -1,4 +1,4 @@
-import { Button, Input, Select } from "../../../ui";
+import { Button, Checkbox, Input, Select } from "../../../ui";
 import { isOpenTicket } from "../../../../../../packages/contracts/src/domain.js";
 import { bounds, download, exportDxf } from "./geometry";
 import { PlanCanvas } from "./PlanCanvas";
@@ -264,20 +264,19 @@ export function PlanEditor(props: PlanEditorProps) {
             <aside className="plan-inspector">
               <h4>Слои</h4>
               {[...new Set(draft.geometry.map((s) => s.layer))].map((layer) => (
-                <label key={layer}>
-                  <Input
-                    type="checkbox"
-                    checked={!hidden.includes(layer)}
-                    onChange={(e) =>
-                      setHidden((h) =>
-                        e.target.checked
-                          ? h.filter((v) => v !== layer)
-                          : [...h, layer],
-                      )
-                    }
-                  />
+                <Checkbox
+                  key={layer}
+                  checked={!hidden.includes(layer)}
+                  onChange={(e) =>
+                    setHidden((h) =>
+                      e.target.checked
+                        ? h.filter((v) => v !== layer)
+                        : [...h, layer],
+                    )
+                  }
+                >
                   {layer}
-                </label>
+                </Checkbox>
               ))}
               {shape && (
                 <>

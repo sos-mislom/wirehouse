@@ -2,7 +2,7 @@ import { useWorkspace } from "../../app/WorkspaceContext";
 import { TicketOperations } from "../../Operations";
 import { formatDateTime, getSlaState } from "../../shared/format";
 import { type Ticket } from "../../shared/types";
-import { Input } from "../../ui";
+import { Checkbox } from "../../ui";
 export function TicketOperationsBlock({ ticket }: { ticket: Ticket }) {
   const {
     locale,
@@ -56,28 +56,22 @@ export function TicketOperationsBlock({ ticket }: { ticket: Ticket }) {
       </div>
       <div className="checklist">
         {ticket.checklistItems.map((item) => (
-          <label
+          <Checkbox
             className={
               item.completed
                 ? "checklist-item checklist-item--done"
                 : "checklist-item"
             }
             key={item.id}
+            checked={item.completed}
+            description={item.completedByName || undefined}
+            disabled={
+              !canUpdateTickets || busyAction === `ticket-checklist-${item.id}`
+            }
+            onChange={() => void toggleChecklistItem(ticket.id, item)}
           >
-            <Input
-              checked={item.completed}
-              disabled={
-                !canUpdateTickets ||
-                busyAction === `ticket-checklist-${item.id}`
-              }
-              onChange={() => void toggleChecklistItem(ticket.id, item)}
-              type="checkbox"
-            />
-            <span>{item.label}</span>
-            {item.completedByName ? (
-              <small>{item.completedByName}</small>
-            ) : null}
-          </label>
+            {item.label}
+          </Checkbox>
         ))}
       </div>
     </div>

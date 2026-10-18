@@ -961,6 +961,80 @@ try {
   await page
     .getByRole("combobox", { name: "Область", exact: true })
     .selectOption(f.lease.id);
+  const permissionOptions = page
+    .locator(".permission-grid")
+    .getByRole("checkbox");
+  await permissionOptions.first().focus();
+  await page.keyboard.press("ArrowDown");
+  assert.equal(
+    await permissionOptions
+      .nth(1)
+      .evaluate((e) => e === document.activeElement),
+    true,
+  );
+  await page.keyboard.press("ArrowUp");
+  assert.equal(
+    await permissionOptions
+      .first()
+      .evaluate((e) => e === document.activeElement),
+    true,
+  );
+  const historyOption = page.getByRole("checkbox", {
+    name: "Сохранить просмотр истории после окончания срока",
+    exact: true,
+  });
+  assert.equal(
+    await historyOption.isChecked(),
+    true,
+    "Uncontrolled initial selection is preserved",
+  );
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    const geometry = await historyOption.evaluate((e) => {
+      const label = e.closest("label"),
+        mark = label.querySelector(".ui-checkbox__mark"),
+        caption = label.querySelector(".ui-checkbox__caption");
+      const l = label.getBoundingClientRect(),
+        m = mark.getBoundingClientRect(),
+        c = caption.getBoundingClientRect();
+      return {
+        height: l.height,
+        offset: m.top - c.top,
+        gap: c.left - m.right,
+        width: m.width,
+      };
+    });
+    assert.ok(geometry.height >= (width < 760 ? 44 : 36));
+    assert.equal(geometry.width, 18);
+    assert.ok(
+      geometry.offset >= 0 && geometry.offset <= 2,
+      "Marker stays aligned with the first caption line",
+    );
+    assert.equal(geometry.gap, 8);
+    assert.equal(
+      await historyOption
+        .locator("..")
+        .locator(".ui-checkbox__caption")
+        .evaluate((e) => getComputedStyle(e).color),
+      "rgb(34, 34, 34)",
+      "Enabled option captions retain the primary text color",
+    );
+    if (process.env.CHECKBOX_SCREENSHOTS) {
+      fs.mkdirSync("output/playwright", { recursive: true });
+      await page.locator(".permission-grid").screenshot({
+        path: `output/playwright/checkbox-permissions-${width}.png`,
+      });
+      await historyOption
+        .locator("..")
+        .screenshot({ path: `output/playwright/checkbox-wrap-${width}.png` });
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page
     .getByLabel("Основание", { exact: true })
     .fill("Назначение собственника для проверки");
@@ -1187,6 +1261,39 @@ try {
     exact: true,
   });
   assert.equal(await amountField.isDisabled(), true);
+  await paidToggle.locator("..").locator(".ui-checkbox__caption").click();
+  assert.equal(
+    await paidToggle.isChecked(),
+    true,
+    "Clicking the caption toggles a controlled checkbox",
+  );
+  await paidToggle.focus();
+  await page.keyboard.press("Space");
+  assert.equal(await paidToggle.isChecked(), false);
+  await page.keyboard.press("Enter");
+  assert.equal(
+    await paidToggle.isChecked(),
+    true,
+    "Enter selects the option without submitting the form",
+  );
+  assert.equal(
+    await termsPanel
+      .getByRole("button", { name: "Сохранить условия", exact: true })
+      .count(),
+    1,
+  );
+  assert.equal(
+    await paidToggle.evaluate((e) => {
+      const mark = e.nextElementSibling;
+      return (
+        e.matches(":focus-visible") &&
+        getComputedStyle(mark).outlineStyle === "solid"
+      );
+    }),
+    true,
+    "Keyboard selection retains a visible focus marker",
+  );
+  await paidToggle.uncheck();
   await paidToggle.check();
   await amountField.fill("100");
   assert.equal(
@@ -1203,13 +1310,32 @@ try {
       ),
       `Work terms fit ${width}`,
     );
-    if (process.env.WORKFLOW_SCREENSHOTS) {
+    if (process.env.WORKFLOW_SCREENSHOTS || process.env.CHECKBOX_SCREENSHOTS) {
       fs.mkdirSync("output/playwright", { recursive: true });
       await termsPanel.screenshot({
         path: `output/playwright/work-terms-${width}.png`,
       });
     }
   }
+  const beforePhoto = termsPanel.getByRole("checkbox", {
+    name: "До начала работ",
+    exact: true,
+  });
+  const afterPhoto = termsPanel.getByRole("checkbox", {
+    name: "После выполнения",
+    exact: true,
+  });
+  await beforePhoto.check();
+  await afterPhoto.uncheck();
+  assert.deepEqual(
+    await beforePhoto.evaluate((e) => {
+      const values = new FormData(e.form);
+      return [values.get("before"), values.get("after")];
+    }),
+    ["on", null],
+    "Native checkbox names and values survive the component migration",
+  );
+  await beforePhoto.uncheck();
   await paidToggle.uncheck();
   assert.equal(await amountField.inputValue(), "0");
   await termsPanel

@@ -5,7 +5,7 @@ import type {
 } from "../../../../../packages/contracts/src/business-workflows";
 import type { AccountingWorkspace } from "../../../../../packages/contracts/src/accounting";
 import { MAX_WORK_AMOUNT } from "../../../../../packages/contracts/src/operations-platform";
-import { Button, Input, Select } from "../../ui";
+import { Button, Checkbox, Input, Select } from "../../ui";
 
 export function TicketWorkTerms({
   workflow: w,
@@ -47,18 +47,16 @@ export function TicketWorkTerms({
         });
       }}
     >
-      <label className="check-field">
-        <Input
-          type="checkbox"
-          checked={paid}
-          disabled={Boolean(w.estimateId)}
-          onChange={(e) => {
-            setPaid(e.target.checked);
-            if (!e.target.checked) setAmount("0");
-          }}
-        />
+      <Checkbox
+        checked={paid}
+        disabled={Boolean(w.estimateId)}
+        onChange={(e) => {
+          setPaid(e.target.checked);
+          if (!e.target.checked) setAmount("0");
+        }}
+      >
         Платная работа
-      </label>
+      </Checkbox>
       <label>
         Стоимость, ₽
         <Input
@@ -101,24 +99,15 @@ export function TicketWorkTerms({
           добавить в разделе «Платежи».
         </p>
       )}
-      <div className="work-photo-policy">
-        <label className="check-field">
-          <Input
-            type="checkbox"
-            name="before"
-            defaultChecked={w.requireBeforePhoto}
-          />
-          Обязательно фото до работ
-        </label>
-        <label className="check-field">
-          <Input
-            type="checkbox"
-            name="after"
-            defaultChecked={w.requireAfterPhoto}
-          />
-          Обязательно фото результата
-        </label>
-      </div>
+      <fieldset className="work-photo-policy">
+        <legend>Обязательные фотографии</legend>
+        <Checkbox name="before" defaultChecked={w.requireBeforePhoto}>
+          До начала работ
+        </Checkbox>
+        <Checkbox name="after" defaultChecked={w.requireAfterPhoto}>
+          После выполнения
+        </Checkbox>
+      </fieldset>
       <div className="mvp-actions work-terms-actions">
         <Button
           variant="primary"

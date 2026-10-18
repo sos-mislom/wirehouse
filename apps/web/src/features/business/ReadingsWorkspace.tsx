@@ -6,7 +6,7 @@ import type {
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { apiRequest } from "../../api/client";
-import { Button, Input, Select, Textarea } from "../../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "../../ui";
 import {
   Disclosure,
   Feedback,
@@ -461,10 +461,9 @@ export function ReadingsWorkspace({
                 required
               />
             </label>
-            <label className="check-field">
-              <Input name="photoRequired" type="checkbox" defaultChecked />
+            <Checkbox name="photoRequired" defaultChecked>
               Обязательная фотография
-            </label>
+            </Checkbox>
             <Button variant="primary" type="submit" busy={resource.busy}>
               Открыть период
             </Button>

@@ -136,7 +136,6 @@ a:focus-visible {
   min-height: 104px;
   resize: vertical;
 }
-.ui-input--checkbox,
 .ui-input--radio {
   accent-color: var(--ui-accent);
   width: 18px;

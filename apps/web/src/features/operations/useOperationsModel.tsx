@@ -4,7 +4,7 @@ import {
   hasPermission,
   rolePermissions,
 } from "../../../../../packages/contracts/src/permissions";
-import { Input, Select, Textarea } from "../../ui";
+import { Checkbox, Input, Select, Textarea } from "../../ui";
 import {
   OperationsData,
   Props,
@@ -186,14 +186,13 @@ export function useOperationsModel({
     </label>
   );
   const check = (key: string, label: string) => (
-    <label className="check-field" key={key}>
-      <Input
-        type="checkbox"
-        checked={Boolean(draft?.[key])}
-        onChange={(event) => change(key, event.target.checked)}
-      />
-      <span>{label}</span>
-    </label>
+    <Checkbox
+      key={key}
+      checked={Boolean(draft?.[key])}
+      onChange={(event) => change(key, event.target.checked)}
+    >
+      {label}
+    </Checkbox>
   );
   const units = Object.fromEntries(
     overview.units

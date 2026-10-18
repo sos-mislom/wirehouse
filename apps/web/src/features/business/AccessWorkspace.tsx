@@ -7,7 +7,7 @@ import {
 } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { apiRequest } from "../../api/client";
-import { Button, Input, Select, Textarea } from "../../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "../../ui";
 import { Disclosure, Feedback, Register, date, useResource } from "./shared";
 import type { AccountingWorkspace } from "../../../../../packages/contracts/src/accounting";
 type Participant = {
@@ -389,20 +389,19 @@ export function AccessWorkspace() {
             <fieldset className="permission-grid">
               <legend>Разрешения</legend>
               {scopePermissions(role, scope).map((p) => (
-                <label key={p}>
-                  <Input
-                    type="checkbox"
-                    checked={permissions.includes(p)}
-                    onChange={(e) =>
-                      setPermissions(
-                        e.target.checked
-                          ? [...permissions, p]
-                          : permissions.filter((v) => v !== p),
-                      )
-                    }
-                  />
+                <Checkbox
+                  key={p}
+                  checked={permissions.includes(p)}
+                  onChange={(e) =>
+                    setPermissions(
+                      e.target.checked
+                        ? [...permissions, p]
+                        : permissions.filter((v) => v !== p),
+                    )
+                  }
+                >
                   {permissionLabels[p]}
-                </label>
+                </Checkbox>
               ))}
             </fieldset>
             {role === "owner" && ["property", "unit"].includes(scope) && (
@@ -411,14 +410,12 @@ export function AccessWorkspace() {
                 на договор или лицевой счет.
               </p>
             )}
-            <label className="check-field">
-              <Input
-                type="checkbox"
-                name="retainHistory"
-                defaultChecked={edit?.retainHistory ?? true}
-              />
+            <Checkbox
+              name="retainHistory"
+              defaultChecked={edit?.retainHistory ?? true}
+            >
               Сохранить просмотр истории после окончания срока
-            </label>
+            </Checkbox>
             <label>
               Основание
               <Textarea

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input, Select, Textarea } from "../../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "../../ui";
 import { usePlatform } from "./usePlatform";
 import type { CatalogItem } from "../../../../../packages/contracts/src/operations-platform";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
@@ -171,14 +171,12 @@ export function Catalog({
             </>
           )}
           {kind !== "templates" && (
-            <label>
-              <Input
-                type="checkbox"
-                checked={draft.active}
-                onChange={(e) => change("active", e.target.checked)}
-              />
+            <Checkbox
+              checked={draft.active}
+              onChange={(e) => change("active", e.target.checked)}
+            >
               Доступен в каталоге
-            </label>
+            </Checkbox>
           )}
           <div className="mvp-actions">
             <Button type="submit" variant="primary" busy={busy}>

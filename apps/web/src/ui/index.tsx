@@ -9,6 +9,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import "./ui.css";
+export { Checkbox } from "./Checkbox";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger" | "text" | "plain";

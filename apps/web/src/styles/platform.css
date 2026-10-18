@@ -16,11 +16,6 @@
   text-align: left;
   padding-inline: 0;
 }
-.plan-inspector label:has(input[type="checkbox"]) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .platform-table .cell-value {
   overflow-wrap: break-word;
   word-break: normal;
@@ -106,15 +101,18 @@
 .platform-permissions {
   grid-column: 1/-1;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  border: 1px solid var(--line);
-  padding: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
 }
-.platform-permissions label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.platform-permissions legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
 }
 .platform-table {
   width: 100%;

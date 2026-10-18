@@ -6,7 +6,7 @@ import {
   unitStatusOptions,
   unitTypeOptions,
 } from "../../projectData";
-import { Button, Input, Select, Textarea } from "../../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "../../ui";
 export function AdminForm() {
   const {
     session,
@@ -339,24 +339,20 @@ export function AdminForm() {
             value={unitForm.ceilingHeight}
           />
         </label>
-        <label className="checkbox">
-          <Input
-            checked={unitForm.hasRamp}
-            name="hasRamp"
-            onChange={handleFieldChange(setUnitForm)}
-            type="checkbox"
-          />
-          <span>{t.fields.hasRamp}</span>
-        </label>
-        <label className="checkbox">
-          <Input
-            checked={unitForm.hasGate}
-            name="hasGate"
-            onChange={handleFieldChange(setUnitForm)}
-            type="checkbox"
-          />
-          <span>{t.fields.hasGate}</span>
-        </label>
+        <Checkbox
+          checked={unitForm.hasRamp}
+          name="hasRamp"
+          onChange={handleFieldChange(setUnitForm)}
+        >
+          {t.fields.hasRamp}
+        </Checkbox>
+        <Checkbox
+          checked={unitForm.hasGate}
+          name="hasGate"
+          onChange={handleFieldChange(setUnitForm)}
+        >
+          {t.fields.hasGate}
+        </Checkbox>
         <Button
           variant="primary"
           className="primary-button"

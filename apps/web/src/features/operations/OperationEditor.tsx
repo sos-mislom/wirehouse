@@ -1,4 +1,4 @@
-import { Button, Input, Select } from "../../ui";
+import { Button, Checkbox, Input, Select } from "../../ui";
 import { resourceNames, specialtyNames, tabs } from "./shared";
 import type { OperationsModel } from "./useOperationsModel";
 import {
@@ -76,30 +76,28 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
                 <fieldset className="platform-permissions">
                   <legend>Права доступа</legend>
                   {(rolePermissions[draft.role] ?? []).map((p) => (
-                    <label key={p}>
-                      <Input
-                        type="checkbox"
-                        checked={(
-                          draft.permissions ?? rolePermissions[draft.role]
-                        ).includes(p)}
-                        onChange={(e) =>
-                          change(
-                            "permissions",
-                            e.target.checked
-                              ? [
-                                  ...(draft.permissions ??
-                                    rolePermissions[draft.role]),
-                                  p,
-                                ]
-                              : (
-                                  draft.permissions ??
-                                  rolePermissions[draft.role]
-                                ).filter((v: string) => v !== p),
-                          )
-                        }
-                      />
+                    <Checkbox
+                      key={p}
+                      checked={(
+                        draft.permissions ?? rolePermissions[draft.role]
+                      ).includes(p)}
+                      onChange={(e) =>
+                        change(
+                          "permissions",
+                          e.target.checked
+                            ? [
+                                ...(draft.permissions ??
+                                  rolePermissions[draft.role]),
+                                p,
+                              ]
+                            : (
+                                draft.permissions ?? rolePermissions[draft.role]
+                              ).filter((v: string) => v !== p),
+                        )
+                      }
+                    >
                       {permissionLabels[p]}
-                    </label>
+                    </Checkbox>
                   ))}
                 </fieldset>
               )}

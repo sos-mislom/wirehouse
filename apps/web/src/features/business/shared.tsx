@@ -8,7 +8,7 @@ import {
 } from "react";
 import { apiRequest, runtimeApiBase } from "../../api/client";
 import { ResponsiveTable } from "../../ResponsiveTable";
-import { Button, Input, Select } from "../../ui";
+import { Button, Checkbox, Input, Select } from "../../ui";
 export function useResource<T>(token: string, path: string, initial: T) {
   const mutationPending = useRef(false);
   const [data, setData] = useState<T>(initial),
@@ -314,24 +314,28 @@ export function Register<T extends { id: string }>({
               ))}
             </Select>
           </label>
-          {columns
-            .filter((c) => c.optional)
-            .map((c) => (
-              <label className="check-field" key={c.key}>
-                <Input
-                  type="checkbox"
-                  checked={!hidden.includes(c.key)}
-                  onChange={(e) =>
-                    setHidden(
-                      e.target.checked
-                        ? hidden.filter((k) => k !== c.key)
-                        : [...hidden, c.key],
-                    )
-                  }
-                />
-                {c.label}
-              </label>
-            ))}
+          {columns.some((c) => c.optional) && (
+            <fieldset className="register-columns">
+              <legend>Показывать столбцы</legend>
+              {columns
+                .filter((c) => c.optional)
+                .map((c) => (
+                  <Checkbox
+                    key={c.key}
+                    checked={!hidden.includes(c.key)}
+                    onChange={(e) =>
+                      setHidden(
+                        e.target.checked
+                          ? hidden.filter((k) => k !== c.key)
+                          : [...hidden, c.key],
+                      )
+                    }
+                  >
+                    {c.label}
+                  </Checkbox>
+                ))}
+            </fieldset>
+          )}
         </div>
       )}
       {visible.length ? (
