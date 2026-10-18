@@ -1,22 +1,25 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import type {
   TicketWorkflow,
   TicketDecision,
   EntityDocument,
+  TicketTermsInput,
 } from "../../../../../packages/contracts/src/business-workflows";
 import type { AccountingWorkspace } from "../../../../../packages/contracts/src/accounting";
-import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { apiRequest } from "../../api/client";
-import { Button, Input, Select, Textarea } from "../../ui";
+import { Button, Input, Textarea } from "../../ui";
 import {
   Disclosure,
   Feedback,
   date,
+  downloadDocument,
   money,
   uploadDocument,
   useResource,
 } from "./shared";
+import { TicketWorkTerms } from "./TicketWorkTerms";
+import { TicketWorkPhotos } from "./TicketWorkPhotos";
 const states: Record<string, string> = {
   registered: "Зарегистрирована",
   awaiting_approval: "Ожидает согласования стоимости",
@@ -89,26 +92,15 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       setReasonAction("");
       await refreshWorkspace();
     }, actions[action]);
-  const terms = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const v = new FormData(e.currentTarget);
-    void resource.run(
-      () =>
-        apiRequest(`/api/tickets/${ticketId}/workflow/terms`, {
-          token,
-          method: "POST",
-          body: {
-            updatedAt: w!.updatedAt,
-            paid: v.get("paid") === "on",
-            amount: Number(v.get("amount")),
-            accountId: v.get("accountId") || null,
-            requireBeforePhoto: v.get("before") === "on",
-            requireAfterPhoto: v.get("after") === "on",
-          },
-        }),
-      "Условия сохранены. Предыдущее согласование больше не действует.",
-    );
-  };
+  const terms = (body: TicketTermsInput) =>
+    void resource.run(async () => {
+      await apiRequest(`/api/tickets/${ticketId}/workflow/terms`, {
+        token,
+        method: "POST",
+        body,
+      });
+      await refreshWorkspace();
+    }, "Условия сохранены. Предыдущее согласование больше не действует.");
   const upload = (file: File, phase: string) =>
     void resource.run(async () => {
       await uploadDocument(
@@ -258,51 +250,35 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
               </label>
               <div className="mvp-actions">
                 <Button variant="primary" type="submit" busy={resource.busy}>
-                  Подтвердить
+                  {reasonAction === "return"
+                    ? "Вернуть в работу"
+                    : reasonAction === "pause"
+                      ? "Приостановить работу"
+                      : "Отклонить стоимость"}
                 </Button>
                 <Button onClick={() => setReasonAction("")}>Отмена</Button>
               </div>
             </form>
           )}
-          {!["closed", "accepted", "rejected"].includes(w.state) && worker && (
-            <Disclosure
-              title={`Фотографии работ · ${docs.data.items.filter((d) => d.category === "photo").length}`}
-            >
-              <div className="form-grid">
-                {["before", "after"].map((phase) => (
-                  <label className="business-file" key={phase}>
-                    {phase === "before" ? "До работ" : "Результат работ"}
-                    <Input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      capture="environment"
-                      disabled={resource.busy}
-                      onChange={(e) => {
-                        const file = e.currentTarget.files?.[0];
-                        if (file) upload(file, phase);
-                        e.currentTarget.value = "";
-                      }}
-                    />
-                    <small>
-                      {
-                        docs.data.items.filter((d) =>
-                          d.links.some(
-                            (l) =>
-                              l.phase === phase &&
-                              l.revision ===
-                                (phase === "before"
-                                  ? w.termsVersion
-                                  : w.resultVersion),
-                          ),
-                        ).length
-                      }{" "}
-                      фото текущей версии
-                    </small>
-                  </label>
-                ))}
-              </div>
-            </Disclosure>
-          )}
+          <Feedback
+            error={
+              docs.error ||
+              (resource.data.capabilities.terms ? accounts.error : "")
+            }
+          />
+          <TicketWorkPhotos
+            workflow={w}
+            documents={docs.data.items}
+            canUpload={worker}
+            busy={resource.busy}
+            onUpload={upload}
+            onDownload={(document) =>
+              void resource.run(
+                () => downloadDocument(token, document.id, document.name),
+                "Фотография скачана",
+              )
+            }
+          />
           {resource.data.capabilities.terms &&
             [
               "registered",
@@ -311,68 +287,14 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
               "rejected",
             ].includes(w.state) && (
               <Disclosure title="Условия работы">
-                <form className="form-grid" key={w.updatedAt} onSubmit={terms}>
-                  <label className="check-field">
-                    <Input
-                      type="checkbox"
-                      name="paid"
-                      defaultChecked={w.paid}
-                    />
-                    Платная работа
-                  </label>
-                  <label>
-                    Стоимость, ₽
-                    <Input
-                      type="number"
-                      name="amount"
-                      defaultValue={w.amount === null ? "" : w.amount}
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Лицевой счет
-                    <Select name="accountId" defaultValue={w.accountId ?? ""}>
-                      <option value="">Без ЛС</option>
-                      {accounts.data.accounts
-                        .filter(
-                          (a) =>
-                            a.leaseId === ticket?.leaseId &&
-                            a.status === "active",
-                        )
-                        .map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.number} ·{" "}
-                            {
-                              accounts.data.sources.find(
-                                (s) => s.id === a.sourceId,
-                              )?.name
-                            }
-                          </option>
-                        ))}
-                    </Select>
-                  </label>
-                  <label className="check-field">
-                    <Input
-                      type="checkbox"
-                      name="before"
-                      defaultChecked={w.requireBeforePhoto}
-                    />
-                    Обязательно фото до работ
-                  </label>
-                  <label className="check-field">
-                    <Input
-                      type="checkbox"
-                      name="after"
-                      defaultChecked={w.requireAfterPhoto}
-                    />
-                    Обязательно фото результата
-                  </label>
-                  <Button variant="primary" type="submit" busy={resource.busy}>
-                    Сохранить условия
-                  </Button>
-                </form>
+                <TicketWorkTerms
+                  key={w.updatedAt}
+                  workflow={w}
+                  leaseId={ticket?.leaseId}
+                  accounts={accounts.data}
+                  busy={resource.busy}
+                  onSave={terms}
+                />
               </Disclosure>
             )}
           {worker && ticket?.maintenancePlanId && (

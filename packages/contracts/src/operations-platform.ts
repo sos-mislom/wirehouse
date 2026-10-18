@@ -1,4 +1,5 @@
 import { z } from "zod";
+export const MAX_WORK_AMOUNT = 10_000_000_000;
 const id = z.string().regex(/^[a-zA-Z0-9-]{1,100}$/);
 const name = z.string().trim().min(1).max(300);
 const text = z.string().trim().max(10000);
@@ -172,6 +173,16 @@ export type Estimate = Omit<EstimateInput, "lines"> & {
   total: number;
   rejectionReason: string;
   updatedAt: string;
+};
+export type EstimateView = Estimate & {
+  isCurrent: boolean;
+  capabilities: {
+    edit: boolean;
+    submit: boolean;
+    approve: boolean;
+    reject: boolean;
+    act: boolean;
+  };
 };
 export type ServiceAct = {
   id: string;

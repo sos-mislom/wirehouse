@@ -255,6 +255,54 @@
   font-size: 1rem;
   margin: 0;
 }
+.work-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.ticket-work-terms label.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.ticket-work-terms > label.check-field {
+  align-self: end;
+}
+.ticket-work-terms .field-hint,
+.ticket-work-terms .work-account,
+.work-photo-policy,
+.work-terms-actions {
+  grid-column: 1/-1;
+}
+.work-photo-policy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.work-photo-policy label {
+  flex: 1 1 220px;
+}
+.work-proof-grid h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+.work-proof-files {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.work-proof-files .ui-button {
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  gap: 6px;
+}
+.work-proof-files svg {
+  flex-shrink: 0;
+}
 .ticket-workflow .business-stats {
   gap: 8px 20px;
 }
@@ -284,6 +332,9 @@
   }
 }
 @media (max-width: 760px) {
+  .work-proof-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .billing-page .billing-grid {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -230,7 +230,7 @@ export const businessTables = {
   ),
   ticket_workflows: table(
     {
-      text: "ticketId accountId acceptanceBy state pauseReason approvalBy",
+      text: "ticketId accountId estimateId acceptanceBy state pauseReason approvalBy",
       boolean: "paid requireBeforePhoto requireAfterPhoto",
       integer: "termsVersion approvedVersion resultVersion",
       numeric: "amount",
@@ -250,6 +250,7 @@ export const businessTables = {
       references: {
         ticketId: "tickets",
         accountId: "personal_accounts",
+        estimateId: "estimates",
         acceptanceBy: "users",
         approvalBy: "users",
       },

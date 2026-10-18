@@ -22,6 +22,17 @@ export function assertBusinessReferences(data) {
     ]),
   );
   const exists = (table, id) => ids.get(table)?.has(id);
+  for (const row of data.ticket_workflows)
+    if (
+      row.estimateId &&
+      data.estimates.find((e) => e.id === row.estimateId)?.ticketId !==
+        row.ticketId
+    )
+      throw businessError(
+        "Смета должна относиться к заявке процесса",
+        409,
+        "ESTIMATE_CONTEXT_MISMATCH",
+      );
   for (const row of data.user_assignments)
     if (!exists(scopes[row.scopeType], row.scopeId))
       throw businessError(

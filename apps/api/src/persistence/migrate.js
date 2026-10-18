@@ -12,6 +12,7 @@ const migrations = [
   "005-business-workflows.sql",
   "006-context-assignments.sql",
   "007-existing-business-records.sql",
+  "008-work-estimate-binding.sql",
 ];
 
 async function sources() {

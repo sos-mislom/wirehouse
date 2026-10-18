@@ -430,6 +430,7 @@ test("Business migration includes existing files and converts account bindings w
         .join(",") +
       " CASCADE",
   );
+  await pg.pool.query("DROP INDEX warehouse.service_act_ticket_unique");
   await pg.pool.query(
     "DELETE FROM warehouse.schema_migrations WHERE name>='005'",
   );

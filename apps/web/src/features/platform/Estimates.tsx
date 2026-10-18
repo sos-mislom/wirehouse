@@ -27,7 +27,7 @@ const blankLine = (): EstimateInput["lines"][number] => ({
   vatRate: "0",
 });
 export function Estimates(props: Props & { services: Row[] }) {
-  const { data, error, busy, mutate } = usePlatform(props.token);
+  const { data, error, busy, mutate, refresh } = usePlatform(props.token);
   const [draft, setDraft] = useState<(EstimateInput & { id?: string }) | null>(
     null,
   );
@@ -88,8 +88,15 @@ export function Estimates(props: Props & { services: Row[] }) {
             </option>
           ))}
         </Select>
+        <Button disabled={busy} onClick={() => void refresh()}>
+          Обновить
+        </Button>
         {write && (
-          <Button variant="primary" onClick={newEstimate}>
+          <Button
+            variant="primary"
+            onClick={newEstimate}
+            disabled={!data.estimateTicketIds.length}
+          >
             Новая смета
           </Button>
         )}
@@ -154,6 +161,7 @@ export function Estimates(props: Props & { services: Row[] }) {
                 {props.tickets
                   .filter(
                     (t) =>
+                      (draft.id || data.estimateTicketIds.includes(t.id)) &&
                       props.overview.units.find((u) => u.id === t.unitId)
                         ?.propertyId === draft.propertyId,
                   )
@@ -226,6 +234,10 @@ export function Estimates(props: Props & { services: Row[] }) {
               </span>
               <span>
                 {names[row.status]} · v{row.version}
+                {!row.isCurrent &&
+                  ["submitted", "approved"].includes(row.status) && (
+                    <small>Заменена другой сметой</small>
+                  )}
               </span>
               <strong>{currency(row.total)}</strong>
             </article>
@@ -246,6 +258,13 @@ export function Estimates(props: Props & { services: Row[] }) {
           <p>
             {names[current.status]} · версия {current.version}
           </p>
+          {!current.isCurrent &&
+            ["submitted", "approved"].includes(current.status) && (
+              <p className="field-hint">
+                Этот вариант заменен. Согласование и акт доступны в актуальной
+                смете заявки.
+              </p>
+            )}
           <Button
             variant="text"
             onClick={() => props.onTicket(current.ticketId)}
@@ -258,10 +277,10 @@ export function Estimates(props: Props & { services: Row[] }) {
           <LineTable lines={current.lines} />
           <strong>Итого: {currency(current.total)}</strong>
           <div className="mvp-actions">
-            {write && ["draft", "rejected"].includes(current.status) && (
+            {current.capabilities.edit && (
               <Button onClick={() => edit(current)}>Изменить</Button>
             )}
-            {write && current.status === "draft" && (
+            {current.capabilities.submit && (
               <Button
                 disabled={busy}
                 variant="primary"
@@ -270,7 +289,7 @@ export function Estimates(props: Props & { services: Row[] }) {
                 На согласование
               </Button>
             )}
-            {approve && current.status === "submitted" && (
+            {current.capabilities.approve && (
               <>
                 <Button
                   disabled={busy}
@@ -294,10 +313,22 @@ export function Estimates(props: Props & { services: Row[] }) {
               </>
             )}
             {approve && current.status === "approved" && (
-              <Button disabled={busy} onClick={() => transition("act")}>
+              <Button
+                disabled={busy || !current.capabilities.act}
+                onClick={() => transition("act")}
+              >
                 Выпустить акт
               </Button>
             )}
+            {approve &&
+              current.isCurrent &&
+              current.status === "approved" &&
+              !current.capabilities.act && (
+                <p className="field-hint">
+                  Акт станет доступен после приемки результата и завершения
+                  обязательного чек-листа.
+                </p>
+              )}
             {data.acts
               .filter((a) => a.estimateId === current.id)
               .map((a) => (

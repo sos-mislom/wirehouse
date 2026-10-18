@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { nextVersionTime } from "./version-time.js";
 import { contextCan, requireContext } from "./context-access.js";
 import {
   businessError,
@@ -17,6 +18,7 @@ export function createTicketWorkflow(db, ticket) {
   const row = {
     ticketId: ticket.id,
     accountId: null,
+    estimateId: null,
     paid,
     amount: paid ? service.basePrice : 0,
     requireBeforePhoto: technical,
@@ -57,6 +59,14 @@ function version(w, stamp) {
       "VERSION_CONFLICT",
     );
 }
+function restoreDeclinedTicket(db, actor, ticket) {
+  if (ticket.status === "rejected")
+    db.updateTicket(ticket.id, {
+      status: ticket.assigned_to ? "accepted" : "new",
+      updatedBy: actor.id,
+      reason: "Условия работы пересмотрены",
+    });
+}
 function proof(db, w, phase) {
   return db.data.document_links.some(
     (l) =>
@@ -81,7 +91,7 @@ function decision(db, w, actor, action, reason = "") {
     snapshot: structuredClone(w),
     createdAt: now(),
   });
-  w.updatedAt = now();
+  w.updatedAt = nextVersionTime(w.updatedAt);
 }
 function canExecute(db, actor, ticket) {
   requireContext(db, actor, "tickets.write", "tickets", ticket.id);
@@ -107,14 +117,24 @@ export function saveTerms(db, actor, ticketId, body) {
       409,
     );
   const quote = publishedEstimate(db, ticketId);
-  if (quote && quote.total > 0 && (!body.paid || body.amount !== quote.total))
+  if (
+    quote &&
+    (body.paid !== Boolean(quote.total) || body.amount !== quote.total)
+  )
     throw businessError(
       "Стоимость должна совпадать с опубликованной сметой",
       409,
     );
   if (body.accountId) {
     const account = requiredRecord(db, "personal_accounts", body.accountId);
-    if (account.leaseId !== ticket.lease_id || account.status !== "active")
+    const today = now().slice(0, 10);
+    if (
+      account.leaseId !== ticket.lease_id ||
+      account.status !== "active" ||
+      account.validFrom > today ||
+      (account.validTo && account.validTo < today) ||
+      !requiredRecord(db, "accounting_sources", account.sourceId).active
+    )
       throw businessError("Выберите действующий ЛС договора заявки");
   }
   Object.assign(w, {
@@ -132,12 +152,25 @@ export function saveTerms(db, actor, ticketId, body) {
         ? "assigned"
         : "registered",
   });
+  restoreDeclinedTicket(db, actor, ticket);
   decision(db, w, actor, "terms");
   return w;
 }
 export function guardTicketTransition(db, current, next, payload) {
   const w = workflowFor(db, current.id);
   if (next.service_id !== current.service_id) {
+    if (
+      w.estimateId ||
+      db.data.estimates.some(
+        (e) =>
+          e.ticketId === current.id &&
+          ["submitted", "approved", "acted"].includes(e.status),
+      )
+    )
+      throw businessError(
+        "Услуга уже включена в условия сметы; измените смету до начала работ",
+        409,
+      );
     if (!["registered", "assigned", "awaiting_approval"].includes(w.state))
       throw businessError("Услугу выполняемой работы менять нельзя", 409);
     const service = next.service_id
@@ -154,8 +187,13 @@ export function guardTicketTransition(db, current, next, payload) {
         : next.assigned_to
           ? "assigned"
           : "registered",
-      updatedAt: now(),
+      updatedAt: nextVersionTime(w.updatedAt),
     });
+  }
+  if (next.assigned_to !== current.assigned_to) {
+    if (["registered", "assigned"].includes(w.state))
+      w.state = next.assigned_to ? "assigned" : "registered";
+    w.updatedAt = nextVersionTime(w.updatedAt);
   }
   if (
     (next.unit_id !== current.unit_id ||
@@ -175,6 +213,7 @@ export function guardTicketTransition(db, current, next, payload) {
     ? db.getById("users", payload.updatedBy)
     : null;
   if (["in_progress", "completed", "resolved"].includes(next.status)) {
+    if (w.paid) assertEstimateApproval(db, w);
     if (w.paid && (!w.accountId || w.approvedVersion !== w.termsVersion))
       throw businessError(
         "Сначала согласуйте актуальную стоимость работы",
@@ -252,7 +291,7 @@ export function guardTicketTransition(db, current, next, payload) {
         : next.assigned_to
           ? "assigned"
           : "registered";
-  w.updatedAt = now();
+  w.updatedAt = nextVersionTime(w.updatedAt);
 }
 export function decideTicket(db, actor, ticketId, body) {
   const ticket = requiredRecord(db, "tickets", ticketId),
@@ -339,6 +378,7 @@ export function decideTicket(db, actor, ticketId, body) {
           "Сначала согласуйте актуальную стоимость работы",
           409,
         );
+      if (w.paid) assertEstimateApproval(db, w);
       if (w.requireBeforePhoto && !proof(db, w, "before"))
         throw businessError("Прикрепите фото до начала работ", 409);
       db.updateTicket(ticketId, { status: "in_progress", updatedBy: actor.id });
@@ -364,16 +404,36 @@ export function decideTicket(db, actor, ticketId, body) {
 }
 
 export function publishedEstimate(db, ticketId) {
-  return (
-    db.data.estimates
-      .filter(
+  const w = workflowFor(db, ticketId);
+  if (!w.estimateId) {
+    if (
+      db.data.estimates.some(
         (e) =>
           e.ticketId === ticketId &&
           ["submitted", "approved", "acted"].includes(e.status),
       )
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .at(0) ?? null
-  );
+    )
+      throw businessError(
+        "Не выбрана актуальная смета. Передайте выбранный вариант на согласование заново",
+        409,
+      );
+    return null;
+  }
+  const row = requiredRecord(db, "estimates", w.estimateId);
+  if (row.ticketId !== ticketId)
+    throw businessError("Смета другой заявки", 409);
+  return row;
+}
+function assertEstimateApproval(db, w) {
+  const quote = publishedEstimate(db, w.ticketId);
+  if (
+    quote &&
+    (!["approved", "acted"].includes(quote.status) || quote.total !== w.amount)
+  )
+    throw businessError(
+      "Актуальная смета не утверждена или ее стоимость изменилась",
+      409,
+    );
 }
 export function publishEstimateTerms(db, actor, estimate) {
   const w = workflowFor(db, estimate.ticketId);
@@ -389,13 +449,24 @@ export function publishEstimateTerms(db, actor, estimate) {
       409,
     );
   Object.assign(w, {
+    estimateId: estimate.id,
     paid: estimate.total > 0,
     amount: estimate.total,
     termsVersion: w.termsVersion + 1,
     approvedVersion: null,
     approvalBy: null,
-    state: estimate.total > 0 ? "awaiting_approval" : "registered",
+    state:
+      estimate.total > 0
+        ? "awaiting_approval"
+        : requiredRecord(db, "tickets", estimate.ticketId).assigned_to
+          ? "assigned"
+          : "registered",
   });
+  restoreDeclinedTicket(
+    db,
+    actor,
+    requiredRecord(db, "tickets", estimate.ticketId),
+  );
   decision(
     db,
     w,

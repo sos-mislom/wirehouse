@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "../../api/client";
 import type {
   CatalogItem,
-  Estimate,
+  EstimateView,
   ServiceAct,
 } from "../../../../../packages/contracts/src/operations-platform";
 export type PlatformData = {
   templates: CatalogItem[];
   materials: CatalogItem[];
   contractors: CatalogItem[];
-  estimates: Estimate[];
+  estimates: EstimateView[];
+  estimateTicketIds: string[];
   acts: ServiceAct[];
 };
 export function usePlatform(token: string) {
@@ -18,6 +19,7 @@ export function usePlatform(token: string) {
     materials: [],
     contractors: [],
     estimates: [],
+    estimateTicketIds: [],
     acts: [],
   });
   const [error, setError] = useState("");
@@ -55,5 +57,13 @@ export function usePlatform(token: string) {
       setBusy(false);
     }
   };
-  return { data, error, setError, busy, mutate, reload };
+  const refresh = async () => {
+    setError("");
+    try {
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось обновить данные");
+    }
+  };
+  return { data, error, setError, busy, mutate, reload, refresh };
 }

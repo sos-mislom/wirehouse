@@ -1,12 +1,66 @@
 import { enqueueExchange, requiredRecord } from "./accounting.js";
 import { publishEstimateTerms, workflowFor } from "./ticket-workflow.js";
 import { registerActDocument } from "./documents.js";
-import { requireContext } from "./context-access.js";
+import { requireContext, contextCan } from "./context-access.js";
+import { MAX_WORK_AMOUNT } from "../../../../packages/contracts/src/operations-platform.ts";
 import crypto from "node:crypto";
 import { assertPermission } from "../services/permissions.js";
 const cents = (value) => Math.round((value + Number.EPSILON) * 100);
 const conflict = (message) =>
   Object.assign(new Error(message), { status: 409 });
+const preparationStates = [
+  "registered",
+  "assigned",
+  "awaiting_approval",
+  "rejected",
+];
+export function canPrepareEstimate(db, actor, ticketId) {
+  return (
+    contextCan(db, actor, "estimates.write", "tickets", ticketId) &&
+    preparationStates.includes(workflowFor(db, ticketId).state) &&
+    !db.data.service_acts.some((a) => a.ticketId === ticketId)
+  );
+}
+export function estimateView(db, actor, row) {
+  const w = workflowFor(db, row.ticketId),
+    ticket = requiredRecord(db, "tickets", row.ticketId),
+    isCurrent = w.estimateId === row.id,
+    prepare = canPrepareEstimate(db, actor, row.ticketId),
+    approve = contextCan(
+      db,
+      actor,
+      "estimates.approve",
+      "tickets",
+      row.ticketId,
+    ),
+    paid = row.total > 0,
+    accepted =
+      ["accepted", "closed"].includes(w.state) &&
+      ["completed", "resolved", "closed"].includes(ticket.status);
+  return {
+    ...row,
+    isCurrent,
+    capabilities: {
+      edit: prepare && ["draft", "rejected"].includes(row.status),
+      submit:
+        prepare &&
+        row.status === "draft" &&
+        contextCan(db, actor, "finance.read", "tickets", row.ticketId),
+      approve: approve && isCurrent && row.status === "submitted",
+      reject: approve && isCurrent && row.status === "submitted",
+      act:
+        approve &&
+        isCurrent &&
+        row.status === "approved" &&
+        accepted &&
+        w.amount === row.total &&
+        w.paid === paid &&
+        (!w.paid || w.approvedVersion === w.termsVersion) &&
+        !ticket.checklist_items.some((c) => c.required && !c.completed) &&
+        !db.data.service_acts.some((a) => a.ticketId === row.ticketId),
+    },
+  };
+}
 
 export function saveEstimate(db, actor, id, input) {
   assertPermission(actor, "estimates.write");
@@ -31,6 +85,10 @@ export function saveEstimate(db, actor, id, input) {
   )
     throw new Error("Нельзя менять заявку существующей сметы");
   requireContext(db, actor, "estimates.write", "tickets", ticket.id);
+  if (!canPrepareEstimate(db, actor, ticket.id))
+    throw conflict(
+      "Смету готовят до начала работ. Дополнительную работу оформите новой заявкой",
+    );
   const contractor = input.contractorId
     ? db.getById("contractors", input.contractorId)
     : null;
@@ -60,7 +118,8 @@ export function saveEstimate(db, actor, id, input) {
     };
   });
   const total = lines.reduce((sum, l) => sum + cents(l.total), 0) / 100;
-  if (total > 1e10) throw new Error("Превышена допустимая сумма сметы");
+  if (total > MAX_WORK_AMOUNT)
+    throw new Error("Превышена допустимая сумма сметы");
   const now = new Date().toISOString();
   const row = {
     ...input,
@@ -109,6 +168,9 @@ export function transitionEstimate(db, actor, id, action, input) {
   }[action];
   if (row.status !== expected)
     throw conflict("Это действие недоступно в текущем статусе");
+  const workflow = workflowFor(db, row.ticketId);
+  if (["approve", "act"].includes(action) && workflow.estimateId !== row.id)
+    throw conflict("Смета заменена. Используйте актуальную смету заявки");
   const now = new Date().toISOString();
   if (action === "reject" && !input.reason?.trim())
     throw new Error("Укажите причину отклонения");
@@ -120,10 +182,18 @@ export function transitionEstimate(db, actor, id, action, input) {
       throw conflict("Акт доступен после выполнения заявки");
     if (!["accepted", "closed"].includes(workflowFor(db, ticket.id).state))
       throw conflict("Акт доступен после приемки результата");
+    if (
+      workflow.amount !== row.total ||
+      workflow.paid !== Boolean(row.total) ||
+      (workflow.paid && workflow.approvedVersion !== workflow.termsVersion)
+    )
+      throw conflict(
+        "Условия актуальной сметы не согласованы для принятого результата",
+      );
     if (ticket.checklist_items.some((item) => item.required && !item.completed))
       throw conflict("Обязательный чек-лист не завершён");
-    if (db.data.service_acts.some((a) => a.estimateId === id))
-      throw conflict("Акт уже выпущен");
+    if (db.data.service_acts.some((a) => a.ticketId === row.ticketId))
+      throw conflict("По заявке уже выпущен акт");
     const number = `АКТ-${now.slice(0, 4)}-${String(db.data.service_acts.length + 1).padStart(6, "0")}`;
     act = {
       id: crypto.randomUUID(),
@@ -150,7 +220,6 @@ export function transitionEstimate(db, actor, id, action, input) {
     };
     db.data.service_acts.push(act);
     registerActDocument(db, actor, act, ticket);
-    const workflow = workflowFor(db, ticket.id);
     if (workflow.accountId) {
       const account = requiredRecord(
         db,

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useWorkspace } from "../../app/WorkspaceContext";
+import { getTicketStatusLabel } from "../../shared/format";
 import { apiRequest } from "../../api/client";
-import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { Button, Input, Textarea } from "../../ui";
 import { Disclosure, Feedback, Register, date, useResource } from "./shared";
 type Item = {
@@ -15,6 +15,7 @@ type Item = {
   status: string;
   updatedAt: string;
   overdue: boolean;
+  capabilities: { reschedule: boolean; remark: boolean };
   changes: {
     id: string;
     reason: string;
@@ -34,8 +35,9 @@ type Data = {
   };
 };
 export function MaintenanceProgress() {
-  const { session, openTicketDetail, refreshWorkspace } = useWorkspace(),
-    { token, user } = session;
+  const { session, openTicketDetail, refreshWorkspace, locale } =
+      useWorkspace(),
+    { token } = session;
   const resource = useResource<Data>(token, "/api/maintenance/progress", {
       items: [],
       summary: { planned: 0, completed: 0, overdue: 0, rescheduled: 0 },
@@ -76,6 +78,11 @@ export function MaintenanceProgress() {
             ),
           },
           {
+            key: "status",
+            label: "Статус",
+            render: (i) => getTicketStatusLabel(i.status, locale),
+          },
+          {
             key: "plan",
             label: "Плановая дата",
             render: (i) => date(i.plannedOn),
@@ -110,7 +117,7 @@ export function MaintenanceProgress() {
               <Button onClick={() => setSelected("")}>Закрыть детали</Button>
             </div>
           </div>
-          {hasPermission(user, "maintenance.write") && !item.completedAt && (
+          {(item.capabilities.reschedule || item.capabilities.remark) && (
             <form
               className="form-grid"
               key={item.updatedAt}
@@ -137,10 +144,12 @@ export function MaintenanceProgress() {
                 }, "Изменение задания сохранено");
               }}
             >
-              <label>
-                Новый срок, если нужен перенос
-                <Input name="toDate" type="datetime-local" />
-              </label>
+              {item.capabilities.reschedule && (
+                <label>
+                  Новый срок, если нужен перенос
+                  <Input name="toDate" type="datetime-local" />
+                </label>
+              )}
               <label>
                 Причина
                 <Input name="reason" required maxLength={10000} />

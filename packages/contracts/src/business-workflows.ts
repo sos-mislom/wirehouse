@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { identity, label, note } from "./accounting.ts";
+import { MAX_WORK_AMOUNT } from "./operations-platform.ts";
 const timestamp = z.iso.datetime({ offset: true });
 const reason = note.refine((v) => v.length > 0, "Укажите причину");
 export const documentEntity = z.enum([
@@ -28,14 +29,14 @@ export const termsInput = z
   .strictObject({
     updatedAt: timestamp,
     paid: z.boolean(),
-    amount: z.number().finite().min(0).max(1e9),
+    amount: z.number().finite().min(0).max(MAX_WORK_AMOUNT),
     accountId: identity.nullable(),
     requireBeforePhoto: z.boolean(),
     requireAfterPhoto: z.boolean(),
   })
   .refine(
-    (v) => !v.paid || (v.amount > 0 && v.accountId !== null),
-    "Для платной работы нужны сумма и ЛС",
+    (v) => (v.paid ? v.amount > 0 && v.accountId !== null : v.amount === 0),
+    "Для платной работы нужны сумма и ЛС; для бесплатной сумма должна быть нулевой",
   );
 export const decisionInput = z
   .strictObject({
@@ -58,6 +59,7 @@ export const decisionInput = z
       !["decline", "pause", "return"].includes(v.action) || v.reason.length > 0,
     "Укажите причину",
   );
+export type TicketTermsInput = z.infer<typeof termsInput>;
 export const readingPeriodInput = z
   .strictObject({
     propertyId: identity,
@@ -121,6 +123,7 @@ export type EntityDocument = {
 export type TicketWorkflow = {
   ticketId: string;
   accountId: string | null;
+  estimateId: string | null;
   paid: boolean;
   amount: number;
   requireBeforePhoto: boolean;

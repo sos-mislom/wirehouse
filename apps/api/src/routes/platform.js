@@ -5,7 +5,12 @@ import { operationsScope } from "../operations.js";
 import { hasPermission } from "../../../../packages/contracts/src/permissions.ts";
 import { assertPermission } from "../services/permissions.js";
 import { saveStructure, deleteStructure } from "../domain/structure.js";
-import { saveEstimate, transitionEstimate } from "../domain/estimates.js";
+import {
+  saveEstimate,
+  transitionEstimate,
+  estimateView,
+  canPrepareEstimate,
+} from "../domain/estimates.js";
 import { importDxf } from "../domain/cad.js";
 
 const catalogs = {
@@ -85,24 +90,31 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
             ]),
           ),
           estimates: canCost
-            ? db.data.estimates.filter(
-                (r) =>
-                  scope(r.propertyId) &&
-                  (contextCan(
-                    db,
-                    actor,
-                    "estimates.write",
-                    "tickets",
-                    r.ticketId,
-                  ) ||
-                    contextCan(
+            ? db.data.estimates
+                .filter(
+                  (r) =>
+                    scope(r.propertyId) &&
+                    (contextCan(
                       db,
                       actor,
-                      "estimates.approve",
+                      "estimates.write",
                       "tickets",
                       r.ticketId,
-                    )),
-              )
+                    ) ||
+                      contextCan(
+                        db,
+                        actor,
+                        "estimates.approve",
+                        "tickets",
+                        r.ticketId,
+                      )),
+                )
+                .map((row) => estimateView(db, actor, row))
+            : [],
+          estimateTicketIds: canCost
+            ? db.data.tickets
+                .filter((t) => canPrepareEstimate(db, actor, t.id))
+                .map((t) => t.id)
             : [],
           acts: canCost
             ? db.data.service_acts.filter(

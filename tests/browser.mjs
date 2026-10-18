@@ -467,11 +467,17 @@ try {
     .getByRole("button", { name: "На согласование", exact: true })
     .click();
   await page.getByRole("button", { name: "Утвердить", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Выпустить акт", exact: true })
+      .isDisabled(),
+    true,
+  );
   await page
-    .getByRole("button", { name: "Выпустить акт", exact: true })
-    .click();
-  await page
-    .getByText("Акт доступен после выполнения заявки", { exact: true })
+    .getByText(
+      "Акт станет доступен после приемки результата и завершения обязательного чек-листа.",
+      { exact: true },
+    )
     .waitFor();
   await capture(page, {
     path: ".deploy/estimate-desktop.png",
@@ -613,7 +619,7 @@ try {
     },
   );
   assert.equal(accepted.status(), 200);
-
+  await page.getByRole("button", { name: "Обновить", exact: true }).click();
   await page
     .getByRole("button", { name: "Выпустить акт", exact: true })
     .click();
@@ -1138,6 +1144,185 @@ try {
     );
   }
   await page.unroute("**/api/accounting");
+  // The person accepting work can inspect both stages, including after closure.
+  const proofTicketResponse = await page.request.post(
+    "http://127.0.0.1:3001/api/tickets",
+    {
+      headers: authorization,
+      data: {
+        unitId: f.unit.id,
+        tenantId: f.tenant.id,
+        leaseId: f.lease.id,
+        assignedTo: f.worker.id,
+        category: "electrical",
+        priority: "medium",
+        title: "Приемка работы с фотографиями",
+        description: "Проверить фотографии этапов",
+      },
+    },
+  );
+  assert.equal(proofTicketResponse.status(), 201);
+  const proofTicket = (await proofTicketResponse.json()).item;
+  await page.reload();
+  await page.getByRole("button", { name: "Меню", exact: true }).waitFor();
+  await navigateManager("Заявки");
+  await page
+    .getByRole("group", { name: "Вид заявок" })
+    .getByRole("button", { name: "Канбан", exact: true })
+    .click();
+  await page
+    .locator(".kanban-ticket")
+    .filter({ hasText: proofTicket.title })
+    .getByRole("button")
+    .first()
+    .click();
+  const termsPanel = page.locator(".ticket-workflow");
+  await termsPanel.getByText("Условия работы", { exact: true }).click();
+  const paidToggle = termsPanel.getByRole("checkbox", {
+    name: "Платная работа",
+    exact: true,
+  });
+  const amountField = termsPanel.getByRole("spinbutton", {
+    name: "Стоимость, ₽",
+    exact: true,
+  });
+  assert.equal(await amountField.isDisabled(), true);
+  await paidToggle.check();
+  await amountField.fill("100");
+  assert.equal(
+    await termsPanel
+      .getByRole("combobox", { name: "Лицевой счет", exact: true })
+      .evaluate((e) => e.required),
+    true,
+  );
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+      `Work terms fit ${width}`,
+    );
+    if (process.env.WORKFLOW_SCREENSHOTS) {
+      fs.mkdirSync("output/playwright", { recursive: true });
+      await termsPanel.screenshot({
+        path: `output/playwright/work-terms-${width}.png`,
+      });
+    }
+  }
+  await paidToggle.uncheck();
+  assert.equal(await amountField.inputValue(), "0");
+  await termsPanel
+    .getByRole("button", { name: "Сохранить условия", exact: true })
+    .click();
+  await termsPanel
+    .getByText(
+      "Условия сохранены. Предыдущее согласование больше не действует.",
+      { exact: true },
+    )
+    .waitFor();
+  const proofWorkflow = async () =>
+    (
+      await (
+        await page.request.get(
+          `http://127.0.0.1:3001/api/tickets/${proofTicket.id}/workflow`,
+          { headers: authorization },
+        )
+      ).json()
+    ).item;
+  const proofDecision = async (action) => {
+    const w = await proofWorkflow();
+    const response = await page.request.post(
+      `http://127.0.0.1:3001/api/tickets/${proofTicket.id}/workflow/decision`,
+      {
+        headers: authorization,
+        data: { updatedAt: w.updatedAt, action, reason: "" },
+      },
+    );
+    assert.equal(response.status(), 200, await response.text());
+  };
+  for (const phase of ["before", "after"]) {
+    const response = await page.request.post(
+      "http://127.0.0.1:3001/api/documents",
+      {
+        headers: authorization,
+        data: {
+          fileName: phase + ".jpg",
+          name: phase === "before" ? "До работ.jpg" : "Результат работ.jpg",
+          category: "photo",
+          mimeType: "image/jpeg",
+          contentBase64: Buffer.from([
+            255, 216, 255, 1, 2, 3, 255, 217,
+          ]).toString("base64"),
+          links: [{ entityType: "tickets", entityId: proofTicket.id, phase }],
+        },
+      },
+    );
+    assert.equal(response.status(), 200, await response.text());
+    if (phase === "before") await proofDecision("start");
+  }
+  await proofDecision("submit");
+  await tenantPage.reload();
+  await tenantPage.getByRole("button", { name: "Меню", exact: true }).click();
+  await tenantPage
+    .locator("#workspace-navigation")
+    .getByRole("button", { name: /^Заявки(?: |$)/ })
+    .click();
+  await tenantPage
+    .locator(".ticket-card")
+    .filter({ hasText: "Приемка работы с фотографиями" })
+    .click();
+  const proofPanel = tenantPage.locator(".ticket-workflow");
+  await proofPanel
+    .getByRole("button", { name: "Принять результат", exact: true })
+    .waitFor();
+  for (const width of [1440, 320]) {
+    await tenantPage.setViewportSize({ width, height: 900 });
+    await proofPanel
+      .getByRole("button", { name: "До работ.jpg", exact: true })
+      .waitFor();
+    await proofPanel
+      .getByRole("button", { name: "Результат работ.jpg", exact: true })
+      .waitFor();
+    assert.equal(
+      await proofPanel.locator('input[type="file"]').count(),
+      0,
+      "Acceptance does not grant evidence upload rights",
+    );
+    assert.ok(
+      await tenantPage.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+      `Work evidence fits ${width}`,
+    );
+    if (process.env.WORKFLOW_SCREENSHOTS) {
+      fs.mkdirSync("output/playwright", { recursive: true });
+      await proofPanel.screenshot({
+        path: `output/playwright/work-acceptance-${width}.png`,
+      });
+    }
+  }
+  const proofDownload = tenantPage.waitForEvent("download");
+  await proofPanel
+    .getByRole("button", { name: "Результат работ.jpg", exact: true })
+    .click();
+  assert.equal(
+    (await proofDownload).suggestedFilename(),
+    "Результат работ.jpg",
+  );
+  await proofPanel
+    .getByRole("button", { name: "Принять результат", exact: true })
+    .click();
+  await proofPanel
+    .getByRole("heading", { name: "Результат принят", exact: true })
+    .waitFor();
+  await proofPanel
+    .locator(".work-disclosure > summary")
+    .filter({ hasText: /^Фотографии работ/ })
+    .click();
+  await proofPanel
+    .getByRole("button", { name: "Результат работ.jpg", exact: true })
+    .waitFor();
   assert.deepEqual(errors, []);
   console.log(
     "Browser checks passed: navigation, DXF editing and persistence, catalogs, estimate approval and printed act, PPR, kanban, users, mobile, tenant login.",

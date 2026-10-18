@@ -54,22 +54,45 @@ export function useResource<T>(token: string, path: string, initial: T) {
       setBusy(false);
     }
   };
-  return { data, load, error, setError, notice, busy, loading, run };
+  const reload = async () => {
+    setLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  return { data, load, reload, error, setError, notice, busy, loading, run };
 }
 export function Feedback({
   error,
   notice,
   loading,
+  reload,
 }: {
   error?: string;
   notice?: string;
   loading?: boolean;
+  reload?: () => Promise<void>;
 }) {
   return (
     <>
       {error && (
         <p className="notice notice--error" role="alert">
           {error}
+          {reload && (
+            <Button
+              variant="text"
+              disabled={loading}
+              onClick={() => void reload()}
+            >
+              Обновить данные
+            </Button>
+          )}
         </p>
       )}
       {notice && (

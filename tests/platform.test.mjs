@@ -1,4 +1,8 @@
-import { workflowFor } from "../apps/api/src/domain/ticket-workflow.js";
+import {
+  workflowFor,
+  decideTicket,
+} from "../apps/api/src/domain/ticket-workflow.js";
+import { preparePaidWork } from "./business-helpers.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./fixtures.mjs";
@@ -118,6 +122,8 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
   t.after(f.cleanup);
   const ticket = f.db.createTicket({
     unitId: f.unit.id,
+    tenantId: f.tenant.id,
+    leaseId: f.lease.id,
     createdBy: f.admin.id,
     title: "Работы",
     description: "Описание",
@@ -159,9 +165,14 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
     /выполнения/,
   );
   const stored = f.db.getById("tickets", ticket.id);
-  stored.status = "completed";
-  workflowFor(f.db, ticket.id).state = "accepted";
   stored.checklist_items.forEach((c) => (c.completed = true));
+  preparePaidWork(f.db, f.admin, ticket.id, f.lease.id);
+  f.db.updateTicket(ticket.id, { status: "completed", updatedBy: f.admin.id });
+  decideTicket(f.db, f.admin, ticket.id, {
+    updatedAt: workflowFor(f.db, ticket.id).updatedAt,
+    action: "accept",
+    reason: "",
+  });
   const { act } = transitionEstimate(f.db, f.admin, row.id, "act", {
     version: 3,
   });
@@ -171,8 +182,18 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
     () => transitionEstimate(f.db, f.admin, row.id, "act", { version: 4 }),
     /недоступно/,
   );
-  workflowFor(f.db, ticket.id).state = "registered";
-  const revised = saveEstimate(f.db, f.admin, null, input);
+  const otherTicket = f.db.createTicket({
+    unitId: f.unit.id,
+    createdBy: f.admin.id,
+    title: "Другая работа",
+    description: "Описание",
+    category: "other",
+    priority: "low",
+  });
+  const revised = saveEstimate(f.db, f.admin, null, {
+    ...input,
+    ticketId: otherTicket.id,
+  });
   transitionEstimate(f.db, f.admin, revised.id, "submit", { version: 1 });
   const reviewer = {
     ...f.manager,
@@ -184,7 +205,12 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
   });
   assert.equal(revised.status, "rejected");
   assert.throws(
-    () => saveEstimate(f.db, reviewer, revised.id, { ...input, version: 3 }),
+    () =>
+      saveEstimate(f.db, reviewer, revised.id, {
+        ...input,
+        ticketId: otherTicket.id,
+        version: 3,
+      }),
     /Нет права/,
   );
 });

@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { nextVersionTime } from "./version-time.js";
 import { requireContext, contextCan } from "./context-access.js";
 import { businessError, requiredRecord } from "./accounting.js";
 export function changeMaintenanceTask(db, actor, id, body) {
@@ -24,7 +25,12 @@ export function changeMaintenanceTask(db, actor, id, body) {
     ["completed", "closed", "rejected", "resolved"].includes(ticket.status)
   )
     throw businessError("Задание уже завершено", 409);
-  const stamp = new Date().toISOString(),
+  if (body.toDate && Date.parse(body.toDate) === Date.parse(ticket.sla_due_at))
+    throw businessError(
+      "Новый срок совпадает с текущим. Для замечания оставьте срок пустым",
+      409,
+    );
+  const stamp = nextVersionTime(ticket.updated_at),
     fromDate = ticket.sla_due_at;
   db.data.maintenance_changes.push({
     id: crypto.randomUUID(),
@@ -58,6 +64,15 @@ export function maintenanceProgress(db, actor) {
         ? t.resolved_at
         : null,
       status: t.status,
+      capabilities: {
+        reschedule:
+          actor.role !== "tenant" &&
+          !["completed", "closed", "rejected", "resolved"].includes(t.status) &&
+          contextCan(db, actor, "maintenance.write", "tickets", t.id),
+        remark:
+          actor.role !== "tenant" &&
+          contextCan(db, actor, "tickets.write", "tickets", t.id),
+      },
       updatedAt: t.updated_at,
       overdue: !t.resolved_at && t.sla_due_at < new Date().toISOString(),
       changes: db.data.maintenance_changes.filter((c) => c.ticketId === t.id),
