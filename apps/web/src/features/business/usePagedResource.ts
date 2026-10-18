@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { apiRequest } from "../../api/client";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
 import type { Page } from "../../../../../packages/contracts/src/registry";
 import { initialPageSize } from "./register-preferences";
-
 export function usePagedResource<T>(
   token: string,
   path: string,
@@ -10,60 +9,34 @@ export function usePagedResource<T>(
 ) {
   const [query, setQuery] = useState(""),
     [offset, setOffset] = useState(0),
-    [limit, setLimit] = useState(() => initialPageSize(title)),
-    [revision, setRevision] = useState(0);
-  const [response, setResponse] = useState<{
-      key: string;
-      page: Page<T>;
-    } | null>(null),
-    [failure, setFailure] = useState<{ key: string; message: string } | null>(
-      null,
-    );
-  const key = JSON.stringify([token, path, query, offset, limit, revision]);
+    [limit, setLimit] = useState(() => initialPageSize(title));
+  const url =
+    path +
+    (path.includes("?") ? "&" : "?") +
+    new URLSearchParams({
+      q: query,
+      offset: String(offset),
+      limit: String(limit),
+    });
+  const resource = useLiveQuery<Page<T> | null>(token, url, null, {
+    delay: 200,
+  });
+  const page = resource.data;
   useEffect(() => {
-    const abort = new AbortController();
-    const timer = setTimeout(() => {
-      const url =
-        path +
-        (path.includes("?") ? "&" : "?") +
-        new URLSearchParams({
-          q: query,
-          offset: String(offset),
-          limit: String(limit),
-        });
-      void apiRequest<Page<T>>(url, { token, signal: abort.signal })
-        .then((page) => {
-          if (abort.signal.aborted) return;
-          if (offset && offset >= page.total) {
-            setOffset(
-              page.total ? Math.floor((page.total - 1) / limit) * limit : 0,
-            );
-            return;
-          }
-          setResponse({ key, page });
-        })
-        .catch((error: Error) => {
-          if (!abort.signal.aborted)
-            setFailure({ key, message: error.message });
-        });
-    }, 200);
-    return () => {
-      clearTimeout(timer);
-      abort.abort();
-    };
-  }, [key, token, path, query, offset, limit]);
-  // A changed filter cannot display or select rows from an older response.
-  const page = response?.key === key ? response.page : null;
-  const error = failure?.key === key && !page ? failure.message : "";
+    if (page && offset && offset >= page.total)
+      setOffset(page.total ? Math.floor((page.total - 1) / limit) * limit : 0);
+  }, [page, offset, limit]);
   return {
     items: page?.items ?? [],
     total: page?.total ?? 0,
     query,
     offset,
     limit,
-    loading: !page && !error,
-    error,
-    reload: () => setRevision((v) => v + 1),
+    loading: resource.loading,
+    error: resource.error,
+    reload: () => {
+      void resource.load().catch(() => {});
+    },
     setQuery: (value: string) => {
       setQuery(value);
       setOffset(0);
@@ -75,7 +48,7 @@ export function usePagedResource<T>(
     setOffset,
     reset: () => {
       setOffset(0);
-      setRevision((v) => v + 1);
+      void resource.load().catch(() => {});
     },
   };
 }

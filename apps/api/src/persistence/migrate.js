@@ -14,6 +14,7 @@ const migrations = [
   "007-existing-business-records.sql",
   "008-work-estimate-binding.sql",
   "009-exchange-page-indexes.sql",
+  "010-realtime-state.sql",
 ];
 
 async function sources() {

@@ -1,5 +1,5 @@
 import { startTransition } from "react";
-import { apiRequest } from "../../api/client";
+import { useQueryClient } from "../../realtime/RealtimeContext";
 import { TOKEN_KEY } from "../../shared/navigation";
 import {
   type BillingInvoice,
@@ -32,6 +32,9 @@ export function useDataActions(
     | "setSelectedBillingInvoiceId"
   >,
 ) {
+  const client = useQueryClient();
+  const apiRequest = <T>(path: string, options: { token: string }) =>
+    client.request<T>(options.token, path, true);
   const {
     setOverview,
     setTickets,

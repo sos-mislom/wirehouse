@@ -37,6 +37,6 @@ npm run test:browser           # изолированные данные; без
 - `packages/contracts/src` — строгие схемы запросов и общие DTO ответов.
 - `tests` — автоматические проверки; `infra/deploy` — актуальное развёртывание и резервные копии.
 
-[Архитектура](docs/ARCHITECTURE.md) · [Контракты API](docs/API.md) · [UI kit](docs/UI_KIT.md) · [Развёртывание](docs/DEPLOYMENT.md) · [Боты](docs/BOTS.md)
+[Живые обновления](docs/REALTIME.md) · [Архитектура](docs/ARCHITECTURE.md) · [Контракты API](docs/API.md) · [UI kit](docs/UI_KIT.md) · [Развёртывание](docs/DEPLOYMENT.md) · [Боты](docs/BOTS.md)
 
 Личные ключи, локальные инструменты ассистента, снимки экрана, черновики аудита и устаревшие прототипы исключены из Git. Рабочие тесты, инструкции и скрипты сборки/развёртывания входят в репозиторий.

@@ -17,7 +17,9 @@ class PageErrorBoundary extends Component<
         <div role="alert">
           <h2>Не удалось открыть страницу</h2>
           <p>Обновите приложение. Сохранённые данные останутся на месте.</p>
-          <Button onClick={() => location.reload()}>Обновить страницу</Button>
+          <Button onClick={() => location.reload()}>
+            Перезапустить приложение
+          </Button>
         </div>
       </main>
     ) : (

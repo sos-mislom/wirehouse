@@ -1,38 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { apiRequest, runtimeApiBase } from "../../api/client";
-import { Button } from "../../ui";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
 export function useResource<T>(token: string, path: string, initial: T) {
   const mutationPending = useRef(false);
-  const [data, setData] = useState<T>(initial),
-    [error, setError] = useState(""),
+  const query = useLiveQuery(token, path, initial);
+  const { data, loading, load } = query;
+  const [failure, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false),
-    [loading, setLoading] = useState(true);
-  const load = useCallback(async () => {
-    const value = await apiRequest<T>(path, { token });
-    setData(value);
-    return value;
-  }, [token, path]);
-  useEffect(() => {
-    const abort = new AbortController();
-    setLoading(true);
-    setError("");
-    apiRequest<T>(path, { token, signal: abort.signal })
-      .then(setData)
-      .catch((e) => {
-        if (!abort.signal.aborted) setError(e.message);
-      })
-      .finally(() => {
-        if (!abort.signal.aborted) setLoading(false);
-      });
-    return () => abort.abort();
-  }, [token, path]);
+    [busy, setBusy] = useState(false);
+  const error = failure || query.error;
   const run = async (fn: () => Promise<unknown>, message = "Сохранено") => {
     if (mutationPending.current) return false;
     mutationPending.current = true;
@@ -52,45 +28,23 @@ export function useResource<T>(token: string, path: string, initial: T) {
       setBusy(false);
     }
   };
-  const reload = async () => {
-    setLoading(true);
-    setError("");
-    setNotice("");
-    try {
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  return { data, load, reload, error, setError, notice, busy, loading, run };
+  return { data, load, error, setError, notice, busy, loading, run };
 }
+
 export function Feedback({
   error,
   notice,
   loading,
-  reload,
 }: {
   error?: string;
   notice?: string;
   loading?: boolean;
-  reload?: () => void | Promise<void>;
 }) {
   return (
     <>
       {error && (
         <p className="notice notice--error" role="alert">
           {error}
-          {reload && (
-            <Button
-              variant="text"
-              disabled={loading}
-              onClick={() => void reload()}
-            >
-              Обновить данные
-            </Button>
-          )}
         </p>
       )}
       {notice && (

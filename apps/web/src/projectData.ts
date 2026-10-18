@@ -53,7 +53,6 @@ export const copy = {
     },
     topbar: {
       logout: "Выйти",
-      refresh: "Обновить",
     },
     nav: {
       overview: "Обзор",
@@ -265,7 +264,6 @@ export const copy = {
     },
     topbar: {
       logout: "Log out",
-      refresh: "Refresh",
     },
     nav: {
       overview: "Overview",

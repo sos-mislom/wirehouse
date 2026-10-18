@@ -59,10 +59,11 @@ export function normalizedData(data) {
     throw new Error(`Unknown collections: ${unknown.join(", ")}`);
   return normalized;
 }
-export async function flushRows(client, before, after) {
+export async function flushRows(client, before, after, { onTableChange } = {}) {
   assertBusinessReferences(after);
   let written = 0;
   for (const [name, table] of Object.entries(tables)) {
+    const writtenBefore = written;
     const oldRows = new Map(
       before[name].map((row) => [rowKey(table, row), row]),
     );
@@ -104,6 +105,7 @@ export async function flushRows(client, before, after) {
       );
       written += chunk.length;
     }
+    if (written !== writtenBefore) onTableChange?.(name);
   }
   return written;
 }

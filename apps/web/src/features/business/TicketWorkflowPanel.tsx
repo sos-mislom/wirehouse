@@ -78,6 +78,7 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       `/api/documents?entityType=tickets&entityId=${ticketId}`,
       { items: [] },
     );
+  const [termsRevision, setTermsRevision] = useState(0);
   const [reasonAction, setReasonAction] = useState(""),
     w = resource.data.item;
   const execute = (action: string, reason = "") =>
@@ -90,8 +91,8 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       setReasonAction("");
       await refreshWorkspace();
     }, actions[action]);
-  const terms = (body: TicketTermsInput) =>
-    void resource.run(async () => {
+  const terms = async (body: TicketTermsInput) => {
+    const saved = await resource.run(async () => {
       await apiRequest(`/api/tickets/${ticketId}/workflow/terms`, {
         token,
         method: "POST",
@@ -99,6 +100,8 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       });
       await refreshWorkspace();
     }, "Условия сохранены. Предыдущее согласование больше не действует.");
+    if (saved) setTermsRevision((v) => v + 1);
+  };
   const upload = (file: File, phase: string) =>
     void resource.run(async () => {
       await uploadDocument(
@@ -286,7 +289,7 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
             ].includes(w.state) && (
               <Disclosure title="Условия работы">
                 <TicketWorkTerms
-                  key={w.updatedAt}
+                  key={`${ticketId}:${termsRevision}`}
                   workflow={w}
                   leaseId={ticket?.leaseId}
                   accounts={accounts.data}

@@ -13,6 +13,7 @@
     "@warehouse/contracts": "0.1.0",
     "dxf-parser": "1.1.2",
     "exceljs": "4.4.0",
-    "pg": "8.23.0"
+    "pg": "8.23.0",
+    "ws": "8.22.0"
   }
 }

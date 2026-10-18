@@ -137,6 +137,21 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   });
+  await page.addInitScript(() => {
+    const NativeWebSocket = window.WebSocket;
+    window.__realtimeSockets = [];
+    window.WebSocket = class extends NativeWebSocket {
+      constructor(...args) {
+        super(...args);
+        if (String(args[0]).includes("/api/realtime")) {
+          window.__realtimeSockets.push(this);
+          this.addEventListener("message", (event) => {
+            if (JSON.parse(event.data).type === "ready") this.__ready = true;
+          });
+        }
+      }
+    };
+  });
   async function navigateManager(label) {
     const menu = page.getByRole("button", { name: "Меню", exact: true });
     if (await menu.isVisible()) await menu.click();
@@ -645,7 +660,6 @@ try {
     },
   );
   assert.equal(accepted.status(), 200);
-  await page.getByRole("button", { name: "Обновить", exact: true }).click();
   await page
     .getByRole("button", { name: "Выпустить акт", exact: true })
     .click();
@@ -1034,9 +1048,6 @@ try {
       .getByRole("alert")
       .filter({ hasText: "Проверка повторной загрузки" })
       .waitFor();
-    await page
-      .getByRole("button", { name: "Обновить данные", exact: true })
-      .click();
     await journal.getByText("journal-inbox-002", { exact: true }).waitFor();
   } finally {
     await page.unroute("**/api/accounting/exchange?**", failSearch);
@@ -1510,6 +1521,30 @@ try {
   await paidToggle.uncheck();
   await paidToggle.check();
   await amountField.fill("100");
+  const liveComment = "Автоматическое сообщение без обновления страницы";
+  const liveCommentResponse = await page.request.post(
+    `http://127.0.0.1:3001/api/tickets/${proofTicket.id}/comments`,
+    {
+      headers: authorization,
+      data: { content: liveComment },
+    },
+  );
+  assert.equal(
+    liveCommentResponse.status(),
+    201,
+    await liveCommentResponse.text(),
+  );
+  await page
+    .locator(".comment-card")
+    .getByText(liveComment, { exact: true })
+    .waitFor();
+  assert.equal(
+    await amountField.inputValue(),
+    "100",
+    "Background data cannot reset a work draft",
+  );
+  assert.equal(await paidToggle.isChecked(), true);
+
   assert.equal(
     await termsPanel
       .getByRole("combobox", { name: "Лицевой счет", exact: true })
@@ -1663,6 +1698,67 @@ try {
   await proofPanel
     .getByRole("button", { name: "Результат работ.jpg", exact: true })
     .waitFor();
+  // Drop one notification, then reconnect without reloading the document.
+  const reconnectDraft = "Черновик сохраняется при восстановлении соединения";
+  const commentDraft = page.locator('.comment-form textarea[name="content"]');
+  await commentDraft.fill(reconnectDraft);
+  await page.waitForFunction(() =>
+    window.__realtimeSockets.some((ws) => ws.readyState === WebSocket.OPEN),
+  );
+  await page.evaluate(() => {
+    window.__realtimeSockets
+      .filter((ws) => ws.readyState === WebSocket.OPEN)
+      .forEach((ws) => {
+        ws.onmessage = null;
+      });
+  });
+  const missedComment = "Пропущенное событие восстановлено после подключения";
+  const missedResponse = await page.request.post(
+    `http://127.0.0.1:3001/api/tickets/${proofTicket.id}/comments`,
+    {
+      headers: authorization,
+      data: { content: missedComment },
+    },
+  );
+  assert.equal(missedResponse.status(), 201, await missedResponse.text());
+  await page.waitForTimeout(600);
+  const socketsBeforeReconnect = await page.evaluate(
+    () => window.__realtimeSockets.length,
+  );
+  await page.evaluate(() =>
+    window.__realtimeSockets
+      .filter((ws) => ws.readyState === WebSocket.OPEN)
+      .forEach((ws) => ws.close(4000, "Test reconnect")),
+  );
+  await page.waitForFunction(
+    (count) =>
+      window.__realtimeSockets.length > count &&
+      window.__realtimeSockets.some(
+        (ws) => ws.readyState === WebSocket.OPEN && ws.__ready,
+      ),
+    socketsBeforeReconnect,
+  );
+  await page
+    .locator(".comment-card")
+    .getByText(missedComment, { exact: true })
+    .waitFor();
+  assert.equal(await commentDraft.inputValue(), reconnectDraft);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        window.__realtimeSockets.filter(
+          (ws) => ws.readyState === WebSocket.OPEN,
+        ).length,
+    ),
+    1,
+    "One socket per workspace",
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: /^Обновить(?: данные| журнал)?$/ })
+      .count(),
+    0,
+  );
   assert.deepEqual(errors, []);
   console.log(
     "Browser checks passed: navigation, DXF editing and persistence, catalogs, estimate approval and printed act, PPR, kanban, users, mobile, tenant login.",

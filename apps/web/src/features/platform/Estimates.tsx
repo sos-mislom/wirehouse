@@ -27,7 +27,7 @@ const blankLine = (): EstimateInput["lines"][number] => ({
   vatRate: "0",
 });
 export function Estimates(props: Props & { services: Row[] }) {
-  const { data, error, busy, mutate, refresh } = usePlatform(props.token);
+  const { data, error, busy, mutate } = usePlatform(props.token);
   const [draft, setDraft] = useState<(EstimateInput & { id?: string }) | null>(
     null,
   );
@@ -88,9 +88,6 @@ export function Estimates(props: Props & { services: Row[] }) {
             </option>
           ))}
         </Select>
-        <Button disabled={busy} onClick={() => void refresh()}>
-          Обновить
-        </Button>
         {write && (
           <Button
             variant="primary"

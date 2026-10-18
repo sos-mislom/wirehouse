@@ -20,6 +20,7 @@ export function TicketWorkTerms({
   busy: boolean;
   onSave: (body: TicketTermsInput) => void;
 }) {
+  const [baseline] = useState(w);
   const [paid, setPaid] = useState(w.paid),
     [amount, setAmount] = useState(String(w.amount ?? 0));
   const today = new Date().toISOString().slice(0, 10),
@@ -38,7 +39,7 @@ export function TicketWorkTerms({
         e.preventDefault();
         const values = new FormData(e.currentTarget);
         onSave({
-          updatedAt: w.updatedAt,
+          updatedAt: baseline.updatedAt,
           paid,
           amount: paid ? Number(amount) : 0,
           accountId: String(values.get("accountId") || "") || null,

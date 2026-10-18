@@ -86,10 +86,6 @@ export function Register<T extends { id: string }>({
       /* View preferences never block business operations. */
     }
   }, [title, density, hidden, pageSize, pagination?.limit]);
-  const rowIds = rows.map((row) => row.id).join(",");
-  useEffect(() => {
-    if (!pagination) setPage(1);
-  }, [rowIds, Boolean(pagination)]);
   const visible = pagination
       ? rows
       : rows.filter((r) =>

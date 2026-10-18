@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
+import { useRef, useState } from "react";
 import { apiRequest } from "../../api/client";
 import type {
   CatalogItem,
@@ -14,7 +15,7 @@ export type PlatformData = {
   acts: ServiceAct[];
 };
 export function usePlatform(token: string) {
-  const [data, setData] = useState<PlatformData>({
+  const resource = useLiveQuery<PlatformData>(token, "/api/maintenance", {
     templates: [],
     materials: [],
     contractors: [],
@@ -22,28 +23,14 @@ export function usePlatform(token: string) {
     estimateTicketIds: [],
     acts: [],
   });
-  const [error, setError] = useState("");
+  const { data, load: reload } = resource;
+  const [failure, setError] = useState("");
+  const error = failure || resource.error;
   const [busy, setBusy] = useState(false);
-  const reload = useCallback(
-    async () =>
-      setData(await apiRequest<PlatformData>("/api/maintenance", { token })),
-    [token],
-  );
-  useEffect(() => {
-    let active = true;
-    apiRequest<PlatformData>("/api/maintenance", { token })
-      .then((d) => {
-        if (active) setData(d);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  const pending = useRef(false);
   const mutate = async (path: string, body: unknown, method = "POST") => {
-    if (busy) return false;
+    if (pending.current) return false;
+    pending.current = true;
     setBusy(true);
     setError("");
     try {
@@ -54,16 +41,9 @@ export function usePlatform(token: string) {
       setError(e instanceof Error ? e.message : "Не удалось сохранить");
       return false;
     } finally {
+      pending.current = false;
       setBusy(false);
     }
   };
-  const refresh = async () => {
-    setError("");
-    try {
-      await reload();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось обновить данные");
-    }
-  };
-  return { data, error, setError, busy, mutate, reload, refresh };
+  return { data, error, setError, busy, mutate, reload };
 }

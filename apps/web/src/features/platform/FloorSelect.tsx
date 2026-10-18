@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import { Select } from "../../ui";
-import { apiRequest } from "../../api/client";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
 import type { Structure } from "../../../../../packages/contracts/src/operations-platform";
 export function FloorSelect({
   token,
@@ -18,25 +17,11 @@ export function FloorSelect({
     entrance: string;
   }) => void;
 }) {
-  const [data, setData] = useState<Structure>({
-      buildings: [],
-      entrances: [],
-      floors: [],
-    }),
-    [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    apiRequest<Structure>("/api/structure", { token })
-      .then((d) => {
-        if (active) setData(d);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  const { data, error } = useLiveQuery<Structure>(token, "/api/structure", {
+    buildings: [],
+    entrances: [],
+    floors: [],
+  });
   const floors = data.floors.filter((f) => f.propertyId === propertyId);
   return (
     <label>

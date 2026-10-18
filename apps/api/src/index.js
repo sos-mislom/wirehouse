@@ -1,3 +1,4 @@
+import { attachRealtime } from "./realtime/server.js";
 import { createBusinessWorkflowRoutes } from "./routes/business-workflows.js";
 import { createDocumentsRegistryRoutes } from "./routes/documents-registry.js";
 import { retryExchange } from "./domain/exchange-worker.js";
@@ -605,6 +606,15 @@ const server = http.createServer(async (request, response) => {
       await routes[0](request, response, url);
       return;
     }
+    if (pathname === "/api/realtime/state" && method === "GET") {
+      const token = String(request.headers.authorization ?? "").replace(
+        /^Bearer /,
+        "",
+      );
+      response.setHeader("Cache-Control", "no-store");
+      ok(response, await realtime.state(token));
+      return;
+    }
     await preloadBody(request);
     const pending = bufferedResponse(response);
     await db.requestScope(
@@ -660,6 +670,12 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
+const realtime = attachRealtime(server, {
+  db,
+  databaseUrl: config.databaseUrl,
+  jwtSecret: config.jwtSecret,
+});
+
 let maintenanceRunning;
 const performMaintenance = () => {
   if (maintenanceRunning) return maintenanceRunning;
@@ -688,8 +704,9 @@ server.listen(config.port, config.host, () => {
   );
 });
 for (const signal of ["SIGTERM", "SIGINT"])
-  process.once(signal, () => {
+  process.once(signal, async () => {
     clearInterval(maintenanceTimer);
+    await realtime.close();
     server.close(async () => {
       await maintenanceRunning;
       await db.close();

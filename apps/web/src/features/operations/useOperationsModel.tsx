@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
+import { useState, type FormEvent } from "react";
 import { operationFormDto } from "../../api/operation-form";
 import {
   hasPermission,
@@ -25,29 +26,21 @@ export function useOperationsModel({
   onCreateUser,
 }: Props) {
   const [tab, setTab] = useState(initialTab);
-  const [data, setData] = useState<OperationsData>(emptyData);
+  const resource = useLiveQuery<OperationsData>(
+    token,
+    "/api/operations",
+    emptyData,
+  );
+  const data = resource.data;
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
-  const [error, setError] = useState("");
+  const [failure, setError] = useState("");
+  const error = failure || resource.error;
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [property, setProperty] = useState("");
   const [query, setQuery] = useState("");
   const [readingMeter, setReadingMeter] = useState("");
-  const load = async () =>
-    setData(await request<OperationsData>("/api/operations", token));
-  useEffect(() => {
-    let active = true;
-    request<OperationsData>("/api/operations", token)
-      .then((value) => {
-        if (active) setData(value);
-      })
-      .catch((error) => {
-        if (active) setError(error.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  const load = resource.load;
   const change = (key: string, value: unknown) =>
     setDraft((current) => ({
       ...current,
@@ -237,7 +230,6 @@ export function useOperationsModel({
     tab,
     setTab,
     data,
-    setData,
     draft,
     setDraft,
     error,

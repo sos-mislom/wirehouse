@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useLiveQuery } from "./realtime/RealtimeContext";
+import { useState, type FormEvent } from "react";
 import type {
   AgendaDto,
   AgendaItemDto,
@@ -58,33 +59,19 @@ export function Agenda({
   const [days, setDays] = useState("30");
   const [property, setProperty] = useState("");
   const [kind, setKind] = useState<AgendaKind | "all">("all");
-  const [data, setData] = useState<AgendaDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [reload, setReload] = useState(0);
+  const [failure, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const query = new URLSearchParams({
     days,
     ...(property ? { propertyId: property } : {}),
   }).toString();
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError("");
-    setData(null);
-    apiRequest<AgendaDto>(`/api/agenda?${query}`, {
-      token,
-      signal: controller.signal,
-    })
-      .then(setData)
-      .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [token, query, reload]);
+  const resource = useLiveQuery<AgendaDto | null>(
+    token,
+    `/api/agenda?${query}`,
+    null,
+  );
+  const { data, loading } = resource;
+  const error = failure || resource.error;
   async function download() {
     setExporting(true);
     setError("");
@@ -188,14 +175,7 @@ export function Agenda({
         Просроченные обязательства включены. Файл календаря — снимок сроков без
         автоматической синхронизации.
       </p>
-      {error && (
-        <Alert>
-          {error}{" "}
-          <Button variant="text" onClick={() => setReload((n) => n + 1)}>
-            Повторить
-          </Button>
-        </Alert>
-      )}
+      {error && <Alert>{error} </Alert>}
       {loading && <p role="status">Загрузка сроков…</p>}
       {!loading && data && !rows.length && (
         <Card>
@@ -262,20 +242,9 @@ export function Agenda({
                     token={token}
                     leaseId={item.entityId}
                     value={item.renewal}
-                    onSaved={(value) =>
-                      setData((current) =>
-                        current
-                          ? {
-                              ...current,
-                              items: current.items.map((row) =>
-                                row.id === item.id
-                                  ? { ...row, renewal: value }
-                                  : row,
-                              ),
-                            }
-                          : current,
-                      )
-                    }
+                    onSaved={() => {
+                      void resource.load().catch(() => {});
+                    }}
                   />
                 )}
               </Card>

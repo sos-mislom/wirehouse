@@ -1,3 +1,4 @@
+import { useLiveQuery } from "../../../realtime/RealtimeContext";
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../../api/client";
 import type {
@@ -21,8 +22,13 @@ export type PlanEditorProps = {
 };
 export function usePlanEditor(props: PlanEditorProps) {
   const [imageHeight, setImageHeight] = useState(700);
-  const [plans, setPlans] = useState<FloorPlan[]>([]),
-    [draft, setDraft] = useState<FloorPlan | null>(null);
+  const resource = useLiveQuery<{ floorplans: FloorPlan[] }>(
+    props.token,
+    "/api/operations",
+    { floorplans: [] },
+  );
+  const plans = resource.data.floorplans;
+  const [draft, setDraft] = useState<FloorPlan | null>(null);
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -68,23 +74,15 @@ export function usePlanEditor(props: PlanEditorProps) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
   useEffect(() => {
-    let active = true;
-    apiRequest<{ floorplans: FloorPlan[] }>("/api/operations", {
-      token: props.token,
-    })
-      .then((d) => {
-        if (!active) return;
-        setPlans(d.floorplans);
-        setDraft(null);
-        setDirty(false);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
+    setDraft(null);
+    setDirty(false);
   }, [props.token, props.propertyId]);
+  useEffect(() => {
+    if (dirty || !draft?.id) return;
+    const fresh = plans.find((p) => p.id === draft.id);
+    if (fresh && fresh.version !== draft.version)
+      setDraft(structuredClone(fresh));
+  }, [plans, dirty, draft?.id, draft?.version]);
   const update = (patch: Partial<FloorPlan>) => {
     setDraft((d) => (d ? { ...d, ...patch } : d));
     setDirty(true);
@@ -149,10 +147,7 @@ export function usePlanEditor(props: PlanEditorProps) {
         `/api/operations/floorplans${id ? "/" + id : ""}`,
         { token: props.token, method: id ? "PUT" : "POST", body },
       );
-      setPlans((p) => [
-        ...p.filter((v) => v.id !== result.item.id),
-        result.item,
-      ]);
+      await resource.load();
       open(result.item);
       setNotice("План сохранён");
     } catch (e) {
@@ -220,7 +215,7 @@ export function usePlanEditor(props: PlanEditorProps) {
     plans,
     draft,
     setDraft,
-    error,
+    error: error || resource.error,
     notice,
     busy,
     dirty,

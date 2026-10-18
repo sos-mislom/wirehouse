@@ -1,3 +1,4 @@
+import { resourcesForChanges } from "../realtime/topics.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { WarehouseDatabase } from "../database.js";
 import { createPool, WRITE_LOCK } from "./pool.js";
@@ -28,6 +29,20 @@ export async function openDatabase({ databaseUrl }) {
     },
     async close() {
       await pool.end();
+    },
+    async realtimeState() {
+      const { rows } = await pool.query(
+        "SELECT epoch::text, revision::text FROM warehouse.realtime_state WHERE id",
+      );
+      if (!rows[0]) throw new Error("Realtime checkpoint is missing");
+      return rows[0];
+    },
+    async realtimeIdentity(id) {
+      const { rows } = await pool.query(
+        "SELECT id, role, is_active, permissions FROM warehouse.users WHERE id=$1",
+        [id],
+      );
+      return rows[0] ? decodeRow("users", rows[0]) : null;
     },
     afterCommit(fn) {
       const scope = context.getStore();
@@ -117,7 +132,24 @@ export async function openDatabase({ databaseUrl }) {
             );
         } else {
           appendAudit(before, domain.data, audit);
-          await flushRows(client, before, domain.data);
+          const changed = [];
+          await flushRows(client, before, domain.data, {
+            onTableChange: (name) => changed.push(name),
+          });
+          const resources = resourcesForChanges(changed);
+          if (resources.length) {
+            const { rows } = await client.query(
+              "UPDATE warehouse.realtime_state SET revision=revision+1 WHERE id RETURNING epoch::text, revision::text",
+            );
+            if (!rows[0]) throw new Error("Realtime checkpoint is missing");
+            await client.query("SELECT pg_notify('wirehouse_changes', $1)", [
+              JSON.stringify({
+                type: "invalidate",
+                cursor: rows[0],
+                resources,
+              }),
+            ]);
+          }
         }
         await client.query("COMMIT");
       } catch (error) {

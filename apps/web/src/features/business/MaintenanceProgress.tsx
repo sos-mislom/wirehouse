@@ -43,6 +43,7 @@ export function MaintenanceProgress() {
       summary: { planned: 0, completed: 0, overdue: 0, rescheduled: 0 },
     }),
     [selected, setSelected] = useState("");
+  const [formRevision, setFormRevision] = useState(0);
   const item = resource.data.items.find((i) => i.ticketId === selected);
   return (
     <Disclosure title="Исполнение ППР: план, факт и переносы">
@@ -118,50 +119,21 @@ export function MaintenanceProgress() {
             </div>
           </div>
           {(item.capabilities.reschedule || item.capabilities.remark) && (
-            <form
-              className="form-grid"
-              key={item.updatedAt}
-              onSubmit={(e) => {
-                e.preventDefault();
-                const v = new FormData(e.currentTarget);
-                void resource.run(async () => {
+            <MaintenanceChangeForm
+              key={`${item.ticketId}:${formRevision}`}
+              item={item}
+              busy={resource.busy}
+              onSave={async (body) => {
+                const saved = await resource.run(async () => {
                   await apiRequest(
                     `/api/maintenance/tickets/${item.ticketId}/change`,
-                    {
-                      token,
-                      method: "POST",
-                      body: {
-                        updatedAt: item.updatedAt,
-                        toDate: v.get("toDate")
-                          ? new Date(String(v.get("toDate"))).toISOString()
-                          : null,
-                        reason: v.get("reason"),
-                        remark: v.get("remark"),
-                      },
-                    },
+                    { token, method: "POST", body },
                   );
                   await refreshWorkspace();
                 }, "Изменение задания сохранено");
+                if (saved) setFormRevision((v) => v + 1);
               }}
-            >
-              {item.capabilities.reschedule && (
-                <label>
-                  Новый срок, если нужен перенос
-                  <Input name="toDate" type="datetime-local" />
-                </label>
-              )}
-              <label>
-                Причина
-                <Input name="reason" required maxLength={10000} />
-              </label>
-              <label>
-                Техническое замечание
-                <Textarea name="remark" maxLength={10000} />
-              </label>
-              <Button variant="primary" type="submit" busy={resource.busy}>
-                Сохранить изменение
-              </Button>
-            </form>
+            />
           )}
           <ol className="record-timeline">
             {item.changes.map((c) => (
@@ -176,5 +148,57 @@ export function MaintenanceProgress() {
         </section>
       )}
     </Disclosure>
+  );
+}
+
+function MaintenanceChangeForm({
+  item,
+  busy,
+  onSave,
+}: {
+  item: Item;
+  busy: boolean;
+  onSave: (body: {
+    updatedAt: string;
+    toDate: string | null;
+    reason: FormDataEntryValue | null;
+    remark: FormDataEntryValue | null;
+  }) => Promise<void>;
+}) {
+  const [baseline] = useState(item.updatedAt);
+  return (
+    <form
+      className="form-grid"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const v = new FormData(e.currentTarget);
+        void onSave({
+          updatedAt: baseline,
+          toDate: v.get("toDate")
+            ? new Date(String(v.get("toDate"))).toISOString()
+            : null,
+          reason: v.get("reason"),
+          remark: v.get("remark"),
+        });
+      }}
+    >
+      {item.capabilities.reschedule && (
+        <label>
+          Новый срок, если нужен перенос
+          <Input name="toDate" type="datetime-local" />
+        </label>
+      )}
+      <label>
+        Причина
+        <Input name="reason" required maxLength={10000} />
+      </label>
+      <label>
+        Техническое замечание
+        <Textarea name="remark" maxLength={10000} />
+      </label>
+      <Button variant="primary" type="submit" busy={busy}>
+        Сохранить изменение
+      </Button>
+    </form>
   );
 }

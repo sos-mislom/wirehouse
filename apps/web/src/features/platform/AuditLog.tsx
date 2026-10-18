@@ -51,7 +51,7 @@ export function AuditLog({ token }: { token: string }) {
   );
   return (
     <div className="business-stack">
-      <Feedback error={resource.error} reload={resource.reload} />
+      <Feedback error={resource.error} />
       <Register
         title="Аудит изменений"
         rows={resource.items}
@@ -62,11 +62,7 @@ export function AuditLog({ token }: { token: string }) {
           rowId: selected,
           render: (r) => <AuditEventDetails event={r} onClose={closeDetails} />,
         }}
-        action={
-          <Button disabled={resource.loading} onClick={resource.reload}>
-            Обновить журнал
-          </Button>
-        }
+
         columns={[
           {
             key: "time",

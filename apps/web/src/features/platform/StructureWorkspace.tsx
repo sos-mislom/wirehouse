@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useLiveQuery } from "../../realtime/RealtimeContext";
+import { useState } from "react";
 import { apiRequest } from "../../api/client";
 import { Button, Input, Select } from "../../ui";
 import type {
@@ -22,34 +23,19 @@ type Props = {
 };
 type Node = Partial<Building & Entrance & Floor>;
 export function StructureWorkspace(props: Props) {
-  const [data, setData] = useState<Structure>({
+  const resource = useLiveQuery<Structure>(props.token, "/api/structure", {
     buildings: [],
     entrances: [],
     floors: [],
   });
   const [mode, setMode] = useState("tree"),
-    [error, setError] = useState(""),
+    [failure, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<keyof Structure>("buildings"),
     [draft, setDraft] = useState<Node | null>(null);
   const [property, setProperty] = useState(props.properties[0]?.id ?? "");
-  const reload = async () =>
-    setData(
-      await apiRequest<Structure>("/api/structure", { token: props.token }),
-    );
-  useEffect(() => {
-    let active = true;
-    apiRequest<Structure>("/api/structure", { token: props.token })
-      .then((d) => {
-        if (active) setData(d);
-      })
-      .catch((e) => {
-        if (active) setError(e.message);
-      });
-    return () => {
-      active = false;
-    };
-  }, [props.token]);
+  const { data, load: reload } = resource;
+  const error = failure || resource.error;
   const change = (key: string, value: string | number) =>
     setDraft((d) => ({ ...d, [key]: value }));
   const save = async (e: React.FormEvent) => {

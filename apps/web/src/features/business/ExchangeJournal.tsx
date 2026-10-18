@@ -54,11 +54,7 @@ export function ExchangeJournal({
   }
   return (
     <div className="business-stack">
-      <Feedback
-        error={error || resource.error}
-        notice={notice}
-        reload={resource.reload}
-      />
+      <Feedback error={error || resource.error} notice={notice} />
       <Register
         title="Сообщения"
         rows={resource.items.map((row) => ({
@@ -67,11 +63,7 @@ export function ExchangeJournal({
           id: row.direction + ":" + row.id,
         }))}
         pagination={resource}
-        action={
-          <Button disabled={resource.loading} onClick={resource.reload}>
-            Обновить журнал
-          </Button>
-        }
+
         filters={
           <>
             <label>
