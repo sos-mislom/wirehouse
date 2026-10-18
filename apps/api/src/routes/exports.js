@@ -19,7 +19,12 @@ export function createExportsRoutes({
 
       const scoped = buildScopedCollections(user);
       const scopedTickets = getScopedTickets(user);
-      const file = await buildExportFile(exportMatch[1], scoped, scopedTickets);
+      const file = await buildExportFile(
+        user,
+        exportMatch[1],
+        scoped,
+        scopedTickets,
+      );
       if (!file) {
         notFound(response);
         return true;
@@ -48,6 +53,7 @@ export function createExportsRoutes({
       const scoped = buildScopedCollections(user);
       const scopedTickets = getScopedTickets(user);
       const file = await buildUnitExportFile(
+        user,
         unitExportMatch[1],
         scoped,
         scopedTickets,

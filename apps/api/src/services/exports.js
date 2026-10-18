@@ -1,4 +1,6 @@
 import { isOpenTicket } from "../../../../packages/contracts/src/domain.js";
+import { canReadInvoice } from "../domain/financial-access.js";
+import { canReadDocument } from "../domain/documents.js";
 export function createExportsService({
   activeLeaseStages,
   sumBy,
@@ -14,7 +16,7 @@ export function createExportsService({
   sanitizeFilename,
   buildBillingReconciliation,
 }) {
-  const buildExportFile = async (exportId, scoped, scopedTickets) => {
+  const buildExportFile = async (user, exportId, scoped, scopedTickets) => {
     const totals = {
       properties: scoped.properties.length,
       units: scoped.units.length,
@@ -173,7 +175,7 @@ export function createExportsService({
     }
 
     if (exportId === "cashflow") {
-      const finance = buildFinanceSummary(scoped, scopedTickets);
+      const finance = buildFinanceSummary(user, scoped);
       return excelFile("cashflow-forecast.xls", [
         {
           name: "Сводная",
@@ -218,6 +220,7 @@ export function createExportsService({
       const invoiceIds = new Set();
       const invoices = db
         .listBillingInvoices()
+        .filter((invoice) => canReadInvoice(db, user, invoice))
         .map(normalizeBillingInvoice)
         .filter((invoice) => {
           const allowed = leaseIds.has(invoice.leaseId);
@@ -474,7 +477,7 @@ export function createExportsService({
     ]);
   };
 
-  const buildUnitExportFile = async (unitId, scoped, scopedTickets) => {
+  const buildUnitExportFile = async (user, unitId, scoped, scopedTickets) => {
     const unit = scoped.units.find((item) => item.id === unitId);
     if (!unit) {
       return null;
@@ -491,17 +494,20 @@ export function createExportsService({
       : null;
     const tickets = scopedTickets.filter((ticket) => ticket.unitId === unit.id);
     const documents = leases.flatMap((lease) =>
-      db.listLeaseDocuments(lease.id).map((document) => ({
-        contractNumber: lease.contractNumber,
-        tenantName: lease.tenantName,
-        fileName: document.file_name,
-        category: document.document_category ?? "other",
-        mimeType: document.mime_type,
-        sizeBytes: document.size_bytes,
-        uploadedByName:
-          db.getById("users", document.uploaded_by)?.full_name ?? null,
-        createdAt: document.created_at,
-      })),
+      db
+        .listLeaseDocuments(lease.id)
+        .filter((document) => canReadDocument(db, user, document.id))
+        .map((document) => ({
+          contractNumber: lease.contractNumber,
+          tenantName: lease.tenantName,
+          fileName: document.file_name,
+          category: document.document_category ?? "other",
+          mimeType: document.mime_type,
+          sizeBytes: document.size_bytes,
+          uploadedByName:
+            db.getById("users", document.uploaded_by)?.full_name ?? null,
+          createdAt: document.created_at,
+        })),
     );
     const monthlyRent = activeLease ? unit.area * activeLease.ratePerSqm : 0;
     const openTickets = tickets.filter((ticket) => isOpenTicket(ticket.status));

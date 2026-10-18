@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Assignment } from "../../../../../packages/contracts/src/access";
 import { businessRolePermissions } from "../../../../../packages/contracts/src/access";
 import {
@@ -28,7 +28,22 @@ const scopeNames = {
   lease: "Договор",
   account: "Лицевой счет",
 };
+function scopePermissions(
+  role: keyof typeof roles,
+  scope: keyof typeof scopeNames,
+): Permission[] {
+  return businessRolePermissions[role].filter(
+    (permission) =>
+      !(
+        role === "owner" &&
+        ["property", "unit"].includes(scope) &&
+        ["finance.read", "work.approve"].includes(permission)
+      ),
+  );
+}
 export function AccessWorkspace() {
+  const formPanel = useRef<HTMLElement>(null),
+    revokePanel = useRef<HTMLFormElement>(null);
   const { session, overview, operations } = useWorkspace(),
     { token } = session;
   const resource = useResource<{ items: Assignment[] }>(
@@ -57,6 +72,18 @@ export function AccessWorkspace() {
       ...businessRolePermissions.tenant,
     ]),
     [revoke, setRevoke] = useState("");
+  useEffect(() => {
+    if (showForm) {
+      formPanel.current?.focus();
+      formPanel.current?.scrollIntoView({ block: "start" });
+    }
+  }, [showForm, edit]);
+  useEffect(() => {
+    if (revoke) {
+      revokePanel.current?.focus();
+      revokePanel.current?.scrollIntoView({ block: "start" });
+    }
+  }, [revoke]);
   const users = [
     ...people.data.items,
     ...(operations?.users ?? []).map((u) => ({
@@ -176,12 +203,14 @@ export function AccessWorkspace() {
                 <small>
                   {a.revokedAt
                     ? "Доступ отозван"
-                    : a.validTo &&
-                        a.validTo < new Date().toISOString().slice(0, 10)
-                      ? a.retainHistory
-                        ? "Только история"
-                        : "Завершен"
-                      : "Действует"}
+                    : a.validFrom > new Date().toISOString().slice(0, 10)
+                      ? "Еще не начался"
+                      : a.validTo &&
+                          a.validTo < new Date().toISOString().slice(0, 10)
+                        ? a.retainHistory
+                          ? "Только история"
+                          : "Завершен"
+                        : "Действует"}
                 </small>
               </>
             ),
@@ -205,6 +234,8 @@ export function AccessWorkspace() {
       />
       {revoke && (
         <form
+          ref={revokePanel}
+          tabIndex={-1}
           className="form-grid business-detail"
           onSubmit={(e) => {
             e.preventDefault();
@@ -232,7 +263,7 @@ export function AccessWorkspace() {
         </form>
       )}
       {showForm && (
-        <section className="business-detail">
+        <section className="business-detail" ref={formPanel} tabIndex={-1}>
           <h3>{edit ? "Изменить назначение" : "Назначить доступ"}</h3>
           <form className="form-grid" key={edit?.id ?? "new"} onSubmit={submit}>
             {edit && (
@@ -244,6 +275,7 @@ export function AccessWorkspace() {
             <label>
               Пользователь
               <Select
+                key={["owner", "tenant"].includes(role) ? "tenant" : role}
                 name="userId"
                 required
                 defaultValue={edit?.userId ?? ""}
@@ -269,16 +301,26 @@ export function AccessWorkspace() {
                 value={role}
                 onChange={(e) => {
                   const r = e.target.value as keyof typeof roles;
+                  const nextScope = r === "tenant" && !edit ? "lease" : scope;
                   setRole(r);
-                  setPermissions([...businessRolePermissions[r]]);
-                  if (r === "tenant") setScope("lease");
+                  setPermissions(scopePermissions(r, nextScope));
+                  setScope(nextScope);
                 }}
               >
-                {Object.entries(roles).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
+                {Object.entries(roles)
+                  .filter(
+                    ([key]) =>
+                      !edit ||
+                      ((["owner", "tenant"].includes(key) ? "tenant" : key) ===
+                        users.find((u) => u.id === edit.userId)?.role &&
+                        (key !== "tenant" ||
+                          ["lease", "account"].includes(edit.scopeType))),
+                  )
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
               </Select>
             </label>
             <label>
@@ -287,16 +329,13 @@ export function AccessWorkspace() {
                 disabled={Boolean(edit)}
                 value={scope}
                 onChange={(e) => {
-                  setScope(e.target.value as keyof typeof scopeNames);
-                  if (
-                    ["unit", "property"].includes(e.target.value) &&
-                    ["owner", "tenant"].includes(role)
-                  )
-                    setPermissions(
-                      permissions.filter(
-                        (p) => !["finance.read", "work.approve"].includes(p),
-                      ),
-                    );
+                  const next = e.target.value as keyof typeof scopeNames;
+                  setScope(next);
+                  setPermissions(
+                    permissions.filter((p) =>
+                      scopePermissions(role, next).includes(p),
+                    ),
+                  );
                 }}
               >
                 {Object.entries(scopeNames)
@@ -314,6 +353,7 @@ export function AccessWorkspace() {
             <label>
               Область
               <Select
+                key={scope}
                 name="scopeId"
                 disabled={Boolean(edit)}
                 required
@@ -348,7 +388,7 @@ export function AccessWorkspace() {
             </label>
             <fieldset className="permission-grid">
               <legend>Разрешения</legend>
-              {businessRolePermissions[role].map((p) => (
+              {scopePermissions(role, scope).map((p) => (
                 <label key={p}>
                   <Input
                     type="checkbox"
@@ -365,6 +405,12 @@ export function AccessWorkspace() {
                 </label>
               ))}
             </fieldset>
+            {role === "owner" && ["property", "unit"].includes(scope) && (
+              <p className="field-hint">
+                Для финансов и согласования работ создайте отдельное назначение
+                на договор или лицевой счет.
+              </p>
+            )}
             <label className="check-field">
               <Input
                 type="checkbox"

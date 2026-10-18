@@ -69,6 +69,8 @@ const child = spawn(process.execPath, ["apps/api/src/index.js"], {
     REDIS_URL: "",
     JWT_ACCESS_SECRET: secret,
     NOTIFICATION_CHANNELS: "in_app",
+    WAREHOUSE_DOCUMENTS_PATH: f.dir + "/documents",
+    WAREHOUSE_TICKET_ATTACHMENTS_PATH: f.dir + "/tickets",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -936,6 +938,19 @@ try {
     .selectOption("owner");
   await page
     .getByRole("combobox", { name: "Тип области", exact: true })
+    .selectOption("property");
+  assert.equal(
+    await page
+      .getByRole("checkbox", {
+        name: "Просмотр начислений и оплат",
+        exact: true,
+      })
+      .count(),
+    0,
+    "Property ownership does not offer account financial permissions",
+  );
+  await page
+    .getByRole("combobox", { name: "Тип области", exact: true })
     .selectOption("lease");
   await page
     .getByRole("combobox", { name: "Область", exact: true })
@@ -963,6 +978,16 @@ try {
     .filter({ hasText: "На проверке" })
     .first()
     .click();
+  await page
+    .getByRole("combobox", { name: "Решение инженера", exact: true })
+    .selectOption("false");
+  assert.equal(
+    await page
+      .getByLabel("Обоснование", { exact: true })
+      .evaluate((e) => e.required && !e.checkValidity()),
+    true,
+    "Rejecting a normal reading requires a reason before submission",
+  );
   await page
     .getByRole("combobox", { name: "Решение инженера", exact: true })
     .selectOption("true");
@@ -1051,6 +1076,68 @@ try {
       });
     }
   }
+  await page.route("**/api/accounting", async (route) => {
+    const response = await route.fetch();
+    const data = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...data,
+        accounts: Array.from({ length: 80 }, (_, i) => ({
+          ...account,
+          id: `account-${i}`,
+          number: `ЛС-ТЕСТ-${String(i).padStart(3, "0")}`,
+        })),
+      },
+    });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await navigateManager("Платежи");
+  await page
+    .getByRole("button", { name: "Лицевые счета", exact: true })
+    .click();
+  const denseRegister = page.getByRole("region", {
+    name: "Лицевые счета",
+    exact: true,
+  });
+  await denseRegister.getByText("ЛС-ТЕСТ-000", { exact: true }).waitFor();
+  assert.equal(await denseRegister.locator("tbody tr").count(), 25);
+  await denseRegister
+    .getByRole("button", { name: "Вид таблицы: Лицевые счета", exact: true })
+    .click();
+  await denseRegister
+    .getByRole("combobox", { name: "Записей на странице", exact: true })
+    .selectOption("10");
+  const pagination = denseRegister.getByRole("navigation", {
+    name: "Страницы: Лицевые счета",
+    exact: true,
+  });
+  await pagination.getByRole("button", { name: "Далее", exact: true }).click();
+  await denseRegister.getByText("ЛС-ТЕСТ-010", { exact: true }).waitFor();
+  assert.equal(await denseRegister.locator("tbody tr").count(), 10);
+  await denseRegister
+    .getByRole("textbox", { name: "Поиск: Лицевые счета", exact: true })
+    .fill("ЛС-ТЕСТ-079");
+  await denseRegister.getByText("ЛС-ТЕСТ-079", { exact: true }).waitFor();
+  assert.equal(
+    await denseRegister.locator("tbody tr").count(),
+    1,
+    "Search includes records from all pages",
+  );
+  await denseRegister
+    .getByRole("textbox", { name: "Поиск: Лицевые счета", exact: true })
+    .fill("");
+  await denseRegister.getByText("ЛС-ТЕСТ-000", { exact: true }).waitFor();
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+      `Paginated long lists fit ${width}`,
+    );
+  }
+  await page.unroute("**/api/accounting");
   assert.deepEqual(errors, []);
   console.log(
     "Browser checks passed: navigation, DXF editing and persistence, catalogs, estimate approval and printed act, PPR, kanban, users, mobile, tenant login.",

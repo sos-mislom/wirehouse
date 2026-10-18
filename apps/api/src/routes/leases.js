@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { parseJsonBody } from "../http/body.js";
+import { canReadDocument } from "../domain/documents.js";
+import { contextCan } from "../domain/context-access.js";
 export function createLeasesRoutes({
   requireAuth,
   buildScopedCollections,
@@ -111,13 +113,19 @@ export function createLeasesRoutes({
 
       if (method === "GET") {
         ok(response, {
-          items: db.listLeaseDocuments(leaseId).map(normalizeLeaseDocument),
+          items: db
+            .listLeaseDocuments(leaseId)
+            .filter((document) => canReadDocument(db, access.user, document.id))
+            .map(normalizeLeaseDocument),
         });
         return true;
       }
 
       if (method === "POST") {
-        if (!["admin", "manager"].includes(access.user.role)) {
+        if (
+          !["admin", "manager"].includes(access.user.role) ||
+          !contextCan(db, access.user, "documents.write", "leases", leaseId)
+        ) {
           forbidden(response);
           return true;
         }
@@ -214,6 +222,10 @@ export function createLeasesRoutes({
       }
 
       if (method === "GET") {
+        if (!canReadDocument(db, access.user, documentId)) {
+          forbidden(response);
+          return true;
+        }
         const content = await fileStorage.get({ key: filePath });
         if (!content) {
           notFound(response);
@@ -232,7 +244,10 @@ export function createLeasesRoutes({
       }
 
       if (method === "DELETE") {
-        if (!["admin", "manager"].includes(access.user.role)) {
+        if (
+          !["admin", "manager"].includes(access.user.role) ||
+          !contextCan(db, access.user, "documents.write", "leases", leaseId)
+        ) {
           forbidden(response);
           return true;
         }

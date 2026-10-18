@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent } from "react";
 import type {
   ReadingPeriod,
   ReadingSubmission,
@@ -62,7 +62,9 @@ export function ReadingsWorkspace({
   const [selected, setSelected] = useState(""),
     [meterId, setMeterId] = useState(initialMeterId),
     [periodId, setPeriodId] = useState(""),
+    [reviewAccepted, setReviewAccepted] = useState(true),
     [status, setStatus] = useState("");
+  useEffect(() => setReviewAccepted(true), [selected]);
   useEffect(() => {
     if (initialMeterId) setMeterId(initialMeterId);
   }, [initialMeterId]);
@@ -158,7 +160,7 @@ export function ReadingsWorkspace({
               </Select>
             </label>
             {meter && (
-              <>
+              <Fragment key={meter.id}>
                 <p className="field-hint">
                   Предыдущее показание: {latest?.value ?? meter.initialValue}.{" "}
                   {period?.photoRequired ? "Фотография обязательна." : ""}
@@ -200,7 +202,7 @@ export function ReadingsWorkspace({
                     capture="environment"
                   />
                 </label>
-              </>
+              </Fragment>
             )}
             <Button
               variant="primary"
@@ -343,6 +345,7 @@ export function ReadingsWorkspace({
           {current.status === "pending" &&
             hasPermission(user, "readings.review") && (
               <form
+                key={current.id}
                 className="form-grid"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -355,7 +358,7 @@ export function ReadingsWorkspace({
                         method: "POST",
                         body: {
                           updatedAt: current.updatedAt,
-                          accepted: v.get("accepted") === "true",
+                          accepted: reviewAccepted,
                           reason: v.get("reason"),
                         },
                       },
@@ -366,7 +369,13 @@ export function ReadingsWorkspace({
               >
                 <label>
                   Решение инженера
-                  <Select name="accepted">
+                  <Select
+                    name="accepted"
+                    value={String(reviewAccepted)}
+                    onChange={(e) =>
+                      setReviewAccepted(e.target.value === "true")
+                    }
+                  >
                     <option value="true">Принять</option>
                     <option value="false">
                       Отклонить и запросить повторный ввод
@@ -377,7 +386,7 @@ export function ReadingsWorkspace({
                   Обоснование
                   <Textarea
                     name="reason"
-                    required={current.anomaly}
+                    required={current.anomaly || !reviewAccepted}
                     maxLength={10000}
                   />
                 </label>

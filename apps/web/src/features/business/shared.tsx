@@ -1,8 +1,16 @@
-import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { apiRequest, runtimeApiBase } from "../../api/client";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import { Button, Input, Select } from "../../ui";
 export function useResource<T>(token: string, path: string, initial: T) {
+  const mutationPending = useRef(false);
   const [data, setData] = useState<T>(initial),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -28,7 +36,8 @@ export function useResource<T>(token: string, path: string, initial: T) {
     return () => abort.abort();
   }, [token, path]);
   const run = async (fn: () => Promise<unknown>, message = "Сохранено") => {
-    if (busy) return false;
+    if (mutationPending.current) return false;
+    mutationPending.current = true;
     setBusy(true);
     setError("");
     setNotice("");
@@ -41,6 +50,7 @@ export function useResource<T>(token: string, path: string, initial: T) {
       setError((e as Error).message);
       return false;
     } finally {
+      mutationPending.current = false;
       setBusy(false);
     }
   };
@@ -143,6 +153,18 @@ export function Register<T extends { id: string }>({
   empty?: string;
 }) {
   const [query, setQuery] = useState(""),
+    [page, setPage] = useState(1),
+    [pageSize, setPageSize] = useState(() => {
+      try {
+        const saved = Number(
+          localStorage.getItem(`register-page-size:${title}`),
+        );
+        if ([10, 25, 50, 100].includes(saved)) return saved;
+      } catch {
+        /* Preferences are optional. */
+      }
+      return window.matchMedia("(max-width: 760px)").matches ? 10 : 25;
+    }),
     [filterOpen, setFilterOpen] = useState(false),
     [settingsOpen, setSettingsOpen] = useState(false),
     [density, setDensity] = useState(() => {
@@ -172,23 +194,33 @@ export function Register<T extends { id: string }>({
     try {
       localStorage.setItem(`register-density:${title}`, density);
       localStorage.setItem(`register-columns:${title}`, JSON.stringify(hidden));
+      localStorage.setItem(`register-page-size:${title}`, String(pageSize));
     } catch {
       /* View preferences never block business operations. */
     }
-  }, [title, density, hidden]);
+  }, [title, density, hidden, pageSize]);
+  const rowIds = rows.map((row) => row.id).join(",");
+  useEffect(() => setPage(1), [rowIds]);
   const visible = rows.filter((r) =>
       searchText(r)
         .toLocaleLowerCase("ru")
         .includes(query.toLocaleLowerCase("ru")),
     ),
-    cols = columns.filter((c) => !hidden.includes(c.key));
+    cols = columns.filter((c) => !hidden.includes(c.key)),
+    pageCount = Math.max(1, Math.ceil(visible.length / pageSize)),
+    currentPage = Math.min(page, pageCount),
+    offset = (currentPage - 1) * pageSize;
+  const changePage = (next: number) => {
+    setPage(next);
+    document.getElementById(id + "-heading")?.focus();
+  };
   return (
     <section
       className={`data-register data-register--${density}`}
       aria-label={title}
     >
       <div className="register-heading">
-        <h3>
+        <h3 id={id + "-heading"} tabIndex={-1}>
           {title} <small>{visible.length}</small>
         </h3>
         {action}
@@ -200,7 +232,10 @@ export function Register<T extends { id: string }>({
             aria-label={`Поиск: ${title}`}
             placeholder="Поиск"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
           />
         </div>
         {filters && (
@@ -240,6 +275,22 @@ export function Register<T extends { id: string }>({
               <option value="comfortable">Свободная</option>
             </Select>
           </label>
+          <label>
+            Записей на странице
+            <Select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              {[10, 25, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </Select>
+          </label>
           {columns
             .filter((c) => c.optional)
             .map((c) => (
@@ -271,7 +322,7 @@ export function Register<T extends { id: string }>({
               </tr>
             </thead>
             <tbody>
-              {visible.map((row) => (
+              {visible.slice(offset, offset + pageSize).map((row) => (
                 <tr
                   key={row.id}
                   className={
@@ -290,6 +341,26 @@ export function Register<T extends { id: string }>({
         </div>
       ) : (
         <p className="empty-state">{empty}</p>
+      )}
+      {pageCount > 1 && (
+        <nav className="register-pagination" aria-label={`Страницы: ${title}`}>
+          <span role="status">
+            {offset + 1}–{Math.min(offset + pageSize, visible.length)} из{" "}
+            {visible.length}
+          </span>
+          <Button
+            disabled={currentPage === 1}
+            onClick={() => changePage(currentPage - 1)}
+          >
+            Назад
+          </Button>
+          <Button
+            disabled={currentPage === pageCount}
+            onClick={() => changePage(currentPage + 1)}
+          >
+            Далее
+          </Button>
+        </nav>
       )}
     </section>
   );

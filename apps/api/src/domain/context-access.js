@@ -141,6 +141,12 @@ export function contextCan(
 ) {
   if (!actor || actor.is_active === 0 || !hasPermission(actor, permission))
     return false;
+  if (
+    type === "tickets" &&
+    actor.role === "worker" &&
+    db.getById("tickets", id)?.assigned_to !== actor.id
+  )
+    return false;
   if (type === "personal_accounts" && !readPermissions.has(permission)) {
     const account = db.getById(type, id);
     if (

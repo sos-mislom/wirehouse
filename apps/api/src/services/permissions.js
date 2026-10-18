@@ -8,6 +8,8 @@ export function routePermission(method, path) {
     return "workspace.read";
   if (/^\/api\/maintenance-import\//.test(path)) return "maintenance.write";
   if (/^\/api\/documents/.test(path)) return "workspace.read";
+  if (/^\/api\/leases\/[^/]+\/documents(?:\/[^/]+)?$/.test(path))
+    return "documents.write";
   if (/^\/api\/tickets\/[^/]+\/workflow\//.test(path)) return "workspace.read";
   if (/^\/api\/readings\/periods/.test(path)) return "meters.write";
   if (/^\/api\/readings\/submissions\/[^/]+\/review/.test(path))

@@ -1,4 +1,8 @@
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
+import {
+  canReadInvoice,
+  canReadFinancialPeriod,
+} from "../../domain/financial-access.js";
 
 export function createTenantQueries(deps) {
   const {
@@ -203,7 +207,9 @@ export function createTenantQueries(deps) {
     const scopedLeaseIds = new Set(leases.map((l) => l.id));
     const tenantInvoices = db
       .listBillingInvoices({ tenantId: tenant.id })
-      .filter((i) => scopedLeaseIds.has(i.lease_id));
+      .filter(
+        (i) => scopedLeaseIds.has(i.lease_id) && canReadInvoice(db, user, i),
+      );
     const invoiceIds = new Set(tenantInvoices.map((i) => i.id));
     const payments = buildTenantLedgerPayments(tenant).filter((p) =>
       invoiceIds.has(p.id),
@@ -256,7 +262,13 @@ export function createTenantQueries(deps) {
       tickets,
       payments,
       meters: buildTenantLedgerMeters(tenant).filter((m) =>
-        units.some((u) => u.id === m.unitId),
+        leases.some(
+          (l) =>
+            l.unitId === m.unitId &&
+            l.startDate <= m.period + "-31" &&
+            l.endDate >= m.period + "-01" &&
+            canReadFinancialPeriod(db, user, l.id, m.period),
+        ),
       ),
       notes: buildTenantNotes(tenant, tickets, manualNotes),
       risks: buildTenantRisks(tenant, leases, tickets),

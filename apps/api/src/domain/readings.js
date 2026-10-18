@@ -207,19 +207,42 @@ export function readingsWorkspace(db, actor) {
     submissions: db.data.reading_submissions.filter(
       (s) =>
         ids.has(s.meterId) &&
+        contextCan(
+          db,
+          actor,
+          "workspace.read",
+          "meters",
+          s.meterId,
+          undefined,
+          s.createdAt.slice(0, 10),
+        ) &&
         (actor.role !== "tenant" ||
           s.submittedBy === actor.id ||
           (s.accountId &&
             contextCan(
               db,
               actor,
-              "readings.submit",
+              "workspace.read",
               "personal_accounts",
               s.accountId,
+              undefined,
+              s.createdAt.slice(0, 10),
             ))),
     ),
     readings: db.data.resource_readings
-      .filter((r) => ids.has(r.meterId))
+      .filter(
+        (r) =>
+          ids.has(r.meterId) &&
+          contextCan(
+            db,
+            actor,
+            "workspace.read",
+            "meters",
+            r.meterId,
+            undefined,
+            r.period + "-01",
+          ),
+      )
       .map(({ allocations, amount, tariff, unallocated, ...r }) => r),
   };
 }

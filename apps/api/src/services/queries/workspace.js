@@ -1,5 +1,6 @@
 import { presentTicket } from "../../domain/ticket-view.js";
 import { contextCan } from "../../domain/context-access.js";
+import { canReadInvoice } from "../../domain/financial-access.js";
 import {
   isCriticalTicket,
   isOpenTicket,
@@ -316,7 +317,9 @@ export function createWorkspaceQueries(deps) {
         );
         const invoices = db
           .listBillingInvoices({ tenantId: tenant.id })
-          .filter((i) => leaseIds.has(i.lease_id));
+          .filter(
+            (i) => leaseIds.has(i.lease_id) && canReadInvoice(db, user, i),
+          );
         const billed = sumBy(invoices, (i) => i.total_amount);
         return {
           ...tenant,
@@ -374,7 +377,7 @@ export function createWorkspaceQueries(deps) {
             ),
           )
         : 0;
-    const finance = buildFinanceSummary(scoped, scopedTickets);
+    const finance = buildFinanceSummary(user, scoped);
     const activeTicketIds = new Set(
       scopedTickets.filter((t) => isOpenTicket(t.status)).map((t) => t.id),
     );

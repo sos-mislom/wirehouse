@@ -31,8 +31,8 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
       JWT_ACCESS_SECRET: secret,
       EXCHANGE_ENVIRONMENT: "test",
       NOTIFICATION_CHANNELS: "in_app",
-      DOCUMENT_STORAGE_PATH: f.dir + "/documents",
-      TICKET_ATTACHMENT_STORAGE_PATH: f.dir + "/tickets",
+      WAREHOUSE_DOCUMENTS_PATH: f.dir + "/documents",
+      WAREHOUSE_TICKET_ATTACHMENTS_PATH: f.dir + "/tickets",
       TELEGRAM_BOT_TOKEN: "",
       VK_GROUP_TOKEN: "",
     },
@@ -140,6 +140,44 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
   );
   const account = (await call("/api/accounting")).body.accounts[0],
     portal = f.db.getTenantPortalUser(f.tenant.id);
+  const statementPacket = {
+    messageId: "statement-one",
+    environment: "test",
+    schemaVersion: 1,
+    kind: "statements",
+    items: [
+      {
+        externalId: "statement-1",
+        accountExternalId: "account-1",
+        period: "2026-10",
+        opening: 0,
+        charged: 100,
+        paid: 20,
+        closing: 80,
+        lines: [{ service: "Аренда", amount: 100 }],
+        asOf: "2026-10-18T10:00:00.000Z",
+        version: 1,
+      },
+    ],
+  };
+  const sendStatement = (body) =>
+    call(
+      `/api/integrations/accounting/${source.id}/messages`,
+      creds.body.token,
+      "POST",
+      body,
+    );
+  assert.equal((await sendStatement(statementPacket)).body.status, "applied");
+  const sameVersion = await sendStatement({
+    ...statementPacket,
+    messageId: "statement-copy",
+  });
+  assert.equal(
+    sameVersion.body.status,
+    "applied",
+    JSON.stringify(sameVersion.body),
+  );
+  assert.equal(sameVersion.body.result.skipped, 1);
   r = await call("/api/tickets", portal, "POST", {
     unitId: f.unit.id,
     leaseId: f.lease.id,
@@ -195,6 +233,22 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
   r = await call("/api/documents", f.manager, "POST", picture);
   assert.equal(r.status, 200, JSON.stringify(r.body));
   const documentId = r.body.item.id;
+  assert.equal(
+    (await call("/api/documents", f.worker)).body.items.some(
+      (d) => d.id === documentId,
+    ),
+    false,
+  );
+  const deniedFile = await fetch(base + `/api/documents/${documentId}/file`, {
+    headers: {
+      Authorization: `Bearer ${createToken({ sub: f.worker.id }, secret)}`,
+    },
+  });
+  assert.equal(
+    deniedFile.status,
+    403,
+    "Unassigned workers cannot bypass ticket scope through the document registry",
+  );
   r = await call(
     `/api/tickets/${ticket.id}/workflow/decision`,
     f.manager,
@@ -207,6 +261,70 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
       (d) => d.id === documentId,
     ),
     true,
+  );
+  r = await call("/api/documents", f.manager, "POST", {
+    ...picture,
+    links: [{ entityType: "tickets", entityId: ticket.id, phase: "after" }],
+  });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  for (const [actor, action] of [
+    [f.manager, "submit"],
+    [portal, "accept"],
+  ]) {
+    const current = (await call(`/api/tickets/${ticket.id}/workflow`)).body
+      .item;
+    r = await call(
+      `/api/tickets/${ticket.id}/workflow/decision`,
+      actor,
+      "POST",
+      { updatedAt: current.updatedAt, action, reason: "" },
+    );
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+  }
+  const claim = () =>
+    call(
+      `/api/integrations/accounting/${source.id}/outbox/claim`,
+      creds.body.token,
+      "POST",
+      { limit: 1 },
+    );
+  const claims = await Promise.all([claim(), claim()]);
+  assert.ok(claims.every((c) => c.status === 200));
+  const messages = claims.flatMap((c) => c.body.items);
+  assert.equal(
+    messages.length,
+    1,
+    "Concurrent claims cannot reserve the same message twice",
+  );
+  assert.equal(messages[0].kind, "work_results");
+  const message = messages[0];
+  assert.equal(
+    (await claim()).body.items.length,
+    0,
+    "Unexpired reservation is exclusive",
+  );
+  const ack = (body) =>
+    call(
+      `/api/integrations/accounting/${source.id}/outbox/${message.id}/ack`,
+      creds.body.token,
+      "POST",
+      body,
+    );
+  assert.equal((await ack({ accepted: false, error: "" })).status, 400);
+  assert.equal((await ack({ accepted: true })).body.item.status, "applied");
+  assert.equal(
+    (await ack({ accepted: true })).body.item.status,
+    "applied",
+    "Positive acknowledgement is idempotent",
+  );
+  assert.equal(
+    (await ack({ accepted: false, error: "Поздний отказ" })).status,
+    409,
+  );
+  assert.equal(
+    (await claim()).body.items.length,
+    0,
+    "Applied message cannot be claimed again",
   );
   r = await call("/api/access/participants", f.admin, "POST", {
     fullName: "Другой участник",
@@ -264,13 +382,13 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
     403,
   );
   const rows = await pg.readState();
-  assert.equal(rows.exchange_inbox.length, 1);
+  assert.equal(rows.exchange_inbox.length, 3);
   assert.equal(rows.personal_accounts.length, 1);
   assert.equal(
     rows.ticket_workflows.find((w) => w.ticketId === ticket.id).state,
-    "in_progress",
+    "accepted",
   );
-  assert.equal(rows.entity_documents.length, 1);
+  assert.equal(rows.entity_documents.length, 2);
   assert.ok(rows.audit_log.some((a) => a.entityType === "ticket_workflows"));
 });
 test("Business migration includes existing files and converts account bindings without inventing approvals or photo evidence", async (t) => {

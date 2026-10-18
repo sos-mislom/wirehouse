@@ -1,5 +1,6 @@
 import { contextCan, requireContext } from "../domain/context-access.js";
 import crypto from "node:crypto";
+import { canReadDocument } from "../domain/documents.js";
 import path from "node:path";
 import {
   isOpenTicket,
@@ -264,6 +265,7 @@ export function createTicketsRoutes({
         ok(response, {
           items: db
             .listTicketAttachments(ticketId)
+            .filter((document) => canReadDocument(db, user, document.id))
             .map(normalizeTicketAttachment),
         });
         return true;
@@ -371,6 +373,10 @@ export function createTicketsRoutes({
       }
 
       if (method === "GET") {
+        if (!canReadDocument(db, user, attachmentId)) {
+          forbidden(response);
+          return true;
+        }
         const content = await fileStorage.get({ key: filePath });
         if (!content) {
           notFound(response);

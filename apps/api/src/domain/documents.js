@@ -8,12 +8,37 @@ const publicDocument = ({ storedName, storageKind, ...row }, links) => ({
 });
 export function canReadDocument(db, actor, documentId) {
   const document = db.getById("entity_documents", documentId);
-  return db.data.document_links.some(
-    (l) =>
-      l.documentId === documentId &&
-      contextCan(db, actor, "documents.read", l.entityType, l.entityId) &&
-      (!["act", "contract"].includes(document.category) ||
-        contextCan(db, actor, "finance.read", l.entityType, l.entityId)),
+  return Boolean(
+    document &&
+    db.data.document_links.some(
+      (l) => l.documentId === documentId && canReadLink(db, actor, document, l),
+    ),
+  );
+}
+function canReadLink(db, actor, document, link) {
+  const at = document.createdAt.slice(0, 10);
+  return (
+    contextCan(
+      db,
+      actor,
+      "documents.read",
+      link.entityType,
+      link.entityId,
+      undefined,
+      at,
+    ) &&
+    (!["act", "contract", "lease", "invoice", "payment", "receipt"].includes(
+      document.category,
+    ) ||
+      contextCan(
+        db,
+        actor,
+        "finance.read",
+        link.entityType,
+        link.entityId,
+        undefined,
+        at,
+      ))
   );
 }
 export function listDocuments(db, actor) {
@@ -23,9 +48,7 @@ export function listDocuments(db, actor) {
       publicDocument(
         d,
         db.data.document_links.filter(
-          (l) =>
-            l.documentId === d.id &&
-            contextCan(db, actor, "documents.read", l.entityType, l.entityId),
+          (l) => l.documentId === d.id && canReadLink(db, actor, d, l),
         ),
       ),
     )

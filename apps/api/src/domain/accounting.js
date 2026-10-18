@@ -218,7 +218,7 @@ function applyStatements(db, source, items) {
     };
     if (old && body.version <= old.version) {
       const canonical = (r) =>
-        JSON.stringify(
+        stableJson(
           Object.fromEntries(
             Object.entries(r)
               .filter(([k]) => !["id", "updatedAt"].includes(k))

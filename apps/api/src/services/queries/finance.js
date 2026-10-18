@@ -1,4 +1,7 @@
-import { contextCan } from "../../domain/context-access.js";
+import {
+  canReadInvoice,
+  canReadFinancialPeriod,
+} from "../../domain/financial-access.js";
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 
 export function createFinanceQueries(deps) {
@@ -40,12 +43,12 @@ export function createFinanceQueries(deps) {
       });
   };
 
-  const buildFinanceSummary = (scoped, scopedTickets) => {
+  const buildFinanceSummary = (user, scoped) => {
     const leaseIds = new Set(scoped.leases.map((l) => l.id));
     const propertyIds = new Set(scoped.financePropertyIds);
     const invoices = db
       .listBillingInvoices()
-      .filter((i) => leaseIds.has(i.lease_id));
+      .filter((i) => leaseIds.has(i.lease_id) && canReadInvoice(db, user, i));
     const currentPeriod = new Date().toISOString().slice(0, 7);
     const current = invoices.filter((i) => i.period === currentPeriod);
     const collectionBilled = sumBy(current, (i) => i.total_amount);
@@ -87,6 +90,7 @@ export function createFinanceQueries(deps) {
       ).getDate();
       const lastDay = `${period}-${daysInMonth}`;
       const details = scoped.leases.flatMap((lease) => {
+        if (!canReadFinancialPeriod(db, user, lease.id, period)) return [];
         const actual = periodInvoices.filter((i) => i.lease_id === lease.id);
         if (
           !actual.length &&
@@ -169,20 +173,11 @@ export function createFinanceQueries(deps) {
     );
     return db
       .listBillingInvoices()
-      .map(normalizeBillingInvoice)
       .filter(
         (invoice) =>
-          leaseIds.has(invoice.leaseId) &&
-          contextCan(
-            db,
-            user,
-            "finance.read",
-            "leases",
-            invoice.leaseId,
-            new Date().toISOString().slice(0, 10),
-            invoice.period + "-01",
-          ),
-      );
+          leaseIds.has(invoice.lease_id) && canReadInvoice(db, user, invoice),
+      )
+      .map(normalizeBillingInvoice);
   };
 
   const getScopedBillingInvoice = (user, invoiceId) =>
@@ -283,13 +278,17 @@ export function createFinanceQueries(deps) {
 
   const getScopedMeterReadings = (user) => {
     const scoped = buildScopedCollections(user);
-    const unitIds = new Set(scoped.units.map((unit) => unit.id));
-    const tenantIds = new Set(scoped.tenants.map((tenant) => tenant.id));
     return db
       .listMeterReadings()
-      .filter(
-        (reading) =>
-          unitIds.has(reading.unit_id) && tenantIds.has(reading.tenant_id),
+      .filter((reading) =>
+        scoped.leases.some(
+          (lease) =>
+            lease.unitId === reading.unit_id &&
+            lease.tenantId === reading.tenant_id &&
+            lease.startDate <= reading.period + "-31" &&
+            lease.endDate >= reading.period + "-01" &&
+            canReadFinancialPeriod(db, user, lease.id, reading.period),
+        ),
       )
       .map(normalizeMeterReading);
   };

@@ -76,6 +76,24 @@
   color: var(--ink-soft);
   margin-top: 2px;
 }
+.register-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.register-pagination > span {
+  margin-right: auto;
+}
+.register-table td {
+  min-width: 90px;
+}
+.business-detail {
+  scroll-margin-top: 76px;
+}
 .register-table tr[aria-selected] {
   cursor: pointer;
 }

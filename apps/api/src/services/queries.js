@@ -8,10 +8,11 @@ export function createQueriesService(deps) {
   let workspaceQueries;
   let tenantQueries;
 
-  const getBuildScopedCollections = (user) => workspaceQueries.buildScopedCollections(user);
+  const getBuildScopedCollections = (user) =>
+    workspaceQueries.buildScopedCollections(user);
   const getGetScopedTickets = (user) => workspaceQueries.getScopedTickets(user);
-  const getBuildFinanceSummary = (scoped, scopedTickets) =>
-    financeQueries.buildFinanceSummary(scoped, scopedTickets);
+  const getBuildFinanceSummary = (user, scoped) =>
+    financeQueries.buildFinanceSummary(user, scoped);
 
   financeQueries = createFinanceQueries({
     ...deps,
