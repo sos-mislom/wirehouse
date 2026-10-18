@@ -21,16 +21,20 @@ export const navSections = [
   "admin",
 ] as const;
 
-export const managerNavGroups = [
+export const managerMainNav = [
+  "dashboard",
+  "tickets",
+  "objects",
+  "billing",
+  "chat",
+] as const satisfies readonly ManagerScreen[];
+
+export const managerExtraNavGroups = [
+  { label: "Аренда", screens: ["units", "tenants", "leases"] },
   {
-    label: "Работа",
-    screens: ["dashboard", "agenda", "tickets", "operations"],
+    label: "Работы и события",
+    screens: ["agenda", "operations", "notifications"],
   },
-  {
-    label: "Аренда",
-    screens: ["objects", "units", "tenants", "leases", "billing"],
-  },
-  { label: "Общение", screens: ["chat", "notifications"] },
   { label: "Управление", screens: ["staff", "import", "profile"] },
 ] as const satisfies readonly {
   label: string;

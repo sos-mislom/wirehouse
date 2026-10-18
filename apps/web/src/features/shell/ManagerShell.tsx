@@ -1,6 +1,11 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { PageBoundary } from "../../app/PageBoundary";
-import { managerNavGroups, managerMobileNav } from "../../shared/navigation";
+import { useEffect, useState } from "react";
+import {
+  managerMainNav,
+  managerExtraNavGroups,
+  managerMobileNav,
+} from "../../shared/navigation";
 import { NavigationIcon } from "./NavigationIcon";
 import { Button } from "../../ui";
 import { DocumentPanel } from "../leases/DocumentPanel";
@@ -23,6 +28,46 @@ export function ManagerShell() {
     error,
     notice,
   } = useWorkspace();
+  const extraActive = managerExtraNavGroups.some((group) =>
+    group.screens.some((screen) => screen === activeManagerNav),
+  );
+  const [extraOpen, setExtraOpen] = useState(extraActive);
+  useEffect(() => {
+    setExtraOpen(extraActive);
+  }, [activeManagerNav, extraActive]);
+  const navItem = (
+    screen:
+      | (typeof managerMainNav)[number]
+      | (typeof managerExtraNavGroups)[number]["screens"][number],
+  ) => {
+    const count =
+      screen === "tickets"
+        ? openTicketCount
+        : screen === "notifications"
+          ? overview.notifications.filter((item) => item.unread).length
+          : screen === "chat"
+            ? chatThreads.reduce(
+                (total, thread) => total + thread.unreadCount,
+                0,
+              )
+            : 0;
+    return (
+      <Button
+        variant="plain"
+        type="button"
+        key={screen}
+        className={`mvp-nav-button ${activeManagerNav === screen ? "mvp-nav-button--active" : ""}`}
+        aria-current={activeManagerNav === screen ? "page" : undefined}
+        onClick={() => {
+          setManagerScreen(screen);
+          setMobileNavOpen(false);
+        }}
+      >
+        <span>{managerUi.nav[screen]}</span>
+        {count > 0 && <small>{count}</small>}
+      </Button>
+    );
+  };
   return (
     <main className="mvp-shell">
       <header className="mobile-app-bar">
@@ -70,43 +115,24 @@ export function ManagerShell() {
           aria-label="Разделы приложения"
           className="workspace-navigation-groups"
         >
-          {managerNavGroups.map((group) => (
-            <div className="mvp-nav-group" key={group.label}>
-              <h2 className="navigation-group-label">{group.label}</h2>
-              {group.screens.map((screen) => {
-                const count =
-                  screen === "tickets"
-                    ? openTicketCount
-                    : screen === "notifications"
-                      ? overview.notifications.filter((item) => item.unread)
-                          .length
-                      : screen === "chat"
-                        ? chatThreads.reduce(
-                            (total, thread) => total + thread.unreadCount,
-                            0,
-                          )
-                        : 0;
-                return (
-                  <Button
-                    variant="plain"
-                    type="button"
-                    key={screen}
-                    className={`mvp-nav-button ${activeManagerNav === screen ? "mvp-nav-button--active" : ""}`}
-                    aria-current={
-                      activeManagerNav === screen ? "page" : undefined
-                    }
-                    onClick={() => {
-                      setManagerScreen(screen);
-                      setMobileNavOpen(false);
-                    }}
-                  >
-                    <span>{managerUi.nav[screen]}</span>
-                    {count > 0 && <small>{count}</small>}
-                  </Button>
-                );
-              })}
+          <div className="mvp-nav-group" aria-label="Основные разделы">
+            {managerMainNav.map(navItem)}
+          </div>
+          <details
+            className="workspace-extra-nav"
+            open={extraOpen}
+            onToggle={(event) => setExtraOpen(event.currentTarget.open)}
+          >
+            <summary>Другие разделы</summary>
+            <div className="workspace-extra-groups">
+              {managerExtraNavGroups.map((group) => (
+                <div className="mvp-nav-group" key={group.label}>
+                  <h2 className="navigation-group-label">{group.label}</h2>
+                  {group.screens.map(navItem)}
+                </div>
+              ))}
             </div>
-          ))}
+          </details>
         </nav>
 
         <div className="mvp-user">

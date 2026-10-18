@@ -136,9 +136,9 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
       if (event.key === "Tab" && menu) {
         const items = Array.from(
           menu.querySelectorAll<HTMLButtonElement>(
-            "button:not([disabled]), a[href]",
+            "button:not([disabled]), a[href], summary",
           ),
-        );
+        ).filter((item) => item.getClientRects().length > 0);
         const first = items[0],
           last = items[items.length - 1];
         if (event.shiftKey && document.activeElement === first) {

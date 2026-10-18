@@ -1,3 +1,4 @@
+import { BillingForecast } from "./BillingForecast";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import {
@@ -450,6 +451,7 @@ export function ManagerBilling() {
           )}
         </article>
       </div>
+      <BillingForecast />
     </section>
   );
 }

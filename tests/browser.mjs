@@ -96,6 +96,17 @@ try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
   });
+  async function navigateManager(label) {
+    const menu = page.getByRole("button", { name: "Меню", exact: true });
+    if (await menu.isVisible()) await menu.click();
+    const nav = page.locator("#workspace-navigation");
+    const button = nav.getByRole("button", {
+      name: new RegExp("^" + label + "(?: |$)"),
+    });
+    if (!(await button.isVisible()))
+      await nav.locator(".workspace-extra-nav > summary").click();
+    await button.click();
+  }
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const loginPage = await browser.newPage({
@@ -191,9 +202,7 @@ try {
   );
   await page.goto("http://127.0.0.1:5173");
   await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
-  await page
-    .getByRole("button", { name: "Сроки и работы", exact: true })
-    .click();
+  await navigateManager("Сроки и работы");
   await page
     .getByRole("heading", { name: "Сроки и работы", exact: true })
     .waitFor();
@@ -233,11 +242,11 @@ try {
   );
   await page.screenshot({ path: ".deploy/agenda-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole("button", { name: "Арендаторы", exact: true }).click();
+  await navigateManager("Арендаторы");
   await page
     .getByRole("heading", { name: "Арендаторы", exact: true })
     .waitFor();
-  await page.getByRole("button", { name: "Договоры", exact: true }).click();
+  await navigateManager("Договоры");
   await page.getByRole("heading", { name: "Договоры", exact: true }).waitFor();
   await page.goBack();
   await page
@@ -257,7 +266,7 @@ try {
     .getByRole("heading", { name: "Арендатор", exact: true })
     .first()
     .waitFor();
-  await page.getByRole("button", { name: "Помещения", exact: true }).click();
+  await navigateManager("Помещения");
   await page.getByText("Структура и планы объекта", { exact: true }).click();
   await page.getByRole("heading", { name: "Структура и планы" }).waitFor();
   await page.getByRole("button", { name: "Объект А", exact: true }).click();
@@ -329,7 +338,7 @@ try {
     "Plan editor fits mobile",
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.getByRole("button", { name: "Эксплуатация", exact: true }).click();
+  await navigateManager("Эксплуатация");
   await page
     .getByRole("heading", { name: "Эксплуатация", exact: true })
     .waitFor();
@@ -531,7 +540,7 @@ try {
     .selectOption("in_progress");
   await page.waitForTimeout(250);
   await page.screenshot({ path: ".deploy/kanban-desktop.png", fullPage: true });
-  await page.getByRole("button", { name: "Пользователи", exact: true }).click();
+  await navigateManager("Пользователи");
   await page.getByRole("heading", { name: "Пользователи и доступ" }).waitFor();
   const workerCard = page.locator(".operation-card").filter({
     has: page.getByRole("heading", { name: "Электрик", exact: true }),
@@ -575,10 +584,7 @@ try {
     "false",
   );
   await page.getByRole("button", { name: "Меню", exact: true }).click();
-  await page
-    .locator("#workspace-navigation")
-    .getByRole("button", { name: "Платежи", exact: true })
-    .click();
+  await navigateManager("Платежи");
   await page.getByRole("heading", { name: "Платежи", exact: true }).waitFor();
   await page.screenshot({ path: ".deploy/billing-mobile.png", fullPage: true });
   assert.ok(
@@ -605,10 +611,7 @@ try {
       "Профиль",
     ]) {
       await page.getByRole("button", { name: "Меню", exact: true }).click();
-      await page
-        .locator("#workspace-navigation")
-        .getByRole("button", { name: new RegExp("^" + section + "(?:\\s|$)") })
-        .click();
+      await navigateManager(section);
       await page.waitForTimeout(100);
       assert.equal(
         await page
@@ -643,10 +646,21 @@ try {
       .getAttribute("aria-current"),
     "page",
   );
-  const forecast = page.locator(".dashboard-forecast");
-  assert.equal(await forecast.getAttribute("open"), null);
+  assert.equal(
+    await page.locator(".workspace-extra-nav").getAttribute("open"),
+    null,
+  );
+  assert.equal(await page.locator(".dashboard-page .mvp-metric").count(), 0);
+  assert.equal(
+    await page.locator(".dashboard-page .forecast-summary").count(),
+    0,
+  );
+  await quickNav.getByRole("button", { name: "Платежи", exact: true }).click();
+  const forecast = page.locator(".billing-forecast");
   await forecast.locator(":scope > summary").click();
   await forecast.locator(".forecast-summary").waitFor();
+  await quickNav.getByRole("button", { name: "Главная", exact: true }).click();
+  await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await quickNav.getByRole("button", { name: "Заявки", exact: true }).click();
   await page.getByRole("heading", { name: "Заявки", exact: true }).waitFor();
@@ -682,10 +696,7 @@ try {
   assert.equal(await quickNav.isVisible(), false);
 
   await page.setViewportSize({ width: 1100, height: 900 });
-  await page
-    .locator("#workspace-navigation")
-    .getByRole("button", { name: "Помещения", exact: true })
-    .click();
+  await navigateManager("Помещения");
   await page.getByRole("heading", { name: "Помещения", exact: true }).waitFor();
   await page.getByText("Структура и планы объекта", { exact: true }).click();
   assert.ok(
