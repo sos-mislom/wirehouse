@@ -1,3 +1,8 @@
+import { createBusinessWorkflowRoutes } from "./routes/business-workflows.js";
+import { createDocumentsRegistryRoutes } from "./routes/documents-registry.js";
+import { retryExchange } from "./domain/exchange-worker.js";
+import { createContextAccessRoutes } from "./routes/context-access.js";
+import { createAccountingRoutes } from "./routes/accounting.js";
 import { createMaintenanceImportRoutes } from "./routes/maintenance-import.js";
 import fs from "node:fs";
 import http from "node:http";
@@ -387,6 +392,16 @@ const routes = [
     forbidden,
   }),
   createAgendaRoutes({ requirePortfolioWriteAccess, db, ok }),
+  createContextAccessRoutes({ db, requireAuth, ok, json }),
+  createBusinessWorkflowRoutes({ db, requireAuth, ok, json }),
+  createDocumentsRegistryRoutes({
+    db,
+    requireAuth,
+    ok,
+    json,
+    fileStorage,
+    sanitizeFilename,
+  }),
   createDashboardRoutes({
     requireAuth,
     ok,
@@ -443,6 +458,14 @@ const routes = [
   }),
   createMaintenanceImportRoutes({ requireAuth, ok, db, json }),
   createPlatformRoutes({ requireAuth, ok, db, json }),
+  createAccountingRoutes({
+    requireAuth,
+    ok,
+    db,
+    json,
+    getScopedLease,
+    exchangeEnvironment: config.exchangeEnvironment,
+  }),
   createOperationsRoutes({ requireAuth, ok, db, created, notFound, json }),
   createUsersRoutes({
     requirePortfolioWriteAccess,
@@ -636,7 +659,10 @@ let maintenanceRunning;
 const performMaintenance = () => {
   if (maintenanceRunning) return maintenanceRunning;
   maintenanceRunning = db
-    .requestScope({ readOnly: false }, () => runMaintenance(db))
+    .requestScope({ readOnly: false }, () => {
+      runMaintenance(db);
+      retryExchange(db, config.exchangeEnvironment);
+    })
     .catch((error) =>
       console.error("Maintenance generation failed", {
         code: error.code,

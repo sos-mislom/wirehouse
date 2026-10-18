@@ -1,3 +1,4 @@
+import { acceptedReading, preparePaidWork } from "./business-helpers.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -9,7 +10,6 @@ import { WarehouseDatabase } from "../apps/api/src/database.js";
 import {
   saveOperation,
   runMaintenance,
-  addReading,
   addWorkLog,
   updateUser,
   getOperations,
@@ -97,6 +97,10 @@ test("PPR creates one task per date and preserves its checklist and occurrence",
   const reloaded = new WarehouseDatabase(f.db.data);
   assert.equal(runMaintenance(reloaded, day).length, 0);
   const task = reloaded.data.tickets[0];
+  reloaded.updateTicket(task.id, {
+    status: "in_progress",
+    updatedBy: f.worker.id,
+  });
   assert.equal(task.equipment_id, eq.id);
   assert.equal(task.maintenance_plan_id, plan.id);
   assert.equal(task.checklist_items.length, 2);
@@ -186,7 +190,7 @@ test("Meter allocations conserve cents and reject duplicated and decreasing read
     responsibleId: f.worker.id,
   });
   const body = { period: new Date().toISOString().slice(0, 7), value: 110 };
-  const reading = addReading(f.db, f.worker, meter.id, body);
+  const reading = acceptedReading(f.db, f.admin, meter.id, body, f.worker);
   assert.equal(reading.consumption, 10);
   assert.equal(reading.amount, 33.3);
   assert.equal(
@@ -194,8 +198,8 @@ test("Meter allocations conserve cents and reject duplicated and decreasing read
     33.3,
   );
   assert.throws(
-    () => addReading(f.db, f.worker, meter.id, body),
-    /уже внесено/,
+    () => acceptedReading(f.db, f.admin, meter.id, body, f.worker),
+    /уже отправлено|уже принят/,
   );
   assert.throws(
     () =>
@@ -212,8 +216,8 @@ test("Meter allocations conserve cents and reject duplicated and decreasing read
     initialValue: 100,
   });
   assert.throws(
-    () => addReading(f.db, f.admin, m2.id, { ...body, value: 99 }),
-    /допустимо/,
+    () => acceptedReading(f.db, f.admin, m2.id, { ...body, value: 99 }),
+    /меньше предыдущего/,
   );
 });
 
@@ -245,6 +249,7 @@ test("Work costs freeze the service tariff; closed tickets and foreign links are
   });
   saveOperation(f.db, f.admin, "services", service.id, { hourlyRate: 999 });
   assert.equal(f.db.getTicket(task.id).work_logs[0].cost, 1050);
+  preparePaidWork(f.db, f.admin, task.id, f.lease.id);
   f.db.updateTicket(task.id, { status: "completed", updatedBy: f.worker.id });
   assert.throws(
     () => addWorkLog(f.db, f.worker, task.id, { description: "Ещё", hours: 1 }),

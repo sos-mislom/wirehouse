@@ -59,7 +59,14 @@ export function createUnitsRoutes({
         return true;
       }
 
-      if (!requirePropertyScope(user, response, body.propertyId)) {
+      if (
+        !requirePropertyScope(
+          user,
+          response,
+          body.propertyId,
+          "portfolio.write",
+        )
+      ) {
         return true;
       }
 
@@ -85,7 +92,7 @@ export function createUnitsRoutes({
       }
 
       const unitId = unitSplitMatch[1];
-      if (!requireUnitScope(user, response, unitId)) {
+      if (!requireUnitScope(user, response, unitId, "portfolio.write")) {
         return true;
       }
 
@@ -127,12 +134,17 @@ export function createUnitsRoutes({
       if (method === "PUT") {
         try {
           const body = await parseJsonBody(request);
-          if (!requireUnitScope(user, response, unitId)) {
+          if (!requireUnitScope(user, response, unitId, "portfolio.write")) {
             return true;
           }
           if (
             body.propertyId &&
-            !requirePropertyScope(user, response, body.propertyId)
+            !requirePropertyScope(
+              user,
+              response,
+              body.propertyId,
+              "portfolio.write",
+            )
           ) {
             return true;
           }
@@ -152,7 +164,7 @@ export function createUnitsRoutes({
       }
 
       if (method === "DELETE") {
-        if (!requireUnitScope(user, response, unitId)) {
+        if (!requireUnitScope(user, response, unitId, "portfolio.write")) {
           return true;
         }
 

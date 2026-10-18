@@ -33,10 +33,6 @@ export function useOperationsModel({
   const [property, setProperty] = useState("");
   const [query, setQuery] = useState("");
   const [readingMeter, setReadingMeter] = useState("");
-  const [readingPeriod, setReadingPeriod] = useState(
-    new Date().toISOString().slice(0, 7),
-  );
-  const [readingValue, setReadingValue] = useState("");
   const load = async () =>
     setData(await request<OperationsData>("/api/operations", token));
   useEffect(() => {
@@ -122,27 +118,7 @@ export function useOperationsModel({
       setBusy(false);
     }
   };
-  const submitReading = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await request(
-        `/api/operations/meters/${readingMeter}/readings`,
-        token,
-        "POST",
-        { period: readingPeriod, value: Number(readingValue) },
-      );
-      await load();
-      setReadingMeter("");
-      setReadingValue("");
-      setNotice("Показания и распределение сохранены");
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+
   const input = (
     key: string,
     label: string,
@@ -277,15 +253,10 @@ export function useOperationsModel({
     setQuery,
     readingMeter,
     setReadingMeter,
-    readingPeriod,
-    setReadingPeriod,
-    readingValue,
-    setReadingValue,
     load,
     change,
     create,
     save,
-    submitReading,
     input,
     area,
     select,

@@ -1,26 +1,9 @@
 // Explicit storage mapping. Nested documents are JSONB; identities, relations,
 // amounts, dates and searchable fields are ordinary typed SQL columns.
-const snake = (value) =>
-  value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-function table(
-  fields,
-  { key = ["id"], required = [], references = {}, checks = [] } = {},
-) {
-  const columns = Object.entries(fields).flatMap(([type, names]) =>
-    names
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((name) => ({
-        name,
-        sql: snake(name),
-        type,
-        required: key.includes(name) || required.includes(name),
-        reference: references[name],
-      })),
-  );
-  return { columns, key, checks };
-}
+import { table } from "./schema-table.js";
+import { businessTables } from "./business-schema.js";
 export const tables = {
+  ...businessTables,
   properties: table(
     {
       text: "id name address warehouse_class description",

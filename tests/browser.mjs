@@ -1,3 +1,4 @@
+import { saveReadingPeriod } from "../apps/api/src/domain/readings.js";
 import { scheduleFile } from "./maintenance-fixtures.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -17,9 +18,10 @@ if (!process.env.TEST_POSTGRES_URL)
 fs.mkdirSync(".deploy", { recursive: true });
 const f = fixture();
 const secret = "browser-test-secret";
-f.db.createTicket({
+const browserTicket = f.db.createTicket({
   unitId: f.unit.id,
   tenantId: f.tenant.id,
+  leaseId: f.lease.id,
   createdBy: f.admin.id,
   assignedTo: f.worker.id,
   title: "Проверка переписки арендатора",
@@ -47,6 +49,14 @@ f.db.createBillingInvoice({
   rentAmount: 1000,
   variableAmount: 50,
   dueDate: `${period}-01`,
+});
+saveReadingPeriod(f.db, f.admin, {
+  propertyId: f.property.id,
+  name: "Период для проверки",
+  startsOn: period + "-01",
+  endsOn: new Date().toISOString().slice(0, 10),
+  photoRequired: false,
+  thresholdPercent: 50,
 });
 const pg = await postgresFixture(f.db.data);
 const child = spawn(process.execPath, ["apps/api/src/index.js"], {
@@ -83,6 +93,9 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(file));
 });
 let browser;
+const capture = async (page, options) => {
+  if (!process.env.SKIP_SCREENSHOTS) await page.screenshot(options);
+};
 try {
   server.listen(5173, "127.0.0.1");
   await once(server, "listening");
@@ -148,7 +161,7 @@ try {
     "Returning users do not see setup instructions",
   );
   await loginPage.locator("input[name=phone]").fill("+79990000101");
-  await loginPage.screenshot({
+  await capture(loginPage, {
     path: ".deploy/phone-login-mobile.png",
     fullPage: true,
   });
@@ -185,7 +198,7 @@ try {
       () => document.documentElement.scrollWidth <= innerWidth + 2,
     ),
   );
-  await loginPage.screenshot({
+  await capture(loginPage, {
     path: ".deploy/messenger-login-mobile.png",
     fullPage: true,
   });
@@ -240,7 +253,7 @@ try {
     ),
     "Agenda fits mobile",
   );
-  await page.screenshot({ path: ".deploy/agenda-mobile.png", fullPage: true });
+  await capture(page, { path: ".deploy/agenda-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Арендаторы");
   await page
@@ -319,7 +332,7 @@ try {
     .getByRole("button", { name: "Сохранить план", exact: true })
     .click();
   await page.getByText("План сохранён", { exact: true }).waitFor();
-  await page.screenshot({
+  await capture(page, {
     path: ".deploy/plan-editor-desktop.png",
     fullPage: true,
   });
@@ -352,9 +365,7 @@ try {
     .getByLabel("Тип оборудования *", { exact: true })
     .fill("Вентиляция");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-  await page
-    .getByRole("heading", { name: "Тестовая вентиляция", exact: true })
-    .waitFor();
+  await page.getByText("Тестовая вентиляция", { exact: true }).waitFor();
   await page
     .locator(".operations-nav")
     .getByRole("button", { name: "ППР", exact: true })
@@ -367,9 +378,7 @@ try {
     .getByLabel("Чек-лист: один пункт на строку *", { exact: true })
     .fill("Осмотр\nПроверка");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
-  await page
-    .getByRole("heading", { name: "Тестовое ППР", exact: true })
-    .waitFor();
+  await page.getByText("Тестовое ППР", { exact: true }).waitFor();
   await page.getByText("Импорт графика ППР", { exact: true }).click();
   const schedule = scheduleFile(f);
   await page.getByLabel("Файл графика ППР", { exact: true }).setInputFiles({
@@ -385,7 +394,7 @@ try {
       exact: true,
     })
     .waitFor();
-  await page.screenshot({
+  await capture(page, {
     path: ".deploy/maintenance-import-desktop.png",
     fullPage: true,
   });
@@ -396,7 +405,7 @@ try {
     ),
     "PPR import fits mobile",
   );
-  await page.screenshot({
+  await capture(page, {
     path: ".deploy/maintenance-import-mobile.png",
     fullPage: true,
   });
@@ -406,9 +415,7 @@ try {
   await page
     .getByText("Загружено графиков: 1. Уже существовали: 0.", { exact: true })
     .waitFor();
-  await page
-    .getByRole("heading", { name: "Проверка фильтра", exact: true })
-    .waitFor();
+  await page.getByText("Проверка фильтра", { exact: true }).waitFor();
   await page
     .getByRole("button", { name: "Проверить файл", exact: true })
     .click();
@@ -443,7 +450,7 @@ try {
   await page.getByRole("button", { name: "Новая смета", exact: true }).click();
   await page.getByLabel(/^Название/).fill("Проверка тарификации");
   await page.getByLabel(/^Объект/).selectOption(f.property.id);
-  await page.getByLabel(/^Заявка/).selectOption({ index: 1 });
+  await page.getByLabel(/^Заявка/).selectOption(browserTicket.id);
   const estimateTicketId = await page.getByLabel(/^Заявка/).inputValue();
   await page.getByLabel(/^Наименование/).fill("Проверка оборудования");
   await page.getByLabel(/^Количество/).fill("2");
@@ -464,7 +471,7 @@ try {
   await page
     .getByText("Акт доступен после выполнения заявки", { exact: true })
     .waitFor();
-  await page.screenshot({
+  await capture(page, {
     path: ".deploy/estimate-desktop.png",
     fullPage: true,
   });
@@ -475,7 +482,7 @@ try {
     ),
     "Estimate fits mobile",
   );
-  await page.screenshot({
+  await capture(page, {
     path: ".deploy/estimate-mobile.png",
     fullPage: true,
   });
@@ -499,6 +506,87 @@ try {
     );
     assert.equal(response.status(), 200);
   }
+  const sourceResponse = await page.request.post(
+    "http://127.0.0.1:3001/api/accounting/sources",
+    {
+      headers: authorization,
+      data: {
+        name: "Учет для проверки",
+        environment: "production",
+        active: true,
+      },
+    },
+  );
+  assert.equal(sourceResponse.status(), 200);
+  const source = (await sourceResponse.json()).item;
+  const contextTicket = (
+    await (
+      await page.request.get("http://127.0.0.1:3001/api/tickets", {
+        headers: authorization,
+      })
+    ).json()
+  ).items.find((t) => t.id === estimateTicketId);
+  if (!contextTicket.leaseId) {
+    const linked = await page.request.put(
+      `http://127.0.0.1:3001/api/tickets/${estimateTicketId}`,
+      { headers: authorization, data: { leaseId: f.lease.id } },
+    );
+    assert.equal(linked.status(), 200);
+  }
+  const accountResponse = await page.request.post(
+    "http://127.0.0.1:3001/api/accounting/accounts",
+    {
+      headers: authorization,
+      data: {
+        sourceId: source.id,
+        leaseId: f.lease.id,
+        externalId: "browser-account",
+        number: "001",
+        status: "active",
+        validFrom: f.lease.start_date,
+        validTo: null,
+      },
+    },
+  );
+  assert.equal(accountResponse.status(), 200);
+  const account = (await accountResponse.json()).item;
+  let workflow = (
+    await (
+      await page.request.get(
+        `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/workflow`,
+        { headers: authorization },
+      )
+    ).json()
+  ).item;
+  const terms = await page.request.post(
+    `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/workflow/terms`,
+    {
+      headers: authorization,
+      data: {
+        updatedAt: workflow.updatedAt,
+        paid: true,
+        amount: 200,
+        accountId: account.id,
+        requireBeforePhoto: false,
+        requireAfterPhoto: false,
+      },
+    },
+  );
+  assert.equal(terms.status(), 200);
+  workflow = (await terms.json()).item;
+  const agreement = await page.request.post(
+    `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/workflow/decision`,
+    {
+      headers: authorization,
+      data: { updatedAt: workflow.updatedAt, action: "approve", reason: "" },
+    },
+  );
+  assert.equal(agreement.status(), 200);
+  const started = await page.request.put(
+    `http://127.0.0.1:3001/api/tickets/${estimateTicketId}`,
+    { headers: authorization, data: { status: "in_progress" } },
+  );
+  assert.equal(started.status(), 200);
   const completed = await page.request.put(
     `http://127.0.0.1:3001/api/tickets/${estimateTicketId}`,
     {
@@ -507,6 +595,23 @@ try {
     },
   );
   assert.equal(completed.status(), 200);
+  workflow = (
+    await (
+      await page.request.get(
+        `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/workflow`,
+        { headers: authorization },
+      )
+    ).json()
+  ).item;
+  const accepted = await page.request.post(
+    `http://127.0.0.1:3001/api/tickets/${estimateTicketId}/workflow/decision`,
+    {
+      headers: authorization,
+      data: { updatedAt: workflow.updatedAt, action: "accept", reason: "" },
+    },
+  );
+  assert.equal(accepted.status(), 200);
+
   await page
     .getByRole("button", { name: "Выпустить акт", exact: true })
     .click();
@@ -539,9 +644,13 @@ try {
     .first()
     .selectOption("in_progress");
   await page.waitForTimeout(250);
-  await page.screenshot({ path: ".deploy/kanban-desktop.png", fullPage: true });
+  await capture(page, { path: ".deploy/kanban-desktop.png", fullPage: true });
   await navigateManager("Пользователи");
   await page.getByRole("heading", { name: "Пользователи и доступ" }).waitFor();
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByText("Электрик", { exact: true }) })
+    .click();
   const workerCard = page.locator(".operation-card").filter({
     has: page.getByRole("heading", { name: "Электрик", exact: true }),
   });
@@ -549,6 +658,10 @@ try {
   await page.getByLabel("Имя *", { exact: true }).fill("Электрик обновлён");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page.getByRole("heading", { name: "Электрик обновлён" }).waitFor();
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByText("Иван", { exact: true }) })
+    .click();
   const tenantCard = page
     .locator(".operation-card")
     .filter({ has: page.getByRole("heading", { name: "Иван", exact: true }) });
@@ -562,7 +675,7 @@ try {
     /^\/link [A-F0-9]{24}$/,
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: ".deploy/users-mobile.png", fullPage: true });
+  await capture(page, { path: ".deploy/users-mobile.png", fullPage: true });
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 2,
@@ -586,7 +699,7 @@ try {
   await page.getByRole("button", { name: "Меню", exact: true }).click();
   await navigateManager("Платежи");
   await page.getByRole("heading", { name: "Платежи", exact: true }).waitFor();
-  await page.screenshot({ path: ".deploy/billing-mobile.png", fullPage: true });
+  await capture(page, { path: ".deploy/billing-mobile.png", fullPage: true });
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 2,
@@ -737,20 +850,207 @@ try {
   );
   await workerPage.goto("http://127.0.0.1:5173");
   await workerPage.getByRole("button", { name: "Меню", exact: true }).waitFor();
+  await workerPage.getByText("Передать показание", { exact: true }).click();
   await workerPage
-    .getByText("Счётчик исполнителя · Вода", { exact: true })
-    .click();
-  await workerPage.getByLabel("Показание *", { exact: true }).fill("12");
+    .getByRole("combobox", { name: "Прибор", exact: true })
+    .selectOption({ label: "Счётчик исполнителя · 101" });
   await workerPage
-    .getByRole("button", { name: "Сохранить показание", exact: true })
+    .getByRole("combobox", { name: "Период ввода", exact: true })
+    .selectOption({ index: 1 });
+  await workerPage.getByLabel("Новое показание", { exact: true }).fill("12");
+  await workerPage
+    .getByRole("button", { name: "Отправить на проверку", exact: true })
     .click();
-  await workerPage.getByText("Показание сохранено", { exact: true }).waitFor();
+  await workerPage
+    .getByText("Показание отправлено инженеру на проверку", { exact: true })
+    .waitFor();
   assert.ok(
     await workerPage.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 2,
     ),
     "Worker fits 320px",
   );
+  // Compact data composition and business functions share the actual working screens.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await navigateManager("Платежи");
+  assert.equal(
+    await page.locator(".billing-reconciliation").getAttribute("open"),
+    null,
+  );
+  const invoiceTableTop = await page
+    .locator('.data-register[aria-label="Реестр счетов"]')
+    .evaluate((e) => e.getBoundingClientRect().top);
+  assert.ok(
+    invoiceTableTop < 500,
+    "Invoices are visible above the fold on desktop",
+  );
+  await page
+    .getByRole("button", { name: "Лицевые счета", exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Лицевые счета", exact: true })
+    .getByText("001", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "Вид таблицы: Лицевые счета", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Плотность", exact: true })
+    .selectOption("comfortable");
+  assert.equal(
+    await page
+      .locator('.data-register--comfortable[aria-label="Лицевые счета"]')
+      .count(),
+    1,
+  );
+  await page.getByRole("checkbox", { name: "Договор", exact: true }).uncheck();
+  assert.equal(
+    await page
+      .getByRole("columnheader", { name: "Договор", exact: true })
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("row")
+    .filter({ has: page.getByText("001", { exact: true }) })
+    .click();
+  await page.getByRole("heading", { name: /^ЛС 001/ }).waitFor();
+  await capture(page, {
+    path: ".deploy/business-desktop-accounts.png",
+    fullPage: true,
+  });
+  await navigateManager("Пользователи");
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "Доступ", exact: true })
+    .click();
+  await page.getByRole("heading", { name: /^Контекстные права/ }).waitFor();
+  await page
+    .getByRole("button", { name: "Назначить доступ", exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Пользователь", exact: true })
+    .selectOption({ label: "Иван" });
+  await page
+    .getByRole("combobox", { name: "Бизнес-роль", exact: true })
+    .selectOption("owner");
+  await page
+    .getByRole("combobox", { name: "Тип области", exact: true })
+    .selectOption("lease");
+  await page
+    .getByRole("combobox", { name: "Область", exact: true })
+    .selectOption(f.lease.id);
+  await page
+    .getByLabel("Основание", { exact: true })
+    .fill("Назначение собственника для проверки");
+  await page
+    .getByRole("button", { name: "Сохранить доступ", exact: true })
+    .click();
+  await page.getByText("Сохранено", { exact: true }).waitFor();
+  await capture(page, {
+    path: ".deploy/business-desktop-access.png",
+    fullPage: true,
+  });
+  await navigateManager("Эксплуатация");
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "Счётчики", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Показания", exact: true }).click();
+  await page
+    .getByRole("region", { name: "Показания", exact: true })
+    .getByRole("row")
+    .filter({ hasText: "На проверке" })
+    .first()
+    .click();
+  await page
+    .getByRole("combobox", { name: "Решение инженера", exact: true })
+    .selectOption("true");
+  await page
+    .getByRole("button", { name: "Сохранить решение", exact: true })
+    .click();
+  await page.getByText("Решение сохранено", { exact: true }).waitFor();
+  await capture(page, {
+    path: ".deploy/business-desktop-readings.png",
+    fullPage: true,
+  });
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "ППР", exact: true })
+    .click();
+  await page
+    .getByText("Исполнение ППР: план, факт и переносы", { exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Задания ППР", exact: true })
+    .getByRole("row")
+    .nth(1)
+    .click();
+  await page
+    .getByLabel("Новый срок, если нужен перенос", { exact: true })
+    .fill(new Date(Date.now() + 86400000).toISOString().slice(0, 16));
+  await page
+    .getByLabel("Причина", { exact: true })
+    .fill("Нет доступа в помещение");
+  await page
+    .getByLabel("Техническое замечание", { exact: true })
+    .fill("Повторный осмотр после открытия помещения");
+  await page
+    .getByRole("button", { name: "Сохранить изменение", exact: true })
+    .click();
+  await page
+    .getByText("Изменение задания сохранено", { exact: true })
+    .waitFor();
+  await navigateManager("Объекты");
+  await page.getByText("Реестр документов", { exact: true }).click();
+  const documentRegister = page.getByRole("region", {
+    name: "Документы",
+    exact: true,
+  });
+  await documentRegister.getByText(/АКТ-.*html/).waitFor();
+  await documentRegister.getByRole("row").nth(1).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Скачать файл", exact: true }).click();
+  assert.match((await download).suggestedFilename(), /АКТ-.*html/);
+  await capture(page, {
+    path: ".deploy/business-desktop-documents.png",
+    fullPage: true,
+  });
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const name of ["Платежи", "Пользователи", "Эксплуатация", "Объекты"]) {
+      await navigateManager(name);
+      if (name === "Платежи")
+        await page
+          .getByRole("button", { name: "Лицевые счета", exact: true })
+          .click();
+      if (name === "Пользователи")
+        await page
+          .getByRole("combobox", { name: "Раздел", exact: true })
+          .selectOption("access");
+      if (name === "Эксплуатация") {
+        await page
+          .getByRole("combobox", { name: "Раздел", exact: true })
+          .selectOption("meters");
+        await page
+          .getByRole("button", { name: "Показания", exact: true })
+          .click();
+      }
+      if (name === "Объекты")
+        await page.getByText("Реестр документов", { exact: true }).click();
+      await page.waitForTimeout(100);
+      assert.ok(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth + 1,
+        ),
+        `${name} business views fit ${width}`,
+      );
+      await capture(page, {
+        path: `.deploy/business-${width}-${name}.png`,
+        fullPage: true,
+      });
+    }
+  }
   assert.deepEqual(errors, []);
   console.log(
     "Browser checks passed: navigation, DXF editing and persistence, catalogs, estimate approval and printed act, PPR, kanban, users, mobile, tenant login.",

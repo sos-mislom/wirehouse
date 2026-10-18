@@ -1,3 +1,6 @@
+import { TicketWorkflowPanel } from "../business/TicketWorkflowPanel";
+import { DocumentRegistry } from "../business/DocumentRegistry";
+import { Disclosure } from "../business/shared";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { WorkerMeters } from "../../Operations";
@@ -257,31 +260,18 @@ export function Service() {
               </div>
             </div>
 
-            {canUpdateTickets ? (
+            <TicketWorkflowPanel
+              key={selectedTicket.id}
+              ticketId={selectedTicket.id}
+            />
+            <Disclosure title="Документы заявки">
+              <DocumentRegistry
+                entityType="tickets"
+                entityId={selectedTicket.id}
+              />
+            </Disclosure>
+            {canUpdateTickets && canAssignTickets ? (
               <div className="inline-form">
-                <label>
-                  <span>{t.fields.status}</span>
-                  <Select
-                    disabled={busyAction === "ticket-update"}
-                    onChange={(event) => {
-                      const nextStatus = event.target.value;
-                      setTicketStatusDraft(nextStatus);
-                      void updateSelectedTicket({ status: nextStatus });
-                    }}
-                    value={ticketStatusDraft}
-                  >
-                    {(isWorker
-                      ? ticketStatusOptions.filter((status) =>
-                          ["in_progress", "completed"].includes(status),
-                        )
-                      : ticketStatusOptions
-                    ).map((status) => (
-                      <option key={status} value={status}>
-                        {t.ticketStatuses[status]}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
                 {canAssignTickets ? (
                   <label>
                     <span>

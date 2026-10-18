@@ -1,3 +1,4 @@
+import { contextCan } from "../domain/context-access.js";
 import crypto from "node:crypto";
 import { parseJsonBody } from "../http/body.js";
 import { operationsScope } from "../operations.js";
@@ -29,9 +30,13 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
           status: 403,
         });
       const scope = operationsScope(db, actor);
-      const scopedProperty = (id) => {
+      const scopedProperty = (id, permission = "workspace.read") => {
         db.requireProperty(id);
-        if (!scope(id))
+        if (
+          !scope(id) ||
+          (permission !== "workspace.read" &&
+            !contextCan(db, actor, permission, "properties", id))
+        )
           throw Object.assign(new Error("Нет доступа к объекту"), {
             status: 403,
           });
@@ -80,10 +85,37 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
             ]),
           ),
           estimates: canCost
-            ? db.data.estimates.filter((r) => scope(r.propertyId))
+            ? db.data.estimates.filter(
+                (r) =>
+                  scope(r.propertyId) &&
+                  (contextCan(
+                    db,
+                    actor,
+                    "estimates.write",
+                    "tickets",
+                    r.ticketId,
+                  ) ||
+                    contextCan(
+                      db,
+                      actor,
+                      "estimates.approve",
+                      "tickets",
+                      r.ticketId,
+                    )),
+              )
             : [],
           acts: canCost
-            ? db.data.service_acts.filter((r) => scope(r.propertyId))
+            ? db.data.service_acts.filter(
+                (r) =>
+                  scope(r.propertyId) &&
+                  contextCan(
+                    db,
+                    actor,
+                    "estimates.approve",
+                    "tickets",
+                    r.ticketId,
+                  ),
+              )
             : [],
         });
         return true;
@@ -97,7 +129,12 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
           const old = db.getById(structure[1], structure[2]);
           if (!old)
             throw Object.assign(new Error("Узел не найден"), { status: 404 });
-          scopedProperty(old.propertyId);
+          scopedProperty(
+            old.propertyId,
+            path.startsWith("/api/structure") || path.includes("floorplans")
+              ? "plans.write"
+              : "maintenance.write",
+          );
         }
         if (method === "DELETE") {
           deleteStructure(db, structure[1], structure[2]);
@@ -105,7 +142,16 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
           return true;
         }
         const body = await parseJsonBody(request);
-        scopedProperty(body.propertyId);
+        scopedProperty(
+          body.propertyId,
+          path.startsWith("/api/structure") || path.includes("floorplans")
+            ? "plans.write"
+            : path.includes("templates")
+              ? "maintenance.write"
+              : path.startsWith("/api/maintenance/")
+                ? "services.write"
+                : "workspace.read",
+        );
         ok(response, {
           item: db.transaction(() =>
             saveStructure(db, structure[1], structure[2], body),
@@ -131,13 +177,27 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
           catalog[1] === "templates" ? "maintenance.write" : "services.write",
         );
         const body = await parseJsonBody(request);
-        scopedProperty(body.propertyId);
+        scopedProperty(
+          body.propertyId,
+          path.startsWith("/api/structure") || path.includes("floorplans")
+            ? "plans.write"
+            : path.includes("templates")
+              ? "maintenance.write"
+              : path.startsWith("/api/maintenance/")
+                ? "services.write"
+                : "workspace.read",
+        );
         const table = catalogs[catalog[1]],
           old = catalog[2] ? db.getById(table, catalog[2]) : null;
         if (catalog[2] && !old)
           throw Object.assign(new Error("Запись не найдена"), { status: 404 });
         if (old) {
-          scopedProperty(old.propertyId);
+          scopedProperty(
+            old.propertyId,
+            path.startsWith("/api/structure") || path.includes("floorplans")
+              ? "plans.write"
+              : "maintenance.write",
+          );
           if (old.propertyId !== body.propertyId)
             throw new Error("Перенос между объектами запрещён");
           if (old.updatedAt !== body.updatedAt)
@@ -174,11 +234,26 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
         if (estimate[2])
           ok(
             response,
-            transitionEstimate(db, actor, estimate[1], estimate[2], body),
+            db.transaction(() =>
+              transitionEstimate(db, actor, estimate[1], estimate[2], body),
+            ),
           );
         else {
-          scopedProperty(body.propertyId);
-          ok(response, { item: saveEstimate(db, actor, estimate[1], body) });
+          scopedProperty(
+            body.propertyId,
+            path.startsWith("/api/structure") || path.includes("floorplans")
+              ? "plans.write"
+              : path.includes("templates")
+                ? "maintenance.write"
+                : path.startsWith("/api/maintenance/")
+                  ? "services.write"
+                  : "workspace.read",
+          );
+          ok(response, {
+            item: db.transaction(() =>
+              saveEstimate(db, actor, estimate[1], body),
+            ),
+          });
         }
         return true;
       }

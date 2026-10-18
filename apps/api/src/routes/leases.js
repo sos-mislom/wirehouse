@@ -61,7 +61,7 @@ export function createLeasesRoutes({
         return true;
       }
 
-      if (!requireUnitScope(user, response, body.unitId)) {
+      if (!requireUnitScope(user, response, body.unitId, "leases.write")) {
         return true;
       }
 
@@ -263,10 +263,13 @@ export function createLeasesRoutes({
       if (method === "PUT") {
         try {
           const body = await parseJsonBody(request);
-          if (!requireLeaseScope(user, response, leaseId)) {
+          if (!requireLeaseScope(user, response, leaseId, "leases.write")) {
             return true;
           }
-          if (body.unitId && !requireUnitScope(user, response, body.unitId)) {
+          if (
+            body.unitId &&
+            !requireUnitScope(user, response, body.unitId, "leases.write")
+          ) {
             return true;
           }
 
@@ -285,7 +288,7 @@ export function createLeasesRoutes({
       }
 
       if (method === "DELETE") {
-        if (!requireLeaseScope(user, response, leaseId)) {
+        if (!requireLeaseScope(user, response, leaseId, "leases.write")) {
           return true;
         }
 

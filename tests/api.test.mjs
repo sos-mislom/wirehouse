@@ -51,10 +51,14 @@ test("API regression: scoped finance, persisted notification reads, validation a
     propertyId: f.property.id,
   });
   f.db.getById("users", unassigned.id).property_id = null;
+  f.db.data.user_assignments = f.db.data.user_assignments.filter(
+    (a) => a.userId !== unassigned.id,
+  );
   const task = f.db.createTicket({
     unitId: f.unit.id,
     createdBy: f.admin.id,
     tenantId: f.tenant.id,
+    leaseId: f.lease.id,
     assignedTo: f.worker.id,
     category: "electrical",
     priority: "urgent",
@@ -251,6 +255,37 @@ test("API regression: scoped finance, persisted notification reads, validation a
   assert.equal(
     overview.notifications.find((n) => n.id === notification.id).unread,
     false,
+  );
+  const photoBody = {
+    name: "Фото.jpg",
+    category: "photo",
+    links: [{ entityType: "tickets", entityId: task.id, phase: "before" }],
+    fileName: "Фото.jpg",
+    mimeType: "image/jpeg",
+    contentBase64: Buffer.from([255, 216, 255, 1, 2, 3, 255, 217]).toString(
+      "base64",
+    ),
+  };
+  assert.equal(
+    (await call("/api/documents", f.manager, "POST", photoBody)).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}`, f.manager, "PUT", {
+        status: "in_progress",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call("/api/documents", f.manager, "POST", {
+        ...photoBody,
+        links: [{ entityType: "tickets", entityId: task.id, phase: "after" }],
+      })
+    ).status,
+    200,
   );
   const completed = await call(`/api/tickets/${task.id}`, f.manager, "PUT", {
     status: "completed",
@@ -489,10 +524,72 @@ test("API regression: scoped finance, persisted notification reads, validation a
       ).status,
       200,
     );
+  const accountSource = (
+    await call("/api/accounting/sources", f.admin, "POST", {
+      name: "Учет",
+      environment: "production",
+      active: true,
+    })
+  ).body.item;
+  const account = (
+    await call("/api/accounting/accounts", f.admin, "POST", {
+      sourceId: accountSource.id,
+      externalId: "work-account",
+      leaseId: f.lease.id,
+      number: "001",
+      status: "active",
+      validFrom: f.lease.start_date,
+      validTo: null,
+    })
+  ).body.item;
+  let w = (await call(`/api/tickets/${task.id}/workflow`)).body.item;
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}/workflow/terms`, f.admin, "POST", {
+        updatedAt: w.updatedAt,
+        paid: true,
+        amount: estimate.total,
+        accountId: account.id,
+        requireBeforePhoto: false,
+        requireAfterPhoto: false,
+      })
+    ).status,
+    200,
+  );
+  w = (await call(`/api/tickets/${task.id}/workflow`)).body.item;
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}/workflow/decision`, f.admin, "POST", {
+        updatedAt: w.updatedAt,
+        action: "approve",
+        reason: "",
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}`, f.admin, "PUT", {
+        status: "in_progress",
+      })
+    ).status,
+    200,
+  );
   assert.equal(
     (
       await call(`/api/tickets/${task.id}`, f.admin, "PUT", {
         status: "completed",
+      })
+    ).status,
+    200,
+  );
+  w = (await call(`/api/tickets/${task.id}/workflow`)).body.item;
+  assert.equal(
+    (
+      await call(`/api/tickets/${task.id}/workflow/decision`, f.admin, "POST", {
+        updatedAt: w.updatedAt,
+        action: "accept",
+        reason: "",
       })
     ).status,
     200,

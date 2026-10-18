@@ -1,3 +1,7 @@
+import { enqueueExchange, requiredRecord } from "./accounting.js";
+import { publishEstimateTerms, workflowFor } from "./ticket-workflow.js";
+import { registerActDocument } from "./documents.js";
+import { requireContext } from "./context-access.js";
 import crypto from "node:crypto";
 import { assertPermission } from "../services/permissions.js";
 const cents = (value) => Math.round((value + Number.EPSILON) * 100);
@@ -26,6 +30,7 @@ export function saveEstimate(db, actor, id, input) {
       current.propertyId !== input.propertyId)
   )
     throw new Error("Нельзя менять заявку существующей сметы");
+  requireContext(db, actor, "estimates.write", "tickets", ticket.id);
   const contractor = input.contractorId
     ? db.getById("contractors", input.contractorId)
     : null;
@@ -86,6 +91,15 @@ export function transitionEstimate(db, actor, id, action, input) {
   );
   const row = db.getById("estimates", id);
   if (!row) throw Object.assign(new Error("Смета не найдена"), { status: 404 });
+  requireContext(
+    db,
+    actor,
+    ["approve", "reject", "act"].includes(action)
+      ? "estimates.approve"
+      : "estimates.write",
+    "tickets",
+    row.ticketId,
+  );
   if (row.version !== input.version) throw conflict("Версия сметы устарела");
   const expected = {
     submit: "draft",
@@ -98,11 +112,14 @@ export function transitionEstimate(db, actor, id, action, input) {
   const now = new Date().toISOString();
   if (action === "reject" && !input.reason?.trim())
     throw new Error("Укажите причину отклонения");
+  if (action === "submit") publishEstimateTerms(db, actor, row);
   let act;
   if (action === "act") {
     const ticket = db.getById("tickets", row.ticketId);
     if (!["completed", "resolved", "closed"].includes(ticket.status))
       throw conflict("Акт доступен после выполнения заявки");
+    if (!["accepted", "closed"].includes(workflowFor(db, ticket.id).state))
+      throw conflict("Акт доступен после приемки результата");
     if (ticket.checklist_items.some((item) => item.required && !item.completed))
       throw conflict("Обязательный чек-лист не завершён");
     if (db.data.service_acts.some((a) => a.estimateId === id))
@@ -132,6 +149,31 @@ export function transitionEstimate(db, actor, id, action, input) {
       },
     };
     db.data.service_acts.push(act);
+    registerActDocument(db, actor, act, ticket);
+    const workflow = workflowFor(db, ticket.id);
+    if (workflow.accountId) {
+      const account = requiredRecord(
+        db,
+        "personal_accounts",
+        workflow.accountId,
+      );
+      enqueueExchange(
+        db,
+        account.sourceId,
+        "service_acts",
+        `service-act-${act.id}`,
+        {
+          schemaVersion: 1,
+          actId: act.id,
+          number: act.number,
+          date: act.date,
+          ticketId: ticket.id,
+          accountExternalId: account.externalId,
+          total: act.total,
+          lines: structuredClone(act.snapshot.lines),
+        },
+      );
+    }
   }
   row.status = {
     submit: "submitted",

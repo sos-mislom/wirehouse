@@ -74,7 +74,9 @@ export function createPropertiesRoutes({
       const propertyId = propertyMatch[1];
 
       if (method === "PUT") {
-        if (!requirePropertyScope(user, response, propertyId)) {
+        if (
+          !requirePropertyScope(user, response, propertyId, "portfolio.write")
+        ) {
           return true;
         }
 
@@ -91,7 +93,9 @@ export function createPropertiesRoutes({
       }
 
       if (method === "DELETE") {
-        if (!requirePropertyScope(user, response, propertyId)) {
+        if (
+          !requirePropertyScope(user, response, propertyId, "portfolio.write")
+        ) {
           return true;
         }
 

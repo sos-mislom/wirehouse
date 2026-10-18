@@ -1,3 +1,11 @@
+import {
+  createTicketWorkflow,
+  guardTicketTransition,
+} from "../domain/ticket-workflow.js";
+import {
+  registerExistingDocument,
+  removeExistingDocument,
+} from "../domain/documents.js";
 import { LeasesDatabase } from "./leases.js";
 import {
   addHours,
@@ -63,6 +71,8 @@ export class TicketsDatabase extends LeasesDatabase {
   }
 
   createTicket(payload) {
+    if (payload.status && !["new", "accepted"].includes(payload.status))
+      throw new Error("Новая заявка должна пройти назначение и исполнение");
     const unit = this.requireUnit(payload.unitId);
     const property = this.requireProperty(unit.property_id);
     const createdAt = nowIso();
@@ -112,6 +122,7 @@ export class TicketsDatabase extends LeasesDatabase {
 
     this.validateTicketPayload(record);
     this.data.tickets.push(record);
+    createTicketWorkflow(this, record);
     this.data.ticket_history.push({
       id: createId(),
       ticket_id: record.id,
@@ -212,6 +223,7 @@ export class TicketsDatabase extends LeasesDatabase {
     )
       throw new Error("Завершите обязательный чек-лист ППР");
     this.validateTicketPayload(next);
+    guardTicketTransition(this, current, next, payload);
     Object.assign(current, next);
     if (current.status !== previousStatus) {
       this.data.ticket_history.push({
@@ -260,6 +272,12 @@ export class TicketsDatabase extends LeasesDatabase {
       return null;
     }
 
+    if (
+      ["awaiting_acceptance", "accepted", "closed"].includes(
+        this.data.ticket_workflows.find((w) => w.ticketId === ticketId)?.state,
+      )
+    )
+      throw new Error("Сначала верните результат в работу");
     const completed = Boolean(payload.completed);
     item.completed = completed;
     item.completed_at = completed ? nowIso() : null;
@@ -359,6 +377,7 @@ export class TicketsDatabase extends LeasesDatabase {
     };
 
     this.data.ticket_attachments.push(record);
+    registerExistingDocument(this, "tickets", record);
 
     const storedTicket = this.getById("tickets", payload.ticketId);
     if (storedTicket) {
@@ -374,6 +393,7 @@ export class TicketsDatabase extends LeasesDatabase {
       return { result: createChangeResult(0), attachment: null };
     }
 
+    removeExistingDocument(this, id);
     this.data.ticket_attachments = this.data.ticket_attachments.filter(
       (attachment) => attachment.id !== id,
     );

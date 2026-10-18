@@ -1,3 +1,8 @@
+import {
+  syncStaffAssignment,
+  contextCan,
+  canSeeProperty,
+} from "./domain/context-access.js";
 import crypto from "node:crypto";
 import {
   isOpenTicket,
@@ -59,18 +64,7 @@ export function publicUser(user) {
   };
 }
 export function operationsScope(db, user) {
-  const leases = db.data.leases.filter(
-    (l) => l.tenant_id === user.tenant_id && l.stage !== "terminated",
-  );
-  const unitIds = new Set(leases.map((l) => l.unit_id));
-  const propertyIds = new Set(
-    db.data.units.filter((u) => unitIds.has(u.id)).map((u) => u.property_id),
-  );
-  return (propertyId) =>
-    user.role === "admin" ||
-    (user.role === "tenant"
-      ? propertyIds.has(propertyId)
-      : Boolean(user.property_id && propertyId === user.property_id));
+  return (propertyId) => canSeeProperty(db, user, propertyId);
 }
 function checkProperty(db, user, propertyId) {
   db.requireProperty(propertyId);
@@ -80,6 +74,8 @@ function checkProperty(db, user, propertyId) {
 function checkUnit(db, user, unitId, propertyId) {
   const unit = db.requireUnit(unitId);
   checkProperty(db, user, unit.property_id);
+  if (!contextCan(db, user, "workspace.read", "units", unit.id))
+    throw Object.assign(new Error("Нет доступа к помещению"), { status: 403 });
   if (unit.property_id !== propertyId)
     throw new Error("Помещение относится к другому объекту");
   return unit;
@@ -91,7 +87,7 @@ function responsible(db, propertyId, userId) {
     !user ||
     !user.is_active ||
     user.role === "tenant" ||
-    (user.property_id && user.property_id !== propertyId)
+    !contextCan(db, user, "workspace.read", "properties", propertyId)
   )
     throw new Error("Ответственный недоступен на этом объекте");
   return userId;
@@ -206,6 +202,14 @@ export function updateUser(db, actor, userId, body) {
     throw Object.assign(new Error("Нет доступа к пользователю"), {
       status: 403,
     });
+  if (
+    actor.role !== "admin" &&
+    !contextCan(db, actor, "users.manage", "properties", user.property_id)
+  )
+    throw Object.assign(
+      new Error("Нет права управлять пользователями объекта"),
+      { status: 403 },
+    );
   const role = body.role ?? user.role;
   if (role !== user.role && !hasPermission(actor, "permissions.manage"))
     throw Object.assign(new Error("Нет права изменять роль"), { status: 403 });
@@ -285,6 +289,7 @@ export function updateUser(db, actor, userId, body) {
       is_active: active ? 1 : 0,
       specialty,
     });
+    syncStaffAssignment(db, record);
     if (body.password) record.password_hash = hashPassword(body.password);
     if (body.permissions !== undefined) record.permissions = body.permissions;
     else if (role !== user.role) record.permissions = null;
@@ -324,6 +329,41 @@ export function saveOperation(db, user, kind, recordId, body) {
   const input = { ...existing, ...body };
   const propertyId = input.propertyId;
   checkProperty(db, user, propertyId);
+  const permission = {
+    equipment: "equipment.write",
+    plans: "maintenance.write",
+    services: "services.write",
+    meters: "meters.write",
+    news: "news.write",
+    expenses: "expenses.write",
+    floorplans: "plans.write",
+  }[kind];
+  if (
+    !contextCan(
+      db,
+      user,
+      permission,
+      input.unitId ? "units" : "properties",
+      input.unitId ?? propertyId,
+    )
+  )
+    throw Object.assign(
+      new Error("Нет права изменять запись в этом контексте"),
+      { status: 403 },
+    );
+  if (
+    existing &&
+    !contextCan(
+      db,
+      user,
+      permission,
+      existing.unitId ? "units" : "properties",
+      existing.unitId ?? existing.propertyId,
+    )
+  )
+    throw Object.assign(new Error("Нет доступа к исходной записи"), {
+      status: 403,
+    });
   if (existing && propertyId !== existing.propertyId)
     throw new Error("Перенос записи между объектами не поддерживается");
   const record = {
@@ -583,7 +623,29 @@ export function saveOperation(db, user, kind, recordId, body) {
     return record;
   });
 }
-export function addReading(db, user, meterId, body) {
+export function postAcceptedReading(db, user, submissionId) {
+  const submission = db.getById("reading_submissions", submissionId);
+  if (!submission || submission.status !== "accepted")
+    throw new Error("Показание еще не принято");
+  const meterId = submission.meterId,
+    periodRecord = db.getById("reading_periods", submission.periodId);
+  const body = {
+    value: submission.value,
+    period: periodRecord.startsOn.slice(0, 7),
+    submissionId,
+  };
+  const accepted = db.data.reading_submissions.find(
+    (r) =>
+      r.id === body.submissionId &&
+      r.status === "accepted" &&
+      r.meterId === meterId &&
+      r.value === body.value,
+  );
+  if (!accepted)
+    throw Object.assign(
+      new Error("Передайте показание на проверку через период ввода"),
+      { status: 409 },
+    );
   const meter = db.getById("meters", meterId);
   if (!meter || !meter.active)
     throw new Error("Счётчик не найден или выключен");
@@ -708,9 +770,19 @@ export function getOperations(db, user) {
   const manager = ["admin", "manager"].includes(user.role);
   const result = {};
   for (const [key, collection] of Object.entries(collections)) {
-    let rows = db.data[collection].filter((r) => scope(r.propertyId));
+    let rows = db.data[collection].filter(
+      (r) =>
+        scope(r.propertyId) &&
+        (!r.unitId ||
+          contextCan(db, user, "workspace.read", "units", r.unitId)),
+    );
     if (!staff && !["services", "news"].includes(key)) rows = [];
-    if (key === "expenses" && !manager) rows = [];
+    if (key === "expenses")
+      rows = rows.filter(
+        (r) =>
+          manager &&
+          contextCan(db, user, "finance.read", "properties", r.propertyId),
+      );
     if (key === "news")
       rows = rows.filter(
         (r) =>
@@ -724,7 +796,18 @@ export function getOperations(db, user) {
     result[key] = rows;
   }
   result.readings = staff
-    ? db.data.resource_readings.filter((r) => scope(r.propertyId))
+    ? db.data.resource_readings
+        .filter(
+          (r) =>
+            scope(r.propertyId) &&
+            contextCan(db, user, "workspace.read", "meters", r.meterId),
+        )
+        .map((r) =>
+          contextCan(db, user, "finance.read", "meters", r.meterId)
+            ? r
+            : (({ allocations, amount, tariff, unallocated, ...reading }) =>
+                reading)(r),
+        )
     : [];
   result.users = manager
     ? db.data.users

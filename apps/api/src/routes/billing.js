@@ -1,3 +1,4 @@
+import { contextCan } from "../domain/context-access.js";
 import { parseJsonBody } from "../http/body.js";
 export function createBillingRoutes({
   requireAuth,
@@ -205,54 +206,6 @@ export function createBillingRoutes({
       return true;
     }
 
-    if (method === "POST" && pathname === "/api/meter-readings") {
-      const user = requirePortfolioWriteAccess(request, response);
-      if (!user) {
-        return true;
-      }
-
-      const body = await parseJsonBody(request);
-      const missing = validateRequired(body, [
-        "unitId",
-        "period",
-        "meterType",
-        "value",
-      ]);
-      if (missing) {
-        badRequest(response, `Missing field: ${missing}`);
-        return true;
-      }
-
-      const scoped = buildScopedCollections(user);
-      if (!scoped.units.some((unit) => unit.id === body.unitId)) {
-        notFound(response);
-        return true;
-      }
-
-      try {
-        const item = db.createMeterReading({
-          unitId: String(body.unitId),
-          tenantId: body.tenantId ? String(body.tenantId) : undefined,
-          period: String(body.period),
-          meterType: String(body.meterType),
-          value: body.value,
-          previousValue: body.previousValue,
-          tariffRate: body.tariffRate,
-          chargeAmount: body.chargeAmount,
-          recordedAt: body.recordedAt ? String(body.recordedAt) : undefined,
-        });
-        created(response, { item: normalizeMeterReading(item) });
-      } catch (error) {
-        badRequest(
-          response,
-          error instanceof Error
-            ? error.message
-            : "Meter reading create failed",
-        );
-      }
-      return true;
-    }
-
     if (method === "GET" && pathname === "/api/checklist-templates") {
       const user = requireAuth(request, response);
       if (!user) {
@@ -281,7 +234,10 @@ export function createBillingRoutes({
         badRequest(response, `Missing field: ${missing}`);
         return true;
       }
-      if (!getScopedLease(user, body.leaseId)) {
+      if (
+        !getScopedLease(user, body.leaseId) ||
+        !contextCan(db, user, "billing.write", "leases", body.leaseId)
+      ) {
         notFound(response);
         return true;
       }
@@ -316,6 +272,13 @@ export function createBillingRoutes({
       }
 
       const invoice = getScopedBillingInvoice(user, invoicePaymentMatch[1]);
+      if (
+        invoice &&
+        !contextCan(db, user, "billing.write", "leases", invoice.leaseId)
+      ) {
+        forbidden(response);
+        return true;
+      }
       if (!invoice) {
         notFound(response);
         return true;

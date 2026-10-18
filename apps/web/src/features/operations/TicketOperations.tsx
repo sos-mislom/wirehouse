@@ -27,9 +27,7 @@ export function TicketOperations({
   const unit = overview.units.find((u) => u.id === ticket.unitId);
   const leases =
     overview.leases?.filter((l) => l.unitId === ticket.unitId) || [];
-  const currentLease =
-    leases.find((l) => l.id === ticket.leaseId) ||
-    leases.find((l) => ["signed", "active", "prolongation"].includes(l.stage));
+  const currentLease = leases.find((l) => l.id === ticket.leaseId);
   const services =
     operations?.services.filter(
       (s) =>
@@ -163,15 +161,19 @@ export function TicketOperations({
       </details>
       <details>
         <summary>
-          Работы и ТМЦ · затраты {currency(cost)}
-          {service?.paid
+          Работы и ТМЦ{" "}
+          {ticket.financialAccess ? ` · затраты ${currency(cost)}` : ""}
+          {ticket.financialAccess && service?.paid
             ? ` · к оплате ${currency(cost + service.basePrice)}`
-            : " · без оплаты арендатором"}
+            : ""}
         </summary>
         {logs.map((log) => (
           <p key={log.id}>
-            {log.description} · {log.hours} ч · ТМЦ {currency(log.materialCost)}{" "}
-            · всего {currency(log.cost)} · {log.createdByName}
+            {log.description} · {log.hours} ч{" "}
+            {ticket.financialAccess
+              ? ` · ТМЦ ${currency(log.materialCost)} · всего ${currency(log.cost)}`
+              : ""}{" "}
+            · {log.createdByName}
           </p>
         ))}
         {!readOnly && isOpenTicket(ticket.status) && (

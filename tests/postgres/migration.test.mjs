@@ -1,3 +1,4 @@
+import { acceptedReading } from "../business-helpers.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "../fixtures.mjs";
@@ -218,8 +219,7 @@ test("Operations, documents, MFA setup, audit and import records all survive typ
   t.after(f.cleanup);
   const period = new Date().toISOString().slice(0, 7),
     day = `${period}-01`;
-  const { addReading, addWorkLog } =
-    await import("../../apps/api/src/operations.js");
+  const { addWorkLog } = await import("../../apps/api/src/operations.js");
   const { issueBotLink } = await import("../../apps/api/src/bot-links.js");
   const eq = saveOperation(f.db, f.admin, "equipment", null, {
     name: "Оборудование",
@@ -309,7 +309,7 @@ test("Operations, documents, MFA setup, audit and import records all survive typ
     tariff: 3,
     initialValue: 0,
   });
-  addReading(f.db, f.admin, meter.id, { period, value: 10 });
+  acceptedReading(f.db, f.admin, meter.id, { period, value: 10 });
   f.db.createMeterReading({
     unitId: f.unit.id,
     tenantId: f.tenant.id,

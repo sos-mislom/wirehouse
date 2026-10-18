@@ -1,3 +1,4 @@
+import { businessTables } from "../persistence/business-schema.js";
 import crypto from "node:crypto";
 export {
   isOpenTicket,
@@ -96,6 +97,9 @@ export const createChangeResult = (changes) => ({
 export const ensureArray = (value) => (Array.isArray(value) ? value : []);
 
 export const createEmptyData = () => ({
+  .../** @type {Record<keyof typeof businessTables, any[]>} */ (
+    Object.fromEntries(Object.keys(businessTables).map((name) => [name, []]))
+  ),
   properties: [],
   units: [],
   tenants: [],

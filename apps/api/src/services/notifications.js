@@ -1,34 +1,29 @@
+import { contextCan, canSeeProperty } from "../domain/context-access.js";
 import { config } from "../config.js";
 export function createNotificationsService({ db, sendEmail }) {
   const getNotificationRecipientUsers = ({
     propertyId = null,
     tenantId = null,
+    ticketId = null,
     includeTenant = false,
   } = {}) => {
     const users = db.listUsers().filter((user) => user.is_active === 1);
     return users.filter((user) => {
-      if (user.role === "admin") return true;
-      if (user.role === "manager")
-        return Boolean(user.property_id && user.property_id === propertyId);
-      if (user.role === "worker") {
-        return Boolean(user.property_id && user.property_id === propertyId);
+      if (user.role === "tenant" && !includeTenant) return false;
+      if (ticketId) {
+        const ticket = db.getById("tickets", ticketId);
+        return (
+          contextCan(db, user, "workspace.read", "tickets", ticketId) &&
+          (user.role !== "worker" || ticket?.assigned_to === user.id)
+        );
       }
-      if (includeTenant && user.role === "tenant") {
-        return tenantId && user.tenant_id === tenantId;
-      }
-      return false;
+      if (user.role === "tenant") return false;
+      return propertyId
+        ? canSeeProperty(db, user, propertyId)
+        : user.role === "admin";
     });
   };
-
-  const getNotificationEmailForUser = (user, tenantId = null) => {
-    if (user.email) {
-      return user.email;
-    }
-    if (user.role === "tenant" && tenantId) {
-      return db.getTenant(tenantId)?.email ?? null;
-    }
-    return null;
-  };
+  const getNotificationEmailForUser = (user) => user.email ?? null;
 
   const dispatchNotification = async ({
     type,
@@ -60,8 +55,15 @@ export function createNotificationsService({ db, sendEmail }) {
           channel: "email",
           userId: recipient.id,
           email: getNotificationEmailForUser(recipient, tenantId),
-          status: config.smtpHost ? "pending" : "skipped",
-          error: config.smtpHost ? null : "SMTP is not configured",
+          status:
+            config.smtpHost && getNotificationEmailForUser(recipient)
+              ? "pending"
+              : "skipped",
+          error: !getNotificationEmailForUser(recipient)
+            ? "Email пользователя не указан"
+            : config.smtpHost
+              ? null
+              : "SMTP is not configured",
         });
       }
     }
@@ -138,6 +140,7 @@ export function createNotificationsService({ db, sendEmail }) {
         propertyId: ticket.propertyId ?? ticket.property_id,
         tenantId: ticket.tenantId ?? ticket.tenant_id,
         includeTenant,
+        ticketId: ticket.id,
       }),
     });
   return {

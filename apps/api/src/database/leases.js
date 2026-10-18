@@ -1,3 +1,8 @@
+import {
+  registerExistingDocument,
+  removeExistingDocument,
+} from "../domain/documents.js";
+import { syncLeaseAssignments } from "../domain/context-access.js";
 import { TenantsDatabase } from "./tenants.js";
 import {
   activeLeaseStages,
@@ -71,6 +76,7 @@ export class LeasesDatabase extends TenantsDatabase {
 
     this.validateLeasePayload(record);
     this.data.leases.push(record);
+    syncLeaseAssignments(this, record);
 
     if (activeLeaseStages.has(record.stage)) {
       this.setUnitStatus(record.unit_id, "occupied");
@@ -87,6 +93,16 @@ export class LeasesDatabase extends TenantsDatabase {
 
     const nextTenantId = payload.tenantId ?? current.tenant_id;
     const nextUnitId = payload.unitId ?? current.unit_id;
+    if (
+      (nextTenantId !== current.tenant_id || nextUnitId !== current.unit_id) &&
+      (this.data.personal_accounts.some((a) => a.leaseId === id) ||
+        this.data.external_links.some(
+          (l) => l.entityType === "leases" && l.localId === id,
+        ))
+    )
+      throw new Error(
+        "Нельзя менять участника или помещение договора, связанного с источником учета. Оформите новый договор",
+      );
     this.requireTenant(nextTenantId);
     this.requireUnit(nextUnitId);
     this.ensureUnique(
@@ -136,6 +152,7 @@ export class LeasesDatabase extends TenantsDatabase {
 
     this.validateLeasePayload(next);
     Object.assign(current, next);
+    syncLeaseAssignments(this, current);
 
     if (
       previousUnitId !== current.unit_id &&
@@ -220,6 +237,7 @@ export class LeasesDatabase extends TenantsDatabase {
     };
 
     this.data.lease_documents.push(record);
+    registerExistingDocument(this, "leases", record);
     lease.updated_at = nowIso();
     return clone(record);
   }
@@ -230,6 +248,7 @@ export class LeasesDatabase extends TenantsDatabase {
       return { result: createChangeResult(0), document: null };
     }
 
+    removeExistingDocument(this, id);
     this.data.lease_documents = this.data.lease_documents.filter(
       (document) => document.id !== id,
     );
@@ -239,5 +258,4 @@ export class LeasesDatabase extends TenantsDatabase {
     }
     return { result: createChangeResult(1), document: clone(current) };
   }
-
 }

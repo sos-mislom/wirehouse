@@ -1,3 +1,4 @@
+import { contextCan, requireContext } from "../domain/context-access.js";
 import crypto from "node:crypto";
 import path from "node:path";
 import {
@@ -78,17 +79,58 @@ export function createTicketsRoutes({
         return true;
       }
 
-      if (user.role === "tenant" && !user.tenant_id) {
+      const availableLeases =
+        user.role === "tenant"
+          ? db.data.leases.filter(
+              (lease) =>
+                lease.unit_id === body.unitId &&
+                ["signed", "active", "prolongation"].includes(lease.stage) &&
+                lease.start_date <= new Date().toISOString().slice(0, 10) &&
+                lease.end_date >= new Date().toISOString().slice(0, 10) &&
+                contextCan(db, user, "tickets.write", "leases", lease.id),
+            )
+          : [];
+      const ownerUnit = db.data.user_assignments.some(
+        (a) =>
+          a.userId === user.id &&
+          a.businessRole === "owner" &&
+          ["property", "unit"].includes(a.scopeType),
+      );
+      if (user.role === "tenant" && !availableLeases.length && !ownerUnit) {
         forbidden(response);
+        return true;
+      }
+      const selectedLease =
+        user.role === "tenant"
+          ? body.leaseId
+            ? availableLeases.find((lease) => lease.id === body.leaseId)
+            : availableLeases.length === 1
+              ? availableLeases[0]
+              : null
+          : null;
+      if (
+        user.role === "tenant" &&
+        !selectedLease &&
+        (!ownerUnit || availableLeases.length)
+      ) {
+        badRequest(response, "Выберите доступный договор для заявки");
         return true;
       }
 
       const payload = {
         ...body,
         createdBy: user.id,
+        ...(selectedLease ? { leaseId: selectedLease.id } : {}),
         tenantId:
-          user.role === "tenant" ? user.tenant_id : (body.tenantId ?? null),
-        assignedTo: user.role === "tenant" ? null : (body.assignedTo ?? null),
+          user.role === "tenant"
+            ? (selectedLease?.tenant_id ?? null)
+            : (body.tenantId ?? null),
+        assignedTo:
+          user.role === "worker"
+            ? user.id
+            : user.role === "tenant"
+              ? null
+              : (body.assignedTo ?? null),
         status: user.role === "tenant" ? "new" : (body.status ?? "new"),
         sourceChannel: body.sourceChannel ?? "web",
       };
@@ -96,8 +138,7 @@ export function createTicketsRoutes({
       try {
         validateTicketLinks(db, user, payload);
         const createdRecord = db.createTicket(payload);
-        const ticket =
-          hydrateTicket(createdRecord.id) ?? normalizeTicket(createdRecord);
+        const ticket = getTicketForUser(user, createdRecord.id);
         await notifyTicketEvent({
           ticket,
           type: "ticket_created",
@@ -127,6 +168,13 @@ export function createTicketsRoutes({
       }
 
       const ticketId = ticketCommentsMatch[1];
+      if (
+        method !== "GET" &&
+        !contextCan(db, user, "tickets.write", "tickets", ticketId)
+      ) {
+        forbidden(response);
+        return true;
+      }
       const ticket = getTicketForUser(user, ticketId);
       if (!ticket) {
         notFound(response);
@@ -192,6 +240,20 @@ export function createTicketsRoutes({
       }
 
       const ticketId = ticketAttachmentsMatch[1];
+      if (
+        method === "GET" &&
+        !contextCan(db, user, "documents.read", "tickets", ticketId)
+      ) {
+        forbidden(response);
+        return true;
+      }
+      if (
+        method !== "GET" &&
+        !contextCan(db, user, "tickets.write", "tickets", ticketId)
+      ) {
+        forbidden(response);
+        return true;
+      }
       const ticket = getTicketForUser(user, ticketId);
       if (!ticket) {
         notFound(response);
@@ -278,6 +340,17 @@ export function createTicketsRoutes({
       }
 
       const ticketId = ticketAttachmentFileMatch[1];
+      if (!contextCan(db, user, "documents.read", "tickets", ticketId)) {
+        forbidden(response);
+        return true;
+      }
+      if (
+        method !== "GET" &&
+        !contextCan(db, user, "tickets.write", "tickets", ticketId)
+      ) {
+        forbidden(response);
+        return true;
+      }
       const attachmentId = ticketAttachmentFileMatch[2];
       const ticket = getTicketForUser(user, ticketId);
       if (!ticket) {
@@ -381,6 +454,10 @@ export function createTicketsRoutes({
       }
 
       const ticketId = ticketChecklistMatch[1];
+      if (!contextCan(db, user, "tickets.write", "tickets", ticketId)) {
+        forbidden(response);
+        return true;
+      }
       const itemId = ticketChecklistMatch[2];
       const ticket = getTicketForUser(user, ticketId);
       if (!ticket) {
@@ -400,7 +477,7 @@ export function createTicketsRoutes({
 
       ok(response, {
         item: updatedItem,
-        ticket: hydrateTicket(ticketId),
+        ticket: getTicketForUser(user, ticketId),
       });
       return true;
     }
@@ -414,6 +491,13 @@ export function createTicketsRoutes({
       }
 
       const ticketId = ticketMatch[1];
+      if (
+        method !== "GET" &&
+        !contextCan(db, user, "tickets.write", "tickets", ticketId)
+      ) {
+        forbidden(response);
+        return true;
+      }
       const ticket = getTicketForUser(user, ticketId);
       if (!ticket) {
         notFound(response);
@@ -432,7 +516,7 @@ export function createTicketsRoutes({
         if (user.role === "tenant") {
           if (
             body.status !== "rejected" ||
-            ticket.tenantId !== user.tenant_id ||
+            !contextCan(db, user, "tickets.write", "tickets", ticketId) ||
             !["new", "accepted", "waiting_tenant"].includes(ticket.status)
           ) {
             forbidden(response);
@@ -489,8 +573,7 @@ export function createTicketsRoutes({
             notFound(response);
             return true;
           }
-          const updatedTicket =
-            hydrateTicket(ticketId) ?? normalizeTicket(updatedRecord);
+          const updatedTicket = getTicketForUser(user, ticketId);
           await notifyTicketEvent({
             ticket: updatedTicket,
             type: "ticket_updated",

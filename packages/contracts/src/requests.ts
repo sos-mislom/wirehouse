@@ -1,3 +1,6 @@
+import { businessWorkflowContracts } from "./business-workflows.ts";
+import { accessContracts } from "./access.ts";
+import { accountingContracts } from "./accounting.ts";
 import { maintenanceImportContracts } from "./maintenance-import.ts";
 import { z } from "zod";
 import { permissionKeys } from "./permissions.ts";
@@ -293,6 +296,9 @@ export const requestContracts: {
 }[] = [
   ...platformContracts,
   ...maintenanceImportContracts,
+  ...accountingContracts,
+  ...accessContracts,
+  ...businessWorkflowContracts,
   {
     method: "POST",
     path: /^\/api\/auth\/staff\/login$/,
@@ -364,11 +370,7 @@ export const requestContracts: {
       schema: schema.partial(),
     },
   ]),
-  {
-    method: "POST",
-    path: /^\/api\/operations\/meters\/[a-zA-Z0-9-]+\/readings$/,
-    schema: readingCreate,
-  },
+
   {
     method: "POST",
     path: /^\/api\/operations\/tickets\/[a-zA-Z0-9-]+\/work$/,
@@ -447,21 +449,7 @@ export const requestContracts: {
       reference: text.optional(),
     }),
   },
-  {
-    method: "POST",
-    path: /^\/api\/meter-readings$/,
-    schema: z.strictObject({
-      unitId: id,
-      tenantId: id.optional(),
-      period,
-      meterType: resource,
-      value: number,
-      previousValue: number.optional(),
-      tariffRate: number.optional(),
-      chargeAmount: number.optional(),
-      recordedAt: timestamp.optional(),
-    }),
-  },
+
   {
     method: "POST",
     path: /^\/api\/imports\/[a-zA-Z0-9-]+$/,

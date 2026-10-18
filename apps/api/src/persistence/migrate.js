@@ -9,6 +9,9 @@ const migrations = [
   "002-remove-legacy-state.sql",
   "003-operations-platform.sql",
   "004-maintenance-import.sql",
+  "005-business-workflows.sql",
+  "006-context-assignments.sql",
+  "007-existing-business-records.sql",
 ];
 
 async function sources() {

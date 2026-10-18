@@ -15,10 +15,6 @@ export function useBillingActions(
     | "setBillingPaymentForm"
     | "setNotice"
     | "locale"
-    | "tenantDetail"
-    | "meterReadingForm"
-    | "setTenantDetail"
-    | "setMeterReadingForm"
   > &
     Pick<
       ReturnType<typeof useDataActions>,
@@ -37,10 +33,6 @@ export function useBillingActions(
     refreshWorkspace,
     setNotice,
     locale,
-    tenantDetail,
-    meterReadingForm,
-    setTenantDetail,
-    setMeterReadingForm,
   } = deps;
   const handleBillingPaymentSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -94,64 +86,5 @@ export function useBillingActions(
     }
   };
 
-  const handleMeterReadingSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!session || !tenantDetail) {
-      return;
-    }
-
-    setBusyAction("meter-reading");
-    setError("");
-
-    try {
-      await apiRequest("/api/meter-readings", {
-        method: "POST",
-        token: session.token,
-        body: {
-          tenantId: tenantDetail.tenant.id,
-          unitId: meterReadingForm.unitId,
-          period: meterReadingForm.period,
-          meterType: meterReadingForm.meterType,
-          value: Number(meterReadingForm.value),
-          previousValue:
-            meterReadingForm.previousValue === ""
-              ? undefined
-              : Number(meterReadingForm.previousValue),
-          tariffRate:
-            meterReadingForm.tariffRate === ""
-              ? undefined
-              : Number(meterReadingForm.tariffRate),
-        },
-      });
-
-      const refreshedTenant = await apiRequest<TenantDetail>(
-        `/api/tenants/${tenantDetail.tenant.id}/detail`,
-        {
-          token: session.token,
-        },
-      );
-      setTenantDetail(refreshedTenant);
-      setMeterReadingForm((current) => ({
-        ...current,
-        value: "",
-        previousValue: "",
-        tariffRate: "",
-      }));
-      await Promise.all([loadBillingInvoices(), refreshWorkspace()]);
-      setNotice(
-        locale === "ru"
-          ? "Показание сохранено, переменная часть счета пересчитана"
-          : "Reading saved and invoice variable charge recalculated",
-      );
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Meter reading failed",
-      );
-    } finally {
-      setBusyAction("");
-    }
-  };
-  return { handleBillingPaymentSubmit, handleMeterReadingSubmit };
+  return { handleBillingPaymentSubmit };
 }

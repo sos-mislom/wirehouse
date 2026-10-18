@@ -31,7 +31,6 @@ export function OperationCard({
     tickets,
     onTicket,
     setReadingMeter,
-    setReadingValue,
     token,
     busy,
   } = model;
@@ -214,7 +213,6 @@ export function OperationCard({
             disabled={!row.active}
             onClick={() => {
               setReadingMeter(row.id);
-              setReadingValue("");
             }}
           >
             Внести показания

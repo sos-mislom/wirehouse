@@ -1,3 +1,5 @@
+import { Disclosure } from "../business/shared";
+import { DocumentRegistry } from "../business/DocumentRegistry";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { formatArea } from "../../shared/format";
 import { Button } from "../../ui";
@@ -213,6 +215,9 @@ export function ManagerObjects() {
           />
         </article>
       </div>
+      <Disclosure title="Реестр документов">
+        <DocumentRegistry />
+      </Disclosure>
     </section>
   );
 }

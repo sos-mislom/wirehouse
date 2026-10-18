@@ -1,3 +1,4 @@
+import { workflowFor } from "../apps/api/src/domain/ticket-workflow.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./fixtures.mjs";
@@ -159,6 +160,7 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
   );
   const stored = f.db.getById("tickets", ticket.id);
   stored.status = "completed";
+  workflowFor(f.db, ticket.id).state = "accepted";
   stored.checklist_items.forEach((c) => (c.completed = true));
   const { act } = transitionEstimate(f.db, f.admin, row.id, "act", {
     version: 3,
@@ -169,6 +171,7 @@ test("Estimate agreement freezes prices; acts require complete work and remain i
     () => transitionEstimate(f.db, f.admin, row.id, "act", { version: 4 }),
     /недоступно/,
   );
+  workflowFor(f.db, ticket.id).state = "registered";
   const revised = saveEstimate(f.db, f.admin, null, input);
   transitionEstimate(f.db, f.admin, revised.id, "submit", { version: 1 });
   const reviewer = {

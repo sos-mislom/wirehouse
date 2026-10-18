@@ -1,6 +1,6 @@
+import { contextCan } from "../domain/context-access.js";
 import { parseJsonBody } from "../http/body.js";
 import {
-  addReading,
   addWorkLog,
   getOperations,
   runMaintenance,
@@ -36,18 +36,17 @@ export function createOperationsRoutes({
           ok(response, { item: updateUser(db, user, userMatch[1], body) });
           return true;
         }
-        const reading = pathname.match(
-          /^\/api\/operations\/meters\/([a-zA-Z0-9-]+)\/readings$/,
-        );
-        if (reading && method === "POST") {
-          created(response, { item: addReading(db, user, reading[1], body) });
-          return true;
-        }
         const work = pathname.match(
           /^\/api\/operations\/tickets\/([a-zA-Z0-9-]+)\/work$/,
         );
         if (work && method === "POST") {
-          created(response, { item: addWorkLog(db, user, work[1], body) });
+          const log = addWorkLog(db, user, work[1], body);
+          const { cost, hourlyRate, materialCost, ...publicLog } = log;
+          created(response, {
+            item: contextCan(db, user, "finance.read", "tickets", work[1])
+              ? log
+              : publicLog,
+          });
           return true;
         }
         const operation = pathname.match(

@@ -311,7 +311,7 @@ export function createTenantsRoutes({
       const tenantId = tenantMatch[1];
 
       if (method === "PUT") {
-        if (!requireTenantScope(user, response, tenantId)) {
+        if (!requireTenantScope(user, response, tenantId, "portfolio.write")) {
           return true;
         }
 
@@ -332,7 +332,7 @@ export function createTenantsRoutes({
       }
 
       if (method === "DELETE") {
-        if (!requireTenantScope(user, response, tenantId)) {
+        if (!requireTenantScope(user, response, tenantId, "portfolio.write")) {
           return true;
         }
 

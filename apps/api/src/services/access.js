@@ -1,3 +1,4 @@
+import { canSeeProperty, contextCan } from "../domain/context-access.js";
 import { execFileSync } from "node:child_process";
 import { verifyToken } from "../auth.js";
 import { config } from "../config.js";
@@ -213,13 +214,19 @@ export function createAccessService({
   };
 
   const canAccessProperty = (user, propertyId) =>
-    user.role === "admin" ||
-    (user.role === "tenant"
-      ? buildScopedCollections(user).properties.some((p) => p.id === propertyId)
-      : Boolean(user.property_id && user.property_id === propertyId));
+    canSeeProperty(db, user, propertyId);
 
-  const requirePropertyScope = (user, response, propertyId) => {
-    if (canAccessProperty(user, propertyId)) {
+  const requirePropertyScope = (
+    user,
+    response,
+    propertyId,
+    permission = "workspace.read",
+  ) => {
+    if (
+      permission === "workspace.read"
+        ? canAccessProperty(user, propertyId)
+        : contextCan(db, user, permission, "properties", propertyId)
+    ) {
       return true;
     }
 
@@ -230,17 +237,29 @@ export function createAccessService({
   const propertyIdForUnit = (unitId) =>
     db.getById("units", unitId)?.property_id ?? null;
 
-  const requireUnitScope = (user, response, unitId) => {
+  const requireUnitScope = (
+    user,
+    response,
+    unitId,
+    permission = "workspace.read",
+  ) => {
     const propertyId = propertyIdForUnit(unitId);
     if (!propertyId) {
       notFound(response);
       return false;
     }
 
-    return requirePropertyScope(user, response, propertyId);
+    if (contextCan(db, user, permission, "units", unitId)) return true;
+    forbidden(response);
+    return false;
   };
 
-  const requireLeaseScope = (user, response, leaseId) => {
+  const requireLeaseScope = (
+    user,
+    response,
+    leaseId,
+    permission = "workspace.read",
+  ) => {
     const lease = db.getById("leases", leaseId);
     if (!lease) {
       notFound(response);
@@ -248,7 +267,8 @@ export function createAccessService({
     }
 
     const propertyId = propertyIdForUnit(lease.unit_id);
-    if (!requirePropertyScope(user, response, propertyId)) {
+    if (!contextCan(db, user, permission, "leases", leaseId)) {
+      forbidden(response);
       return null;
     }
 
@@ -261,6 +281,10 @@ export function createAccessService({
       return null;
     }
 
+    if (!contextCan(db, user, "documents.read", "leases", leaseId)) {
+      forbidden(response);
+      return null;
+    }
     const lease = getScopedLease(user, leaseId);
     if (!lease) {
       notFound(response);
@@ -270,14 +294,26 @@ export function createAccessService({
     return { user, lease };
   };
 
-  const requireTenantScope = (user, response, tenantId) => {
+  const requireTenantScope = (
+    user,
+    response,
+    tenantId,
+    permission = "workspace.read",
+  ) => {
     if (user.role === "admin") {
       return true;
     }
 
     if (
       buildScopedCollections(user).tenants.some(
-        (tenant) => tenant.id === tenantId,
+        (tenant) =>
+          tenant.id === tenantId &&
+          (permission === "workspace.read" ||
+            db.data.leases.some(
+              (l) =>
+                l.tenant_id === tenantId &&
+                contextCan(db, user, permission, "leases", l.id),
+            )),
       )
     ) {
       return true;

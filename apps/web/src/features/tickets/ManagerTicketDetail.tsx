@@ -1,3 +1,6 @@
+import { TicketWorkflowPanel } from "../business/TicketWorkflowPanel";
+import { DocumentRegistry } from "../business/DocumentRegistry";
+import { Disclosure } from "../business/shared";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { TicketOperations } from "../../Operations";
 import { ticketStatusOptions } from "../../projectData";
@@ -62,6 +65,16 @@ export function ManagerTicketDetail() {
               </div>
             </div>
             <p>{selectedTicket.description}</p>
+            <TicketWorkflowPanel
+              key={selectedTicket.id}
+              ticketId={selectedTicket.id}
+            />
+            <Disclosure title="Документы заявки">
+              <DocumentRegistry
+                entityType="tickets"
+                entityId={selectedTicket.id}
+              />
+            </Disclosure>
             <TicketOperations
               token={session.token}
               ticket={selectedTicket}
@@ -98,26 +111,8 @@ export function ManagerTicketDetail() {
               </div>
             </div>
 
-            {canUpdateTickets ? (
+            {canUpdateTickets && canAssignTickets ? (
               <div className="inline-form">
-                <label>
-                  <span>{t.fields.status}</span>
-                  <Select
-                    disabled={busyAction === "ticket-update"}
-                    onChange={(event) => {
-                      const nextStatus = event.target.value;
-                      setTicketStatusDraft(nextStatus);
-                      void updateSelectedTicket({ status: nextStatus });
-                    }}
-                    value={ticketStatusDraft}
-                  >
-                    {ticketStatusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {t.ticketStatuses[status]}
-                      </option>
-                    ))}
-                  </Select>
-                </label>
                 {canAssignTickets ? (
                   <label>
                     <span>

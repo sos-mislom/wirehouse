@@ -85,7 +85,11 @@ const resolvedTicketAttachmentsPath = resolveWorkspacePath(
   path.resolve(defaultDataPath, "ticket-attachments"),
 );
 
+const exchangeEnvironment = process.env.EXCHANGE_ENVIRONMENT ?? "production";
+if (!["test", "production"].includes(exchangeEnvironment))
+  throw new Error("EXCHANGE_ENVIRONMENT must be test or production");
 export const config = {
+  exchangeEnvironment,
   host: process.env.API_HOST ?? "0.0.0.0",
   port: toNumber(process.env.API_PORT, 3001),
   databaseUrl: process.env.DATABASE_URL ?? "",

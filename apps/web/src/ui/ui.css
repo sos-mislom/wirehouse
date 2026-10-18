@@ -129,7 +129,7 @@ a:focus-visible {
   border-color: var(--ui-danger);
 }
 .ui-control::placeholder {
-  color: #999999;
+  color: var(--ui-muted);
   opacity: 1;
 }
 .ui-textarea {

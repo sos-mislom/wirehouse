@@ -1,3 +1,4 @@
+import { contextCan } from "../../domain/context-access.js";
 import crypto from "node:crypto";
 import path from "node:path";
 import { MAX_ATTACHMENT_BYTES } from "../../../../../packages/contracts/src/domain.js";
@@ -150,7 +151,7 @@ export function createBotMediaHandler(deps) {
 
   const deliverTicketCommentToTenant = async ({ ticket, author, content }) => {
     const tenantId = ticket?.tenant_id ?? ticket?.tenantId ?? null;
-    if (!tenantId || author.role === "tenant") {
+    if (author.role === "tenant") {
       return {
         delivered: false,
         channels: [],
@@ -158,10 +159,23 @@ export function createBotMediaHandler(deps) {
       };
     }
 
-    const tenantUser = db.getTenantPortalUser(tenantId);
-    const bindings = db
-      .getActiveOtpBindingsForUser(tenantUser)
-      .filter((binding) => ["telegram", "vk"].includes(binding.channel));
+    const participants = db.data.users.filter(
+      (u) =>
+        u.role === "tenant" &&
+        u.is_active === 1 &&
+        contextCan(db, u, "workspace.read", "tickets", ticket.id),
+    );
+    const bindings = [
+      ...new Map(
+        participants
+          .flatMap((user) => db.getActiveOtpBindingsForUser(user))
+          .filter((binding) => ["telegram", "vk"].includes(binding.channel))
+          .map((binding) => [
+            binding.channel + ":" + binding.recipient_id,
+            binding,
+          ]),
+      ).values(),
+    ];
 
     const message = buildOutboundTicketMessage({ ticket, author, content });
     const tasks = bindings
@@ -221,7 +235,6 @@ export function createBotMediaHandler(deps) {
         .map((result) => `${result.channel}: ${result.error}`),
     };
   };
-
 
   return {
     persistBotTicketAttachment,

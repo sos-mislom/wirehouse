@@ -1,3 +1,5 @@
+import { presentTicket } from "../../domain/ticket-view.js";
+import { contextCan } from "../../domain/context-access.js";
 import {
   isCriticalTicket,
   isOpenTicket,
@@ -256,36 +258,40 @@ export function createWorkspaceQueries(deps) {
     let scopedLeases = leases;
     let scopedTenants = tenants;
 
-    if (user.role === "tenant") {
-      scopedTenants = user.tenant_id
-        ? tenants.filter((tenant) => tenant.id === user.tenant_id)
-        : [];
-      scopedLeases = user.tenant_id
-        ? leases.filter((lease) => lease.tenantId === user.tenant_id)
-        : [];
+    scopedUnits = units.filter((unit) =>
+      contextCan(db, user, "workspace.read", "units", unit.id),
+    );
+    scopedLeases = leases.filter((lease) =>
+      contextCan(db, user, "finance.read", "leases", lease.id),
+    );
+    const visibleTenantIds = new Set(
+      scopedLeases.map((lease) => lease.tenantId),
+    );
+    scopedTenants =
+      user.role === "admin"
+        ? tenants
+        : tenants.filter((tenant) => visibleTenantIds.has(tenant.id));
+    const visiblePropertyIds = new Set(
+      scopedUnits.map((unit) => unit.propertyId),
+    );
+    scopedProperties = properties.filter(
+      (property) =>
+        visiblePropertyIds.has(property.id) ||
+        contextCan(db, user, "workspace.read", "properties", property.id),
+    );
 
-      const unitIds = new Set(scopedLeases.map((lease) => lease.unitId));
-      scopedUnits = units.filter((unit) => unitIds.has(unit.id));
-
-      const propertyIds = new Set(scopedUnits.map((unit) => unit.propertyId));
-      scopedProperties = properties.filter((property) =>
-        propertyIds.has(property.id),
+    if (user.role === "tenant")
+      scopedUnits = scopedUnits.map((unit) =>
+        scopedLeases.some(
+          (l) =>
+            l.unitId === unit.id &&
+            activeLeaseStages.has(l.stage) &&
+            l.startDate <= new Date().toISOString().slice(0, 10) &&
+            l.endDate >= new Date().toISOString().slice(0, 10),
+        )
+          ? unit
+          : { ...unit, tenantName: null, leaseStage: null, leaseEndDate: null },
       );
-    } else if (["manager", "worker"].includes(user.role)) {
-      scopedProperties = properties.filter(
-        (property) => property.id === user.property_id,
-      );
-      scopedUnits = units.filter(
-        (unit) => unit.propertyId === user.property_id,
-      );
-
-      const unitIds = new Set(scopedUnits.map((unit) => unit.id));
-      scopedLeases = leases.filter((lease) => unitIds.has(lease.unitId));
-
-      const tenantIds = new Set(scopedLeases.map((lease) => lease.tenantId));
-      scopedTenants = tenants.filter((tenant) => tenantIds.has(tenant.id));
-    }
-
     const leaseCounts = new Map();
     for (const lease of scopedLeases) {
       if (lease.stage === "terminated") {
@@ -299,6 +305,9 @@ export function createWorkspaceQueries(deps) {
     }
 
     return {
+      financePropertyIds: scopedProperties
+        .filter((p) => contextCan(db, user, "finance.read", "properties", p.id))
+        .map((p) => p.id),
       properties: scopedProperties,
       units: scopedUnits,
       tenants: scopedTenants.map((tenant) => {
@@ -443,21 +452,13 @@ export function createWorkspaceQueries(deps) {
   const getScopedTickets = (user) => {
     const tickets = db.listTickets().map(normalizeTicket);
 
-    if (user.role === "tenant") {
-      return user.tenant_id
-        ? tickets.filter((ticket) => ticket.tenantId === user.tenant_id)
-        : [];
-    }
-
-    if (user.role === "manager") {
-      return tickets.filter((ticket) => ticket.propertyId === user.property_id);
-    }
-
-    if (user.role === "worker") {
-      return tickets.filter((ticket) => ticket.assignedTo === user.id);
-    }
-
-    return tickets;
+    return tickets
+      .filter(
+        (ticket) =>
+          contextCan(db, user, "workspace.read", "tickets", ticket.id) &&
+          (user.role !== "worker" || ticket.assignedTo === user.id),
+      )
+      .map((ticket) => presentTicket(db, user, ticket));
   };
 
   const getTicketForUser = (user, ticketId) =>
@@ -469,8 +470,7 @@ export function createWorkspaceQueries(deps) {
     ) ?? null;
 
   const canUseUnit = (user, unitId) => {
-    const scoped = buildScopedCollections(user);
-    return scoped.units.some((unit) => unit.id === unitId);
+    return contextCan(db, user, "tickets.write", "units", unitId);
   };
 
   const hydrateTicket = (ticketId) =>

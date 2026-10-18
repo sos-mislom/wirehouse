@@ -102,7 +102,6 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
     setTenantNoteFile,
     setTenantNoteForm,
     tenantDetail,
-    setMeterReadingForm,
     isManagerShell,
     setChatBusy,
     selectedChatTicketIdsKey,
@@ -593,19 +592,6 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
       content: "",
     });
   }, [selectedTenantId]);
-
-  useEffect(() => {
-    if (!tenantDetail?.units.length) {
-      return;
-    }
-
-    setMeterReadingForm((current) => ({
-      ...current,
-      unitId: tenantDetail.units.some((unit) => unit.id === current.unitId)
-        ? current.unitId
-        : tenantDetail.units[0].id,
-    }));
-  }, [tenantDetail?.tenant.id, tenantDetail?.units]);
 
   useEffect(() => {
     if (

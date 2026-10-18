@@ -209,14 +209,6 @@ export function useWorkspaceState() {
     method: "bank_transfer",
     reference: "",
   });
-  const [meterReadingForm, setMeterReadingForm] = useState({
-    unitId: "",
-    period: new Date().toISOString().slice(0, 7),
-    meterType: "power",
-    value: "",
-    previousValue: "",
-    tariffRate: "",
-  });
   const [paymentProofForm, setPaymentProofForm] = useState({
     leaseId: "",
     amount: "",
@@ -405,8 +397,6 @@ export function useWorkspaceState() {
     setChatDraft,
     billingPaymentForm,
     setBillingPaymentForm,
-    meterReadingForm,
-    setMeterReadingForm,
     paymentProofForm,
     setPaymentProofForm,
     paymentProofFile,

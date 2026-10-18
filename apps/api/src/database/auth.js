@@ -1,3 +1,4 @@
+import { syncStaffAssignment } from "../domain/context-access.js";
 import crypto from "node:crypto";
 import { hashPassword } from "../auth.js";
 import { WarehouseDatabaseBase } from "./base.js";
@@ -265,6 +266,7 @@ export class AuthDatabase extends WarehouseDatabaseBase {
 
     this.validateUserPayload(record);
     this.data.users.push(record);
+    syncStaffAssignment(this, record);
     return clone(record);
   }
 
@@ -276,5 +278,4 @@ export class AuthDatabase extends WarehouseDatabaseBase {
 
     user.last_login_at = nowIso();
   }
-
 }

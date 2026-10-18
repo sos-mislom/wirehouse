@@ -1,3 +1,7 @@
+import { Disclosure } from "../business/shared";
+import { AccountingWorkspace } from "../business/AccountingWorkspace";
+import { ReadingsWorkspace } from "../business/ReadingsWorkspace";
+import { DocumentRegistry } from "../business/DocumentRegistry";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { TenantServices } from "../../Operations";
@@ -40,6 +44,17 @@ export function Leases() {
   } = useWorkspace();
   return (
     <section className="section-grid">
+      {isTenant && (
+        <div className="surface surface--hero business-stack">
+          <AccountingWorkspace />
+          <Disclosure title="Показания приборов">
+            <ReadingsWorkspace />
+          </Disclosure>
+          <Disclosure title="Все документы">
+            <DocumentRegistry />
+          </Disclosure>
+        </div>
+      )}
       {isTenant ? (
         <>
           <TenantServices data={operations} />

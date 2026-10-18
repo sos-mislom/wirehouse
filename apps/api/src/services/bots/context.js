@@ -1,3 +1,4 @@
+import { contextCan } from "../../domain/context-access.js";
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 import { config } from "../../config.js";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions.ts";
@@ -44,14 +45,13 @@ export function createBotContextManager(deps) {
   const chatContextKey = (channel, recipientId) => `${channel}:${recipientId}`;
 
   const buildTenantChatContexts = (user) => {
-    if (!user?.tenant_id) {
+    if (!user?.is_active) {
       return [];
     }
     return db
       .listLeases()
-      .filter(
-        (lease) =>
-          lease.tenant_id === user.tenant_id && lease.stage !== "terminated",
+      .filter((lease) =>
+        contextCan(db, user, "tickets.write", "leases", lease.id),
       )
       .map((lease) => {
         const unit = db.getUnit(lease.unit_id);
@@ -170,8 +170,7 @@ export function createBotContextManager(deps) {
       !user ||
       !user.is_active ||
       !hasPermission(user, "tickets.write") ||
-      user.role !== "tenant" ||
-      !user.tenant_id
+      user.role !== "tenant"
     ) {
       return null;
     }
@@ -179,7 +178,9 @@ export function createBotContextManager(deps) {
     db.setAuditActor(user);
     const scopedTickets = db
       .listTickets()
-      .filter((ticket) => ticket.tenant_id === user.tenant_id)
+      .filter((ticket) =>
+        contextCan(db, user, "tickets.write", "tickets", ticket.id),
+      )
       .sort(
         (left, right) =>
           new Date(right.updated_at).getTime() -
@@ -227,7 +228,8 @@ export function createBotContextManager(deps) {
       const unit = db.getUnit(lease.unit_id);
       ticket = db.createTicket({
         unitId: lease.unit_id,
-        tenantId: user.tenant_id,
+        tenantId: lease.tenant_id,
+        leaseId: lease.id,
         propertyId: unit?.property_id,
         createdBy: user.id,
         category: "other",
@@ -254,7 +256,7 @@ export function createBotContextManager(deps) {
       return { user: null, ticket: null };
     }
 
-    if (user.role === "tenant" && user.tenant_id) {
+    if (user.role === "tenant") {
       db.setAuditActor(user);
       const contexts = buildTenantChatContexts(user);
       if (contexts.length === 0) {
@@ -287,7 +289,7 @@ export function createBotContextManager(deps) {
         .listTickets()
         .filter(
           (ticket) =>
-            ticket.tenant_id === user.tenant_id &&
+            contextCan(db, user, "tickets.write", "tickets", ticket.id) &&
             ticket.unit_id === context.unitId,
         )
         .sort(
@@ -309,7 +311,8 @@ export function createBotContextManager(deps) {
         const unit = db.getUnit(lease.unit_id);
         ticket = db.createTicket({
           unitId: lease.unit_id,
-          tenantId: user.tenant_id,
+          tenantId: lease.tenant_id,
+          leaseId: lease.id,
           propertyId: unit?.property_id,
           createdBy: user.id,
           category: "other",
@@ -328,7 +331,11 @@ export function createBotContextManager(deps) {
       db.setAuditActor(user);
       const tickets = db
         .listTickets()
-        .filter((ticket) => ticket.assigned_to === user.id)
+        .filter(
+          (ticket) =>
+            ticket.assigned_to === user.id &&
+            contextCan(db, user, "tickets.write", "tickets", ticket.id),
+        )
         .sort(
           (left, right) =>
             new Date(right.updated_at).getTime() -

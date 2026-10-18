@@ -1,3 +1,4 @@
+import { contextCan } from "../../domain/context-access.js";
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 
 export function createFinanceQueries(deps) {
@@ -41,7 +42,7 @@ export function createFinanceQueries(deps) {
 
   const buildFinanceSummary = (scoped, scopedTickets) => {
     const leaseIds = new Set(scoped.leases.map((l) => l.id));
-    const propertyIds = new Set(scoped.properties.map((p) => p.id));
+    const propertyIds = new Set(scoped.financePropertyIds);
     const invoices = db
       .listBillingInvoices()
       .filter((i) => leaseIds.has(i.lease_id));
@@ -169,7 +170,19 @@ export function createFinanceQueries(deps) {
     return db
       .listBillingInvoices()
       .map(normalizeBillingInvoice)
-      .filter((invoice) => leaseIds.has(invoice.leaseId));
+      .filter(
+        (invoice) =>
+          leaseIds.has(invoice.leaseId) &&
+          contextCan(
+            db,
+            user,
+            "finance.read",
+            "leases",
+            invoice.leaseId,
+            new Date().toISOString().slice(0, 10),
+            invoice.period + "-01",
+          ),
+      );
   };
 
   const getScopedBillingInvoice = (user, invoiceId) =>

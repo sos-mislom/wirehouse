@@ -1,3 +1,4 @@
+import { assertBusinessReferences } from "../domain/integrity.js";
 import { isDeepStrictEqual } from "node:util";
 import {
   tables,
@@ -51,6 +52,7 @@ export function normalizedData(data) {
   return normalized;
 }
 export async function flushRows(client, before, after) {
+  assertBusinessReferences(after);
   let written = 0;
   for (const [name, table] of Object.entries(tables)) {
     const oldRows = new Map(

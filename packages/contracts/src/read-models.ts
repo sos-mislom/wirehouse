@@ -87,6 +87,7 @@ export type LeaseDocument = {
 };
 
 export type Ticket = {
+  financialAccess: boolean;
   equipmentId?: string | null;
   serviceId?: string | null;
   leaseId?: string | null;
@@ -95,8 +96,8 @@ export type Ticket = {
     id: string;
     description: string;
     hours: number;
-    materialCost: number;
-    cost: number;
+    materialCost?: number;
+    cost?: number;
     createdByName: string;
   }>;
   id: string;

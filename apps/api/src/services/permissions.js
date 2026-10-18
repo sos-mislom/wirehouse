@@ -4,7 +4,20 @@ export function routePermission(method, path) {
   if (/^\/api\/(auth|integrations)\//.test(path)) return null;
   if (method === "GET" || method === "HEAD")
     return path.startsWith("/api/audit") ? "audit.read" : "workspace.read";
+  if (/^\/api\/maintenance\/tickets\/[^/]+\/change$/.test(path))
+    return "workspace.read";
   if (/^\/api\/maintenance-import\//.test(path)) return "maintenance.write";
+  if (/^\/api\/documents/.test(path)) return "workspace.read";
+  if (/^\/api\/tickets\/[^/]+\/workflow\//.test(path)) return "workspace.read";
+  if (/^\/api\/readings\/periods/.test(path)) return "meters.write";
+  if (/^\/api\/readings\/submissions\/[^/]+\/review/.test(path))
+    return "readings.review";
+  if (/^\/api\/readings\/submissions/.test(path)) return "readings.submit";
+  if (/^\/api\/access\//.test(path)) return "permissions.manage";
+  if (/^\/api\/accounting\/(sources|links)/.test(path))
+    return "accounting.manage";
+  if (/^\/api\/accounting\/(inbox|outbox)/.test(path)) return "exchange.manage";
+  if (/^\/api\/accounting\/accounts/.test(path)) return "leases.write";
   if (/^\/api\/users/.test(path)) return "users.manage";
   if (/^\/api\/structure|^\/api\/operations\/floorplans/.test(path))
     return "plans.write";

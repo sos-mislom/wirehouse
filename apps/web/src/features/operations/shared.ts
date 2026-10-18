@@ -31,6 +31,7 @@ export type Unit = {
 };
 
 export type Ticket = {
+  financialAccess?: boolean;
   id: string;
   unitId: string;
   title: string;
@@ -154,6 +155,7 @@ export const tabs: Record<string, string> = {
   news: "Объявления",
   expenses: "Расходы",
   users: "Пользователи",
+  access: "Доступ",
   audit: "Аудит",
 };
 

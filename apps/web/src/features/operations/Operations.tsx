@@ -1,8 +1,21 @@
+import { useState } from "react";
+import { Register } from "../business/shared";
+import { Disclosure } from "../business/shared";
+import { AccessWorkspace } from "../business/AccessWorkspace";
+import { ReadingsWorkspace } from "../business/ReadingsWorkspace";
+import { MaintenanceProgress } from "../business/MaintenanceProgress";
 import { MaintenanceImport } from "../platform/MaintenanceImport";
 import { Button, Input, Select } from "../../ui";
 import { OperationCard } from "./OperationCard";
 import { OperationEditor } from "./OperationEditor";
-import { Props, tabs, tabPermission } from "./shared";
+import {
+  Props,
+  tabs,
+  tabPermission,
+  roleNames,
+  statusNames,
+  resourceNames,
+} from "./shared";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useOperationsModel } from "./useOperationsModel";
 import { Catalog } from "../platform/Catalog";
@@ -10,6 +23,8 @@ import { Estimates } from "../platform/Estimates";
 import { AuditLog } from "../platform/AuditLog";
 export function Operations(props: Props) {
   const model = useOperationsModel(props);
+  const [selectedRow, setSelectedRow] = useState("");
+  const [meterView, setMeterView] = useState("meters");
   const {
     initialTab,
     user,
@@ -39,11 +54,6 @@ export function Operations(props: Props) {
     data,
     busy,
     readingMeter,
-    submitReading,
-    readingPeriod,
-    setReadingPeriod,
-    readingValue,
-    setReadingValue,
     setReadingMeter,
     onUnit,
     unitName,
@@ -78,15 +88,17 @@ export function Operations(props: Props) {
           .filter(
             ([key]) =>
               (initialTab === "users"
-                ? ["users", "audit"].includes(key)
+                ? ["users", "access", "audit"].includes(key)
                 : ![
                     "users",
+                    "access",
                     "audit",
                     "templates",
                     "materials",
                     "contractors",
                   ].includes(key)) &&
-              (key !== "audit" || hasPermission(user, "audit.read")),
+              (key !== "audit" || hasPermission(user, "audit.read")) &&
+              (key !== "access" || hasPermission(user, "permissions.manage")),
           )
           .map(([key, label]) => (
             <Button
@@ -115,9 +127,10 @@ export function Operations(props: Props) {
             .filter(
               ([key]) =>
                 (initialTab === "users"
-                  ? ["users", "audit"].includes(key)
-                  : !["users", "audit"].includes(key)) &&
-                (key !== "audit" || hasPermission(user, "audit.read")),
+                  ? ["users", "access", "audit"].includes(key)
+                  : !["users", "access", "audit"].includes(key)) &&
+                (key !== "audit" || hasPermission(user, "audit.read")) &&
+                (key !== "access" || hasPermission(user, "permissions.manage")),
             )
             .map(([key, label]) => (
               <option key={key} value={key}>
@@ -153,6 +166,26 @@ export function Operations(props: Props) {
           {notice}
         </div>
       )}
+      {tab === "meters" && (
+        <div className="business-tabs" aria-label="Учет приборов">
+          <Button
+            aria-pressed={meterView === "meters" && !readingMeter}
+            onClick={() => {
+              setMeterView("meters");
+              setReadingMeter("");
+            }}
+          >
+            Приборы
+          </Button>
+          <Button
+            aria-pressed={meterView === "readings" || Boolean(readingMeter)}
+            onClick={() => setMeterView("readings")}
+          >
+            Показания
+          </Button>
+        </div>
+      )}
+      {tab === "plans" && <MaintenanceProgress />}
       {tab === "plans" &&
         hasPermission(user, "maintenance.write") &&
         hasPermission(user, "imports.write") && (
@@ -164,7 +197,12 @@ export function Operations(props: Props) {
             }}
           />
         )}
-      {tab === "audit" ? (
+      {tab === "access" ? (
+        <AccessWorkspace />
+      ) : tab === "meters" &&
+        (meterView === "readings" || Boolean(readingMeter)) ? (
+        <ReadingsWorkspace initialMeterId={readingMeter} />
+      ) : tab === "audit" ? (
         <AuditLog token={token} />
       ) : tab === "estimates" ? (
         <Estimates {...props} services={data.services} />
@@ -177,12 +215,6 @@ export function Operations(props: Props) {
       ) : (
         <>
           <div className="mvp-actions">
-            <Input
-              aria-label="Поиск"
-              placeholder="Поиск по названию или номеру"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
             {tab !== "audit" && tab !== "users" && (
               <Select
                 aria-label="Объект"
@@ -212,65 +244,75 @@ export function Operations(props: Props) {
           </div>
           {tab === "users" && (
             <p className="field-hint">
-              Администратор управляет всем портфелем; менеджер — своим объектом
-              и исполнителями; исполнитель — назначенными заявками; арендатор —
-              своими помещениями и обращениями. Блокировка отзывает доступ
-              немедленно.
+              Роль задает доступные действия. Контекстные назначения определяют
+              объекты, помещения, договоры и ЛС, к которым эти действия
+              применимы. Блокировка отзывает доступ немедленно.
             </p>
           )}
           {draft && <OperationEditor model={model} />}
-          {readingMeter && (
-            <article className="mvp-card">
-              <h3>
-                Показания ·{" "}
-                {data.meters.find((m) => m.id === readingMeter)?.name}
-              </h3>
-              <form className="form-grid" onSubmit={submitReading}>
-                <label>
-                  Месяц *
-                  <Input
-                    type="month"
-                    required
-                    max={new Date().toISOString().slice(0, 7)}
-                    value={readingPeriod}
-                    onChange={(e) => setReadingPeriod(e.target.value)}
-                  />
-                </label>
-                <label>
-                  Показание *
-                  <Input
-                    type="number"
-                    required
-                    min="0"
-                    step="any"
-                    value={readingValue}
-                    onChange={(e) => setReadingValue(e.target.value)}
-                  />
-                </label>
-                <Button
-                  variant="primary"
-                  className="primary-button"
-                  type="submit"
-                  disabled={busy}
-                >
-                  Сохранить показание
+          <Register
+            title={tabs[tab] ?? "Записи"}
+            rows={rows}
+            selectedId={selectedRow}
+            onSelect={(r) => setSelectedRow(r.id)}
+            searchText={(r) =>
+              `${r.name ?? r.fullName} ${r.serialNumber ?? ""}`
+            }
+            columns={[
+              {
+                key: "name",
+                label: "Название",
+                render: (r) => <strong>{r.name ?? r.fullName}</strong>,
+              },
+              {
+                key: "property",
+                label: "Объект",
+                render: (r) =>
+                  overview.properties.find((p) => p.id === r.propertyId)
+                    ?.name ?? "—",
+                optional: true,
+              },
+              {
+                key: "context",
+                label: "Контекст",
+                render: (r) =>
+                  r.unitId
+                    ? `Помещение ${unitName(r.unitId)}`
+                    : r.role
+                      ? roleNames[String(r.role)]
+                      : (r.category ??
+                        (r.resource ? resourceNames[String(r.resource)] : "—")),
+                optional: true,
+              },
+              {
+                key: "status",
+                label: "Состояние",
+                render: (r) =>
+                  tab === "plans"
+                    ? `${r.active ? "По расписанию" : "Приостановлен"} · ${r.nextDate}`
+                    : tab === "users"
+                      ? r.isActive
+                        ? "Активен"
+                        : "Заблокирован"
+                      : (r.status ??
+                        (r.active === false ? "Отключено" : "Действует")),
+              },
+            ]}
+          />
+          {rows.some((r) => r.id === selectedRow) && (
+            <div className="business-detail operation-detail">
+              <div className="register-heading">
+                <h3>Детали записи</h3>
+                <Button onClick={() => setSelectedRow("")}>
+                  Закрыть детали
                 </Button>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setReadingMeter("")}
-                >
-                  Отмена
-                </Button>
-              </form>
-            </article>
+              </div>
+              <OperationCard
+                row={rows.find((r) => r.id === selectedRow)!}
+                model={model}
+              />
+            </div>
           )}
-          <div className="operations-list">
-            {rows.map((row) => (
-              <OperationCard key={row.id} row={row} model={model} />
-            ))}
-          </div>
           {!rows.length && (
             <div className="mvp-card empty-state">
               {tab === "audit"

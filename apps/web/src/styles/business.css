@@ -1,0 +1,313 @@
+/* Operate surfaces: data first, optional controls on demand. */
+.data-register {
+  min-width: 0;
+}
+.register-heading,
+.register-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.register-heading {
+  justify-content: space-between;
+}
+.register-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.register-heading h3 small {
+  margin-left: 6px;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+.register-search {
+  flex: 1 1 240px;
+  min-width: 120px;
+  max-width: 440px;
+  margin-right: auto;
+}
+.register-toolbar .ui-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.register-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--surface-muted);
+}
+.register-options label {
+  display: grid;
+  gap: 4px;
+  min-width: 140px;
+  flex: 0 1 240px;
+}
+.register-options .check-field {
+  display: flex;
+  align-items: center;
+  min-width: auto;
+  flex: 0 0 auto;
+  gap: 8px;
+  min-height: 36px;
+}
+.register-table {
+  min-width: 560px;
+}
+.register-table th,
+.data-register--compact .register-table td {
+  padding: 8px 12px;
+}
+.data-register--comfortable .register-table td {
+  padding: 16px 12px;
+}
+.register-table td {
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.register-table td small {
+  display: block;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+.register-table tr[aria-selected] {
+  cursor: pointer;
+}
+.work-disclosure {
+  border-top: 1px solid var(--line);
+  padding: 4px 0;
+  min-width: 0;
+}
+.work-disclosure > summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 32px;
+  align-content: center;
+}
+.work-disclosure-body {
+  margin-top: 12px;
+  min-width: 0;
+}
+.work-disclosure-body > :first-child {
+  margin-top: 0;
+}
+.business-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.business-detail {
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+.business-detail h3,
+.business-detail h4 {
+  margin: 0 0 12px;
+}
+.business-detail .form-grid {
+  margin-top: 12px;
+}
+.business-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+.business-split > * {
+  min-width: 0;
+}
+.business-stats {
+  display: flex;
+  gap: 12px 24px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 12px 0;
+}
+.business-stats > div {
+  display: grid;
+  gap: 4px;
+}
+.business-stats dt {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+.business-stats dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.business-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+}
+.business-tabs [aria-pressed="true"] {
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+.business-file {
+  display: grid;
+  gap: 6px;
+}
+.business-file input {
+  max-width: 100%;
+  min-width: 0;
+}
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 4px 12px;
+  grid-column: 1/-1;
+}
+.permission-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+.record-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.record-timeline li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.record-timeline small {
+  display: block;
+  color: var(--ink-soft);
+}
+.billing-page .mvp-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.billing-page .mvp-metric {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  flex: 1 1 160px;
+}
+.billing-page .mvp-metric strong {
+  font-size: 1.25rem;
+}
+.billing-page .mvp-metric small {
+  margin-top: 2px;
+}
+.billing-page .mvp-metric span {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.85rem;
+}
+.billing-page .billing-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  align-items: start;
+}
+.billing-page .billing-grid > .mvp-card--wide {
+  grid-column: auto;
+}
+.billing-page .billing-grid > .mvp-card {
+  padding: 16px;
+}
+.billing-page .mvp-table {
+  min-width: 600px;
+}
+.billing-page .mvp-table th,
+.billing-page .mvp-table td {
+  padding: 8px 10px;
+}
+.ticket-workflow {
+  padding: 12px 0;
+  border-block: 1px solid var(--line);
+}
+.ticket-workflow h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+.ticket-workflow .business-stats {
+  gap: 8px 20px;
+}
+@media (min-width: 1081px) {
+  .mvp-page {
+    gap: 16px;
+  }
+  .operations-list {
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .operations-list .operation-card {
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+    padding: 14px 16px;
+  }
+  .operations-list .operation-card:last-child {
+    border-bottom: 0;
+  }
+}
+@media (max-width: 1100px) {
+  .business-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .billing-page .billing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .business-stats {
+    gap: 12px 20px;
+  }
+  .business-stats > div {
+    flex: 1 1 120px;
+  }
+  .business-detail {
+    padding: 12px;
+  }
+  .register-table {
+    min-width: 0;
+  }
+  .register-search {
+    max-width: none;
+  }
+  .register-options label {
+    flex: 1 1 140px;
+  }
+  .work-disclosure > summary,
+  .permission-grid label {
+    min-height: 44px;
+  }
+  .data-register--compact .register-table td,
+  .data-register--comfortable .register-table td {
+    padding: 6px 0;
+  }
+  .business-tabs .ui-button {
+    flex: 1 1 auto;
+  }
+  .billing-page .mvp-metric {
+    flex-basis: calc(50% - 28px);
+  }
+}
+
+.operation-detail .operation-card {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.register-table tr:not([aria-selected]) {
+  cursor: default;
+}
