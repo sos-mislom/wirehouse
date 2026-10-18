@@ -38,6 +38,7 @@ import { runMaintenance } from "./operations.js";
 
 import { config } from "./config.js";
 import { openDatabase } from "./persistence/database.js";
+import { readCollectionsFor } from "./persistence/read-profiles.js";
 import { PostgresTtlStore } from "./infrastructure/postgres-ttl-store.js";
 import { bufferedResponse } from "./http/buffered-response.js";
 import { preloadBody } from "./http/body.js";
@@ -609,6 +610,10 @@ const server = http.createServer(async (request, response) => {
     await db.requestScope(
       {
         readOnly: method === "GET" || method === "HEAD",
+        collections:
+          method === "GET" || method === "HEAD"
+            ? readCollectionsFor(pathname)
+            : undefined,
         source: `${method} ${pathname}`,
       },
       async () => {

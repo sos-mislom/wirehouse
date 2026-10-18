@@ -2,7 +2,7 @@ import { isCriticalTicket } from "../../../../../packages/contracts/src/domain";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { ForecastChart } from "../../ForecastChart";
 import { BotLinkPanel } from "../../MessengerButtons";
-import { TenantServices } from "../../Operations";
+import { TenantServices } from "../operations/TenantServices";
 import {
   daysUntil,
   formatArea,

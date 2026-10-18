@@ -61,8 +61,6 @@ export function AccessWorkspace() {
       accounts: [],
       statements: [],
       links: [],
-      inbox: [],
-      outbox: [],
     });
   const [edit, setEdit] = useState<Assignment | null>(null),
     [showForm, setShowForm] = useState(false),

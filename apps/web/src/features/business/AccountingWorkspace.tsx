@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ExchangeJournal } from "./ExchangeJournal";
 import type { AccountingWorkspace as Data } from "../../../../../packages/contracts/src/accounting";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
@@ -17,8 +18,6 @@ const initial: Data = {
   accounts: [],
   statements: [],
   links: [],
-  inbox: [],
-  outbox: [],
 };
 export function AccountingWorkspace() {
   const { session, overview } = useWorkspace(),
@@ -425,82 +424,11 @@ export function AccountingWorkspace() {
               Автоматического сопоставления по имени нет.
             </p>
           </Disclosure>
-          <Disclosure title="Журнал обмена">
-            <Register
-              title="Сообщения"
-              rows={[
-                ...data.inbox.map((r) => ({ ...r, direction: "Входящее" })),
-                ...data.outbox.map((r) => ({ ...r, direction: "Исходящее" })),
-              ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
-              searchText={(r) =>
-                `${r.messageId} ${r.error ?? ""} ${sourceName(r.sourceId)}`
-              }
-              columns={[
-                {
-                  key: "id",
-                  label: "Сообщение",
-                  render: (r) => (
-                    <>
-                      {r.messageId}
-                      <small>
-                        {r.direction} · {sourceName(r.sourceId)}
-                      </small>
-                    </>
-                  ),
-                },
-                {
-                  key: "status",
-                  label: "Результат",
-                  render: (r) => (
-                    <>
-                      {
-                        (
-                          {
-                            applied: "Обработано",
-                            failed: "Ошибка",
-                            pending: "В очереди",
-                          } as Record<string, string>
-                        )[r.status]
-                      }
-                      <small>{r.error}</small>
-                    </>
-                  ),
-                },
-                {
-                  key: "tries",
-                  label: "Попытки",
-                  render: (r) => r.attempts,
-                  optional: true,
-                },
-                {
-                  key: "retry",
-                  label: "Действие",
-                  render: (r) =>
-                    r.status === "failed" ? (
-                      <Button
-                        busy={busy}
-                        onClick={() =>
-                          void run(
-                            () =>
-                              apiRequest(
-                                `/api/accounting/${r.direction === "Входящее" ? "inbox" : "outbox"}/${r.id}/retry`,
-                                { token, method: "POST", body: {} },
-                              ),
-                            "Пакет обработан повторно. Проверьте результат в журнале.",
-                          )
-                        }
-                      >
-                        Повторить
-                      </Button>
-                    ) : r.nextAttemptAt ? (
-                      date(r.nextAttemptAt)
-                    ) : (
-                      "—"
-                    ),
-                },
-              ]}
-            />
-          </Disclosure>
+          {user.role === "admin" && hasPermission(user, "exchange.manage") && (
+            <Disclosure title="Журнал обмена">
+              <ExchangeJournal token={token} sources={data.sources} />
+            </Disclosure>
+          )}
         </Disclosure>
       )}
     </div>

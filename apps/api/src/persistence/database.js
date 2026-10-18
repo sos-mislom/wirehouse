@@ -6,6 +6,9 @@ import { loadRows, flushRows } from "./rows.js";
 import { isDeepStrictEqual } from "node:util";
 import { appendAudit } from "./audit.js";
 import { decodeRow } from "./schema.js";
+import { tables } from "./schema.js";
+import { exchangePage } from "./exchange-page.js";
+import { literalSearch, searchable } from "./search.js";
 
 export async function openDatabase({ databaseUrl }) {
   if (!databaseUrl) throw new Error("DATABASE_URL is required");
@@ -38,8 +41,8 @@ export async function openDatabase({ databaseUrl }) {
     async auditPage({ query = "", entityId = null, offset = 0, limit = 50 }) {
       const client = context.getStore()?.client;
       if (!client) throw new Error("Audit read outside request scope");
-      const where =
-        "($1::text IS NULL OR entity_id=$1) AND ($2='' OR concat_ws(' ',actor_name,entity_type,entity_id,action) ILIKE '%' || $2 || '%')";
+      query = literalSearch(query);
+      const where = `($1::text IS NULL OR entity_id=$1) AND ($2='' OR ${searchable("concat_ws(' ',actor_name,entity_type,entity_id,action)")} LIKE '%' || $2 || '%')`;
       const count = await client.query(
         `SELECT count(*)::int AS total FROM warehouse.audit_log WHERE ${where}`,
         [entityId, query],
@@ -55,7 +58,18 @@ export async function openDatabase({ databaseUrl }) {
         limit,
       };
     },
-    async requestScope({ readOnly = false, source = "system" } = {}, fn) {
+    async exchangePage(query) {
+      const scope = context.getStore();
+      if (!scope?.readOnly)
+        throw new Error("Exchange page requires a read-only request scope");
+      return exchangePage(scope.client, query);
+    },
+    async requestScope(
+      { readOnly = false, source = "system", collections } = {},
+      fn,
+    ) {
+      if (!readOnly && collections)
+        throw new Error("Partial write models are not supported");
       if (context.getStore())
         throw new Error("Nested database request scopes are not supported");
       const client = await pool.connect();
@@ -73,10 +87,29 @@ export async function openDatabase({ databaseUrl }) {
           // own SQL repository. Readers never take this lock or wait for writers.
           await client.query("SELECT pg_advisory_xact_lock($1,$2)", WRITE_LOCK);
         }
-        const before = await loadRows(client, { auditLimit: 200 });
+        const before = await loadRows(client, { auditLimit: 200, collections });
         const domain = new WarehouseDatabase(before);
+        if (readOnly && collections) {
+          domain.data = new Proxy(domain.data, {
+            get(target, key, receiver) {
+              if (
+                typeof key === "string" &&
+                Object.hasOwn(tables, key) &&
+                !Object.hasOwn(target, key)
+              )
+                throw Object.assign(
+                  new Error(`Collection ${key} was not loaded for ${source}`),
+                  { status: 500, code: "UNLOADED_COLLECTION" },
+                );
+              return Reflect.get(target, key, receiver);
+            },
+          });
+        }
         const audit = { source, actor: null };
-        result = await context.run({ domain, client, afterCommit, audit }, fn);
+        result = await context.run(
+          { domain, client, afterCommit, audit, readOnly },
+          fn,
+        );
         if (readOnly) {
           if (!isDeepStrictEqual(before, domain.data))
             throw new Error(

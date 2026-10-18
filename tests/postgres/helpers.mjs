@@ -16,7 +16,9 @@ export async function postgresFixture(data, { applyMigration = true } = {}) {
     );
   const admin = createPool(process.env.TEST_POSTGRES_URL);
   const name = `wirehouse_test_${crypto.randomBytes(8).toString("hex")}`;
-  await admin.query(`CREATE DATABASE "${name}"`);
+  await admin.query(
+    `CREATE DATABASE "${name}" TEMPLATE template0 ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C'`,
+  );
   const url = new URL(process.env.TEST_POSTGRES_URL);
   url.pathname = `/${name}`;
   const pool = createPool(url.toString());

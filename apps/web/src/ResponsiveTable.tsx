@@ -86,7 +86,10 @@ export function ResponsiveTable({
                   return cell;
                 return cloneElement(
                   cell,
-                  { "data-label": headers[index] || "" },
+                  {
+                    "data-label":
+                      cell.props["data-label"] ?? headers[index] ?? "",
+                  },
                   <div className="cell-value">{cell.props.children}</div>,
                 );
               }),

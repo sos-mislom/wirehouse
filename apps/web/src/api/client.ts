@@ -33,7 +33,9 @@ export async function apiRequest<T>(
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal ?? AbortSignal.timeout(30000),
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
+      : AbortSignal.timeout(30000),
   });
   if (!response.headers.get("content-type")?.includes("application/json"))
     throw new ApiError(

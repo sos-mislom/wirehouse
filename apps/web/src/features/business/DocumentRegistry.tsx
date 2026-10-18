@@ -49,8 +49,6 @@ export function DocumentRegistry({
       accounts: [],
       statements: [],
       links: [],
-      inbox: [],
-      outbox: [],
     });
   const [category, setCategory] = useState(""),
     [type, setType] = useState<keyof typeof entities>(

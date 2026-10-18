@@ -2,7 +2,7 @@ import { TicketWorkflowPanel } from "../business/TicketWorkflowPanel";
 import { DocumentRegistry } from "../business/DocumentRegistry";
 import { Disclosure } from "../business/shared";
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { TicketOperations } from "../../Operations";
+import { TicketOperations } from "../operations/TicketOperations";
 import { ticketStatusOptions } from "../../projectData";
 import { formatDateTime, getTicketStatusLabel } from "../../shared/format";
 import { Button, Select, Textarea } from "../../ui";

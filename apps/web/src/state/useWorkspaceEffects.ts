@@ -1,7 +1,7 @@
 import { startTransition, useEffect } from "react";
 import { apiRequest } from "../api/client";
 import { useBrowserNavigation } from "../navigation";
-import { type OperationsData } from "../Operations";
+import { type OperationsData } from "../features/operations/shared";
 import { brand } from "../projectData";
 import { TOKEN_KEY } from "../shared/navigation";
 import {

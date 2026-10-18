@@ -1,6 +1,9 @@
 import { contextCan } from "../domain/context-access.js";
 import crypto from "node:crypto";
 import { parseJsonBody } from "../http/body.js";
+import { parseDto } from "../http/body.js";
+import { pageQuery } from "../../../../packages/contracts/src/registry.ts";
+import { z } from "zod";
 import { operationsScope } from "../operations.js";
 import { hasPermission } from "../../../../packages/contracts/src/permissions.ts";
 import { assertPermission } from "../services/permissions.js";
@@ -48,15 +51,18 @@ export function createPlatformRoutes({ db, requireAuth, ok, json }) {
       };
       if (path === "/api/audit" && method === "GET") {
         assertPermission(actor, "audit.read");
-        const limit = 50,
-          offset = Number(url.searchParams.get("offset") ?? 0);
-        if (!Number.isSafeInteger(offset) || offset < 0)
-          throw new Error("Некорректное смещение");
-        const q = (url.searchParams.get("q") ?? "").toLocaleLowerCase("ru");
-        const entity = url.searchParams.get("entityId");
+        const { q, offset, limit, entityId } = parseDto(
+          pageQuery.extend({ entityId: z.string().max(100).optional() }),
+          Object.fromEntries(url.searchParams),
+        );
         ok(
           response,
-          await db.auditPage({ query: q, entityId: entity, offset, limit }),
+          await db.auditPage({
+            query: q,
+            entityId: entityId ?? null,
+            offset,
+            limit,
+          }),
         );
         return true;
       }

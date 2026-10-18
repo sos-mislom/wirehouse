@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { initialRoute } from "../navigation";
-import { type OperationsData } from "../Operations";
+import { type OperationsData } from "../features/operations/shared";
 import { documentCategoryOptions } from "../shared/navigation";
 import {
   type AdminPanel,

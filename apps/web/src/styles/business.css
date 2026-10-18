@@ -65,6 +65,86 @@
 }
 .register-table {
   min-width: 560px;
+  table-layout: fixed;
+}
+.register-table tr[tabindex] {
+  cursor: pointer;
+}
+.register-table tr[tabindex]:hover,
+.register-table tr[aria-selected="true"] {
+  background: #f0f0f0;
+}
+.register-table tr[tabindex]:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: -2px;
+}
+.register-loading {
+  min-height: 160px;
+  padding: 24px 12px;
+  color: var(--ink-soft);
+}
+.register-table .audit-event summary {
+  cursor: pointer;
+  color: var(--ui-accent);
+  padding-block: 4px;
+}
+.register-table .audit-event pre {
+  max-height: 320px;
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.register-table .audit-event p {
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+}
+.register-table .register-details-row,
+.register-table .register-details-row:hover {
+  background: var(--surface);
+}
+.audit-detail-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.audit-changes {
+  margin: 0;
+}
+.audit-change {
+  display: grid;
+  grid-template-columns: minmax(120px,1fr) minmax(0,2fr) minmax(0,2fr);
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.audit-change dt,
+.audit-change dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.audit-change small {
+  margin: 0 0 4px;
+}
+@media (max-width:760px) {
+  .register-table .register-details-row td {
+    display: block;
+    padding: 12px;
+  }
+  .register-table .register-details-row td::before {
+    display: none;
+  }
+  .audit-change {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px 12px;
+  }
+  .audit-change dt {
+    grid-column: 1/-1;
+    font-weight: 600;
+  }
 }
 .register-table th,
 .data-register--compact .register-table td {

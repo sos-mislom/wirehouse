@@ -3,7 +3,7 @@ import { DocumentRegistry } from "../business/DocumentRegistry";
 import { Disclosure } from "../business/shared";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
-import { WorkerMeters } from "../../Operations";
+import { WorkerMeters } from "../operations/WorkerMeters";
 import {
   ticketCategoryOptions,
   ticketPriorityOptions,

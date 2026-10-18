@@ -10,10 +10,17 @@ import {
   decodeRow,
 } from "./schema.js";
 
-export async function loadRows(client, { auditLimit = null } = {}) {
-  const names = Object.keys(tables);
+export async function loadRows(
+  client,
+  { auditLimit = null, collections = Object.keys(tables) } = {},
+) {
+  const names = [...new Set(collections)];
+  for (const name of names)
+    if (!Object.hasOwn(tables, name))
+      throw new Error(`Unknown collection: ${name}`);
+  if (!names.length) return {};
   // One round trip; REPEATABLE READ or the write lock gives one consistent view.
-  const results = await client.query(
+  const result = await client.query(
     names
       .map((name) =>
         name === "audit_log" && auditLimit !== null
@@ -22,6 +29,7 @@ export async function loadRows(client, { auditLimit = null } = {}) {
       )
       .join(";"),
   );
+  const results = names.length === 1 ? [result] : result;
   return Object.fromEntries(
     names.map((name, index) => [
       name,

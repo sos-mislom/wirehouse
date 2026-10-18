@@ -1,5 +1,5 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { TicketOperations } from "../../Operations";
+import { TicketOperations } from "../operations/TicketOperations";
 import { formatDateTime, getSlaState } from "../../shared/format";
 import { type Ticket } from "../../shared/types";
 import { Checkbox } from "../../ui";

@@ -1,5 +1,7 @@
 import { contextCan } from "../domain/context-access.js";
 import { parseJsonBody } from "../http/body.js";
+import { parseDto } from "../http/body.js";
+import { exchangePageQuery } from "../../../../packages/contracts/src/registry.ts";
 import { assertPermission } from "../services/permissions.js";
 import {
   businessError,
@@ -93,6 +95,16 @@ export function createAccountingRoutes({
       const actor = requireAuth(request, response);
       if (!actor) return true;
       const admin = actor.role === "admin";
+      if (path === "/api/accounting/exchange" && method === "GET") {
+        assertPermission(actor, "exchange.manage");
+        if (!admin) throw businessError("Журнал доступен администратору", 403);
+        const query = parseDto(
+          exchangePageQuery,
+          Object.fromEntries(url.searchParams),
+        );
+        ok(response, await db.exchangePage(query));
+        return true;
+      }
       if (path === "/api/accounting" && method === "GET") {
         const accounts = db.data.personal_accounts.filter((a) =>
           contextCan(db, actor, "finance.read", "personal_accounts", a.id),
@@ -118,12 +130,6 @@ export function createAccountingRoutes({
               ),
           ),
           links: admin ? db.data.external_links : [],
-          inbox: admin
-            ? db.data.exchange_inbox.slice(-100).reverse().map(summary)
-            : [],
-          outbox: admin
-            ? db.data.exchange_outbox.slice(-100).reverse().map(summary)
-            : [],
         });
         return true;
       }

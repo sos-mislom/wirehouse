@@ -1,7 +1,11 @@
 import { lazy } from "react";
 import { Agenda } from "../../Agenda";
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { Operations } from "../../Operations";
+const Operations = lazy(() =>
+  import("../operations/Operations").then((module) => ({
+    default: module.Operations,
+  })),
+);
 
 import { ManagerFormScreen } from "./ManagerFormScreen";
 

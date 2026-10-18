@@ -1,4 +1,4 @@
-import { Operations } from "../../Operations";
+import { Operations } from "../operations/Operations";
 import { useWorkspace } from "../../app/WorkspaceContext";
 export function ManagerStaff() {
   const {

@@ -121,8 +121,10 @@ export type AccountingWorkspace = {
   accounts: PersonalAccount[];
   statements: AccountStatement[];
   links: ExternalLink[];
-  inbox: ExchangeEvent[];
-  outbox: ExchangeEvent[];
+};
+export type ExchangeJournalItem = ExchangeEvent & {
+  direction: "inbox" | "outbox";
+  sourceName: string;
 };
 export const accountingContracts = [
   { method: "POST", path: /^\/api\/accounting\/sources$/, schema: sourceInput },

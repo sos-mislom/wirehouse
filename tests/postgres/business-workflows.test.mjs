@@ -381,6 +381,18 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
     ).status,
     403,
   );
+  const journal = await call("/api/accounting/exchange?limit=10");
+  assert.equal(journal.status,200,JSON.stringify(journal.body));
+  assert.ok(journal.body.total>=3);
+  assert.ok(journal.body.items.every(r=>!('payload' in r)&&!('payloadHash' in r)));
+  assert.equal((await call("/api/accounting/exchange",f.worker)).status,403);
+  assert.equal((await call("/api/accounting/exchange",f.manager)).status,403);
+  assert.equal((await call("/api/accounting/exchange","invalid")).status,401);
+  for(const params of ['offset=-1','offset=1.5','limit=1000','direction=other','unexpected=1','q='+('x'.repeat(201))])
+    assert.equal((await call('/api/accounting/exchange?'+params)).status,400,params);
+  const accounting = (await call('/api/accounting')).body;
+  assert.equal('inbox' in accounting,false);
+  assert.equal('outbox' in accounting,false);
   const rows = await pg.readState();
   assert.equal(rows.exchange_inbox.length, 3);
   assert.equal(rows.personal_accounts.length, 1);

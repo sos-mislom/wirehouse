@@ -1,4 +1,5 @@
 import { saveReadingPeriod } from "../apps/api/src/domain/readings.js";
+import { saveSource } from "../apps/api/src/domain/accounting.js";
 import { scheduleFile } from "./maintenance-fixtures.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -18,6 +19,31 @@ if (!process.env.TEST_POSTGRES_URL)
 fs.mkdirSync(".deploy", { recursive: true });
 const f = fixture();
 const secret = "browser-test-secret";
+const journalSource = saveSource(f.db, f.admin, null, {
+  name: "Бухгалтерия производственно-складского комплекса для проверки журнала",
+  environment: "test",
+  active: true,
+});
+for (const direction of ["inbox", "outbox"])
+  for (let i = 0; i < (direction === "inbox" ? 120 : 12); i++) {
+    f.db.data[`exchange_${direction}`].push({
+      id: `journal-${direction}-${i}`,
+      sourceId: journalSource.id,
+      messageId: `journal-${direction}-${String(i).padStart(3, "0")}`,
+      kind: "accounts",
+      payloadHash: "browser-hash",
+      payload: {},
+      status: "failed",
+      attempts: 1,
+      error:
+        "Ошибка тестового обмена: договор с указанным внешним идентификатором не сопоставлен",
+      result: null,
+      correlationId: null,
+      createdAt: "2026-10-01T00:00:00.000Z",
+      updatedAt: "2026-10-01T00:00:00.000Z",
+      nextAttemptAt: null,
+    });
+  }
 const browserTicket = f.db.createTicket({
   unitId: f.unit.id,
   tenantId: f.tenant.id,
@@ -921,13 +947,192 @@ try {
   await page
     .getByRole("row")
     .filter({ has: page.getByText("001", { exact: true }) })
-    .click();
+    .press("Enter");
   await page.getByRole("heading", { name: /^ЛС 001/ }).waitFor();
   await capture(page, {
     path: ".deploy/business-desktop-accounts.png",
     fullPage: true,
   });
+  await page.getByText("Источники учета и обмен", { exact: true }).click();
+  await page.getByText("Журнал обмена", { exact: true }).click();
+  const journal = page.getByRole("region", { name: "Сообщения", exact: true });
+  const journalSearch = journal.getByRole("textbox", {
+    name: "Поиск: Сообщения",
+    exact: true,
+  });
+  await journalSearch.fill("journal-");
+  await journal
+    .getByRole("status")
+    .filter({ hasText: "1–25 из 132" })
+    .waitFor();
+  await journal.getByRole("button", { name: "Далее", exact: true }).click();
+  await journal
+    .getByRole("status")
+    .filter({ hasText: "26–50 из 132" })
+    .waitFor();
+  await journalSearch.fill("journal-inbox-000");
+  await journal.getByText("journal-inbox-000", { exact: true }).waitFor();
+  assert.equal(
+    await journal.locator("tbody tr").count(),
+    1,
+    "Server search reaches records older than the previous last-100 window",
+  );
+  let releaseOld, signalOld;
+  const heldOld = new Promise((resolve) => {
+      releaseOld = resolve;
+    }),
+    oldStarted = new Promise((resolve) => {
+      signalOld = resolve;
+    });
+  const delayedSearch = async (route) => {
+    if (new URL(route.request().url()).searchParams.get("q") !== "задержанный")
+      return route.continue();
+    signalOld();
+    await heldOld;
+    try {
+      await route.fulfill({
+        status: 500,
+        json: { error: "Устаревшая ошибка", code: "TEST_ERROR" },
+      });
+    } catch {}
+  };
+  await page.route("**/api/accounting/exchange?**", delayedSearch);
+  try {
+    await journalSearch.fill("задержанный");
+    await oldStarted;
+    await journalSearch.fill("journal-inbox-001");
+    await journal.getByText("journal-inbox-001", { exact: true }).waitFor();
+    releaseOld();
+    await page.waitForTimeout(250);
+    assert.equal(
+      await page.getByText("Устаревшая ошибка", { exact: true }).count(),
+      0,
+    );
+    assert.equal(
+      await journal.getByText("journal-inbox-001", { exact: true }).count(),
+      1,
+    );
+  } finally {
+    releaseOld();
+    await page.unroute("**/api/accounting/exchange?**", delayedSearch);
+  }
+  let failNext = true;
+  const failSearch = (route) => {
+    if (failNext) {
+      failNext = false;
+      return route.fulfill({
+        status: 503,
+        json: { error: "Проверка повторной загрузки", code: "TEST_ERROR" },
+      });
+    }
+    return route.continue();
+  };
+  await page.route("**/api/accounting/exchange?**", failSearch);
+  try {
+    await journalSearch.fill("journal-inbox-002");
+    await page
+      .getByRole("alert")
+      .filter({ hasText: "Проверка повторной загрузки" })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "Обновить данные", exact: true })
+      .click();
+    await journal.getByText("journal-inbox-002", { exact: true }).waitFor();
+  } finally {
+    await page.unroute("**/api/accounting/exchange?**", failSearch);
+  }
+  await journalSearch.fill("");
+  await journal.getByRole("button", { name: "Фильтры", exact: true }).click();
+  await journal
+    .getByRole("combobox", { name: "Источник", exact: true })
+    .selectOption(journalSource.id);
+  await journal
+    .getByRole("combobox", { name: "Направление", exact: true })
+    .selectOption("outbox");
+  await journal
+    .getByRole("combobox", { name: "Результат", exact: true })
+    .selectOption("failed");
+  await journal.getByText("journal-outbox-011", { exact: true }).waitFor();
+  assert.equal(await journal.locator("tbody tr").count(), 12);
+  await journal
+    .getByRole("button", { name: "Повторить", exact: true })
+    .first()
+    .click();
+  await page
+    .getByText("Повторная обработка запрошена. Результат появится в журнале.", {
+      exact: true,
+    })
+    .waitFor();
+  await journal.getByText("journal-outbox-010", { exact: true }).waitFor();
+  assert.equal(await journal.locator("tbody tr").count(), 11);
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    await journal.getByRole("heading").scrollIntoViewIfNeeded();
+    if (process.env.PAGED_SCREENSHOTS) {
+      fs.mkdirSync("output/playwright", { recursive: true });
+      await page.screenshot({
+        path: `output/playwright/exchange-${width}.png`,
+      });
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Пользователи");
+  await page
+    .locator(".operations-nav")
+    .getByRole("button", { name: "Аудит", exact: true })
+    .click();
+  const auditRegister = page.getByRole("region", {
+    name: "Аудит изменений",
+    exact: true,
+  });
+  await auditRegister.locator("tbody tr").first().waitFor();
+  await auditRegister
+    .getByRole("textbox", { name: "Поиск: Аудит изменений", exact: true })
+    .fill(f.worker.id);
+  await auditRegister.locator("tbody tr").first().waitFor();
+  await auditRegister
+    .getByRole("button", { name: "Состав изменений", exact: true })
+    .first()
+    .click();
+  for (const width of [1440, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    );
+    await auditRegister.getByRole("heading").scrollIntoViewIfNeeded();
+    const detail = auditRegister.getByRole("region", {
+      name: "Подробности изменения",
+      exact: true,
+    });
+    assert.ok(
+      (await detail.evaluate(
+        (e) =>
+          e.getBoundingClientRect().width /
+          e.closest("table").getBoundingClientRect().width,
+      )) > 0.8,
+      "Audit details use the full record width",
+    );
+    if (process.env.PAGED_SCREENSHOTS)
+      await page.screenshot({ path: `output/playwright/audit-${width}.png` });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await auditRegister
+    .getByRole("button", { name: "Закрыть подробности", exact: true })
+    .click();
+  assert.equal(
+    await auditRegister
+      .getByRole("button", { name: "Состав изменений", exact: true })
+      .first()
+      .evaluate((e) => e === document.activeElement),
+    true,
+  );
   await page
     .locator(".operations-nav")
     .getByRole("button", { name: "Доступ", exact: true })
@@ -1016,6 +1221,15 @@ try {
       "Marker stays aligned with the first caption line",
     );
     assert.equal(geometry.gap, 8);
+    for (const control of [
+      page.getByLabel("Доступ с", { exact: true }),
+      page.getByRole("combobox", { name: "Тип области", exact: true }),
+    ])
+      assert.equal(
+        await control.evaluate((e) => e.getBoundingClientRect().height),
+        width < 760 ? 44 : 36,
+        "Inputs and selects use the same control height",
+      );
     assert.equal(
       await historyOption
         .locator("..")

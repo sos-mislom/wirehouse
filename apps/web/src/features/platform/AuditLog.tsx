@@ -1,93 +1,111 @@
 import { useEffect, useState } from "react";
-import { Button, Input } from "../../ui";
-import { apiRequest } from "../../api/client";
-type Event = {
-  id: string;
-  actorName: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  createdAt: string;
-  changes: unknown;
+import { AuditEventDetails } from "./AuditEventDetails";
+import type { AuditEvent } from "../../../../../packages/contracts/src/registry";
+import { Button } from "../../ui";
+import { Feedback } from "../business/shared";
+import { Register } from "../business/Register";
+import { usePagedResource } from "../business/usePagedResource";
+const entities: Record<string, string> = {
+  user: "Пользователь",
+  ticket: "Заявка",
+  meter: "Прибор учета",
+  equipment: "Оборудование",
+  users: "Пользователь",
+  tickets: "Заявка",
+  units: "Помещение",
+  properties: "Объект",
+  leases: "Договор",
+  tenants: "Арендатор",
+  estimates: "Смета",
+  service_acts: "Акт",
+  personal_accounts: "Лицевой счет",
+  user_assignments: "Доступ",
+  entity_documents: "Документ",
+  reading_submissions: "Показание",
+  maintenance_plans: "График ППР",
+  maintenance_changes: "Исполнение ППР",
+  accounting_sources: "Источник учета",
+};
+const actions: Record<string, string> = {
+  user_updated: "Пользователь изменён",
+  reading_added: "Добавлено показание",
+  work_logged: "Учтены работы",
+  created: "Создано",
+  updated: "Изменено",
+  deleted: "Удалено",
 };
 export function AuditLog({ token }: { token: string }) {
-  const [q, setQ] = useState(""),
-    [offset, setOffset] = useState(0),
-    [error, setError] = useState("");
-  const [result, setResult] = useState<{ items: Event[]; total: number }>({
-    items: [],
-    total: 0,
-  });
-  useEffect(() => {
-    let active = true;
-    const timer = setTimeout(
-      () =>
-        apiRequest<typeof result>(
-          `/api/audit?q=${encodeURIComponent(q)}&offset=${offset}`,
-          { token },
-        )
-          .then((r) => {
-            if (active) {
-              setResult(r);
-              setError("");
-            }
-          })
-          .catch((e) => {
-            if (active) setError(e.message);
-          }),
-      200,
-    );
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [q, offset, token]);
+  const resource = usePagedResource<AuditEvent>(
+    token,
+    "/api/audit",
+    "Аудит изменений",
+  );
+  const [selected, setSelected] = useState("");
+  const closeDetails = () => {
+    document.getElementById("audit-trigger-" + selected)?.focus();
+    setSelected("");
+  };
+  useEffect(
+    () => setSelected(""),
+    [resource.query, resource.offset, resource.limit],
+  );
   return (
-    <div className="platform-section">
-      <Input
-        placeholder="Автор, сущность или идентификатор"
-        aria-label="Поиск в аудите"
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setOffset(0);
+    <div className="business-stack">
+      <Feedback error={resource.error} reload={resource.reload} />
+      <Register
+        title="Аудит изменений"
+        rows={resource.items}
+        pagination={resource}
+        selectedId={selected}
+        onSelect={(r) => setSelected(selected === r.id ? "" : r.id)}
+        details={{
+          rowId: selected,
+          render: (r) => <AuditEventDetails event={r} onClose={closeDetails} />,
         }}
+        action={
+          <Button disabled={resource.loading} onClick={resource.reload}>
+            Обновить журнал
+          </Button>
+        }
+        columns={[
+          {
+            key: "time",
+            label: "Дата и время",
+            render: (r) => new Date(r.createdAt).toLocaleString("ru-RU"),
+          },
+          {
+            key: "actor",
+            label: "Автор",
+            render: (r) => r.actorName || "Система",
+          },
+          {
+            key: "event",
+            label: "Изменение",
+            render: (r) => (
+              <>
+                {actions[r.action] ?? r.action}
+                <small>{entities[r.entityType] ?? r.entityType}</small>
+              </>
+            ),
+          },
+          {
+            key: "details",
+            label: "Подробности",
+            render: (r) => (
+              <Button
+                id={"audit-trigger-" + r.id}
+                variant="text"
+                aria-expanded={selected === r.id}
+                aria-controls={"audit-detail-" + r.id}
+                onClick={() => setSelected(selected === r.id ? "" : r.id)}
+              >
+                Состав изменений
+              </Button>
+            ),
+          },
+        ]}
+        empty="Событий по вашему запросу нет. Измените поиск."
       />
-      {error && <p role="alert">{error}</p>}
-      <p>Событий: {result.total}. Время указано в вашем часовом поясе.</p>
-      {result.items.map((row) => (
-        <details className="audit-event" key={row.id}>
-          <summary>
-            <time>{new Date(row.createdAt).toLocaleString("ru-RU")}</time>
-            <strong>{row.actorName}</strong>
-            <span>
-              {{ created: "Создано", updated: "Изменено", deleted: "Удалено" }[
-                row.action
-              ] ?? row.action}{" "}
-              · {row.entityType}
-            </span>
-          </summary>
-          <p>ID: {row.entityId}</p>
-          <pre>{JSON.stringify(row.changes, null, 2)}</pre>
-        </details>
-      ))}
-      <div className="mvp-actions">
-        <Button
-          disabled={!offset}
-          onClick={() => setOffset((v) => Math.max(0, v - 50))}
-        >
-          Назад
-        </Button>
-        <span>
-          {result.total ? offset + 1 : 0}–{Math.min(offset + 50, result.total)}
-        </span>
-        <Button
-          disabled={offset + 50 >= result.total}
-          onClick={() => setOffset((v) => v + 50)}
-        >
-          Далее
-        </Button>
-      </div>
     </div>
   );
 }

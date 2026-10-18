@@ -72,8 +72,6 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       accounts: [],
       statements: [],
       links: [],
-      inbox: [],
-      outbox: [],
     }),
     docs = useResource<{ items: EntityDocument[] }>(
       token,

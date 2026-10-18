@@ -13,6 +13,7 @@ const migrations = [
   "006-context-assignments.sql",
   "007-existing-business-records.sql",
   "008-work-estimate-binding.sql",
+  "009-exchange-page-indexes.sql",
 ];
 
 async function sources() {

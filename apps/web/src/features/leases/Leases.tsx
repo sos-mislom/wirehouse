@@ -4,7 +4,7 @@ import { ReadingsWorkspace } from "../business/ReadingsWorkspace";
 import { DocumentRegistry } from "../business/DocumentRegistry";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
-import { TenantServices } from "../../Operations";
+import { TenantServices } from "../operations/TenantServices";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import {
   daysUntil,
