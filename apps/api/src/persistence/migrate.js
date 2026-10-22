@@ -15,6 +15,7 @@ const migrations = [
   "008-work-estimate-binding.sql",
   "009-exchange-page-indexes.sql",
   "010-realtime-state.sql",
+  "011-catalog-import.sql",
 ];
 
 async function sources() {

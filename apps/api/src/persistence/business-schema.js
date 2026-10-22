@@ -14,7 +14,7 @@ export const businessTables = {
   ),
   external_links: table(
     {
-      text: "id sourceId entityType externalId localId",
+      text: "id sourceId entityType externalId localId payloadHash",
       integer: "version",
       timestamptz: "updatedAt",
     },

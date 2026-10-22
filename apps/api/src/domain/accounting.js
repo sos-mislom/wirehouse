@@ -7,6 +7,8 @@ import {
   statementInput,
   accountExchangeInput,
   exchangeMessage,
+  propertyExchangeInput,
+  unitExchangeInput,
 } from "../../../../packages/contracts/src/accounting.ts";
 export const stableJson = (value) => JSON.stringify(stableValue(value));
 function stableValue(value) {
@@ -128,10 +130,17 @@ export function saveExternalLink(db, input) {
     throw businessError("Лицевой счет другого источника");
   if (old && body.version < old.version)
     throw businessError("Версия сопоставления устарела", 409, "STALE_VERSION");
-  const row = { ...body, id: old?.id ?? crypto.randomUUID(), updatedAt: now() };
+  const row = {
+    ...body,
+    id: old?.id ?? crypto.randomUUID(),
+    // A manually advanced version has no verified import snapshot.
+    payloadHash:
+      old?.version === body.version ? (old.payloadHash ?? null) : null,
+    updatedAt: now(),
+  };
   if (old) Object.assign(old, row);
   else db.data.external_links.push(row);
-  return row;
+  return old ?? row;
 }
 export function saveAccount(db, id, input) {
   const body = parseDto(accountInput, input),
@@ -325,6 +334,95 @@ function applyAccounts(db, source, items) {
   }
   return result;
 }
+function applyCatalog(db, source, kind, items) {
+  const result = { created: 0, updated: 0, skipped: 0 };
+  const seen = new Set();
+  for (const input of items) {
+    const body = parseDto(
+      kind === "properties" ? propertyExchangeInput : unitExchangeInput,
+      input,
+    );
+    if (seen.has(body.externalId))
+      throw businessError(
+        "В пакете повторен внешний ID",
+        409,
+        "IDENTITY_CONFLICT",
+      );
+    seen.add(body.externalId);
+    const mapping = db.data.external_links.find(
+      (r) =>
+        r.sourceId === source.id &&
+        r.entityType === kind &&
+        r.externalId === body.externalId,
+    );
+    const hash = crypto
+      .createHash("sha256")
+      .update(stableJson(body))
+      .digest("hex");
+    if (mapping) {
+      requiredRecord(db, kind, mapping.localId);
+      if (
+        db.data.external_links.some(
+          (r) =>
+            r.sourceId !== source.id &&
+            r.entityType === kind &&
+            r.localId === mapping.localId,
+        )
+      )
+        throw businessError(
+          "Запись связана с несколькими источниками; определите источник изменений",
+          409,
+          "IDENTITY_CONFLICT",
+        );
+      if (body.version <= mapping.version) {
+        if (body.version === mapping.version && mapping.payloadHash !== hash)
+          throw businessError(
+            "Та же версия справочника содержит другие данные или не имеет подтвержденного снимка",
+            409,
+            "VERSION_CONFLICT",
+          );
+        result.skipped++;
+        continue;
+      }
+    }
+    const { externalId, version, propertyExternalId, ...fields } = body;
+    let record;
+    if (kind === "properties") {
+      record = mapping
+        ? db.updateProperty(mapping.localId, fields)
+        : db.createProperty(fields);
+    } else {
+      const parent = db.data.external_links.find(
+        (r) =>
+          r.sourceId === source.id &&
+          r.entityType === "properties" &&
+          r.externalId === propertyExternalId,
+      );
+      if (!parent)
+        throw businessError(
+          `Не сопоставлен объект: ${propertyExternalId}`,
+          422,
+          "MISSING_MAPPING",
+        );
+      requiredRecord(db, "properties", parent.localId);
+      // Importing geometry must not reset occupancy or client layout.
+      const data = { ...fields, propertyId: parent.localId };
+      record = mapping
+        ? db.updateUnit(mapping.localId, data)
+        : db.createUnit({ ...data, status: "vacant" });
+    }
+    const link = saveExternalLink(db, {
+      sourceId: source.id,
+      entityType: kind,
+      externalId,
+      localId: record.id,
+      version,
+    });
+    link.payloadHash = hash;
+    result[mapping ? "updated" : "created"]++;
+  }
+  return result;
+}
 export function processExchange(db, sourceId, input, serverEnvironment) {
   const body = parseDto(exchangeMessage, input),
     source = requiredRecord(db, "accounting_sources", sourceId);
@@ -382,8 +480,9 @@ export function processExchange(db, sourceId, input, serverEnvironment) {
   row.updatedAt = now();
   const before = structuredClone(db.data);
   try {
-    const result =
-      body.kind === "statements"
+    const result = ["properties", "units"].includes(body.kind)
+      ? applyCatalog(db, source, body.kind, body.items)
+      : body.kind === "statements"
         ? applyStatements(db, source, body.items)
         : applyAccounts(db, source, body.items);
     row.status = "applied";
@@ -392,7 +491,10 @@ export function processExchange(db, sourceId, input, serverEnvironment) {
     row.nextAttemptAt = null;
   } catch (error) {
     // Keep the durable failure while rolling back every business row from this package.
-    db.data = before;
+    // Restore the collections on the current domain object. Assigning db.data
+    // would shadow the PostgreSQL facade's proxy, leaving partial writes behind.
+    // This also works inside an outer domain transaction (nested savepoint).
+    Object.assign(db.data, before);
     row = requiredRecord(db, "exchange_inbox", rowId);
     row.status = "failed";
     row.error = error.message;

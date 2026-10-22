@@ -59,6 +59,11 @@ export function ManagerShell() {
         className={`mvp-nav-button ${activeManagerNav === screen ? "mvp-nav-button--active" : ""}`}
         aria-current={activeManagerNav === screen ? "page" : undefined}
         onClick={() => {
+          setExtraOpen(
+            managerExtraNavGroups.some((group) =>
+              group.screens.some((item) => item === screen),
+            ),
+          );
           setManagerScreen(screen);
           setMobileNavOpen(false);
         }}
@@ -185,6 +190,7 @@ export function ManagerShell() {
             key={screen}
             aria-current={activeManagerNav === screen ? "page" : undefined}
             onClick={() => {
+              setExtraOpen(false);
               setManagerScreen(screen);
               setMobileNavOpen(false);
             }}

@@ -30,7 +30,7 @@ export function createAccountingRoutes({
       return false;
     try {
       const machine = path.match(
-        /^\/api\/integrations\/accounting\/([a-zA-Z0-9-]+)\/(messages|outbox\/claim|outbox\/([a-zA-Z0-9-]+)\/ack)$/,
+        /^\/api\/integrations\/accounting\/([a-zA-Z0-9-]+)\/(capabilities|messages|outbox\/claim|outbox\/([a-zA-Z0-9-]+)\/ack)$/,
       );
       if (machine) {
         const source = authenticateSource(
@@ -44,6 +44,23 @@ export function createAccountingRoutes({
             409,
             "ENVIRONMENT_MISMATCH",
           );
+        if (machine[2] === "capabilities") {
+          if (method !== "GET")
+            throw businessError("Метод не поддерживается", 405);
+          ok(response, {
+            sourceId: source.id,
+            environment: exchangeEnvironment,
+            schemaVersion: 1,
+            incomingKinds: ["properties", "units", "accounts", "statements"],
+            outgoingKinds: [
+              "readings",
+              "work_results",
+              "work_reopened",
+              "service_acts",
+            ],
+          });
+          return true;
+        }
         if (method !== "POST")
           throw businessError("Метод не поддерживается", 405);
         const input = await parseJsonBody(request);
@@ -58,6 +75,7 @@ export function createAccountingRoutes({
             .filter(
               (r) =>
                 r.sourceId === source.id &&
+                (!input.kinds || input.kinds.includes(r.kind)) &&
                 r.status !== "applied" &&
                 (r.status !== "failed" || r.attempts < 8) &&
                 (!r.nextAttemptAt || r.nextAttemptAt <= now),

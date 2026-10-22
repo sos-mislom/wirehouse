@@ -13,11 +13,27 @@ const allowed = (file) =>
     "apps/web/package.json",
     "scripts/create-initial-admin.mjs",
     "README.md",
+    "scripts/build-one-c.py",
+    "scripts/configure-one-c.py",
+    "scripts/inspect-one-c.py",
+    "scripts/inspect-one-c-data.py",
   ].includes(file) ||
-  ["apps/api/src/", "packages/contracts/", "infra/deploy/", "docs/"].some(
-    (prefix) => file.startsWith(prefix),
-  );
+  [
+    "apps/api/src/",
+    "packages/contracts/",
+    "infra/deploy/",
+    "docs/",
+    "integrations/one-c/",
+  ].some((prefix) => file.startsWith(prefix));
 try {
+  if (
+    execFileSync("git", ["status", "--porcelain", "--untracked-files=normal"], {
+      encoding: "utf8",
+    }).trim()
+  )
+    throw new Error(
+      "Commit release changes before packaging so REVISION identifies the deployed sources",
+    );
   const files = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
     .split("\0")
     .filter((file) => file && allowed(file));

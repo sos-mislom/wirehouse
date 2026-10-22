@@ -74,11 +74,39 @@ export const accountExchangeInput = z.strictObject({
   status: z.enum(["active", "closed"]),
   version: z.number().int().positive(),
 });
+// Only source-owned fields are accepted. Layout, availability and access rights
+// stay in the operational contour. References always use this source's IDs.
+const area = z.number().finite().positive().max(1e12);
+export const propertyExchangeInput = z
+  .strictObject({
+    externalId: label,
+    version: z.number().int().positive(),
+    name: label,
+    address: label,
+    totalArea: area,
+    rentableArea: z.number().finite().nonnegative().max(1e12),
+    warehouseClass: z.enum(["A+", "A", "B+", "B", "C", "D"]),
+  })
+  .refine(
+    (v) => v.rentableArea <= v.totalArea,
+    "Арендуемая площадь больше общей",
+  );
+export const unitExchangeInput = z.strictObject({
+  externalId: label,
+  version: z.number().int().positive(),
+  propertyExternalId: label,
+  number: label,
+  floor: z.number().int().min(-10).max(300),
+  area,
+  type: z.enum(["warm", "cold", "freezer", "open", "office"]),
+  building: z.string().trim().max(300),
+  entrance: z.string().trim().max(300),
+});
 export const exchangeMessage = z.strictObject({
   messageId: identity,
   environment,
   schemaVersion: z.literal(1),
-  kind: z.enum(["accounts", "statements"]),
+  kind: z.enum(["properties", "units", "accounts", "statements"]),
   items: z.array(z.unknown()).min(1).max(500),
 });
 export type AccountingSource = z.infer<typeof sourceInput> & {
@@ -162,7 +190,16 @@ export const accountingContracts = [
   {
     method: "POST",
     path: /^\/api\/integrations\/accounting\/[a-zA-Z0-9-]+\/outbox\/claim$/,
-    schema: z.strictObject({ limit: z.number().int().min(1).max(100) }),
+    schema: z.strictObject({
+      limit: z.number().int().min(1).max(100),
+      kinds: z
+        .array(
+          z.enum(["readings", "work_results", "work_reopened", "service_acts"]),
+        )
+        .min(1)
+        .max(4)
+        .optional(),
+    }),
   },
   {
     method: "POST",

@@ -1,0 +1,21 @@
+{
+  "accounts": [
+    {
+      "externalId": "00000000-0000-4000-8000-000000000001",
+      "leaseExternalId": "00000000-0000-4000-8000-000000000002",
+      "number": "EXAMPLE-ONLY",
+      "validFrom": "2026-01-01",
+      "validTo": null,
+      "status": "active",
+      "version": 1
+    }
+  ],
+  "meters": [
+    {
+      "externalId": "00000000-0000-4000-8000-000000000003",
+      "accountExternalId": "00000000-0000-4000-8000-000000000001",
+      "initialValue": 0,
+      "active": true
+    }
+  ]
+}

@@ -123,6 +123,7 @@ export function MaintenanceProgress() {
               key={`${item.ticketId}:${formRevision}`}
               item={item}
               busy={resource.busy}
+              loading={resource.loading}
               onSave={async (body) => {
                 const saved = await resource.run(async () => {
                   await apiRequest(
@@ -154,10 +155,12 @@ export function MaintenanceProgress() {
 function MaintenanceChangeForm({
   item,
   busy,
+  loading,
   onSave,
 }: {
   item: Item;
   busy: boolean;
+  loading: boolean;
   onSave: (body: {
     updatedAt: string;
     toDate: string | null;
@@ -165,15 +168,18 @@ function MaintenanceChangeForm({
     remark: FormDataEntryValue | null;
   }) => Promise<void>;
 }) {
-  const [baseline] = useState(item.updatedAt);
+  // Cached data may refresh after opening the detail. Pin the version when
+  // editing starts, then retain it so concurrent changes still return 409.
+  const [baseline, setBaseline] = useState<string | null>(null);
   return (
     <form
       className="form-grid"
+      onChange={() => setBaseline((value) => value ?? item.updatedAt)}
       onSubmit={(e) => {
         e.preventDefault();
         const v = new FormData(e.currentTarget);
         void onSave({
-          updatedAt: baseline,
+          updatedAt: baseline ?? item.updatedAt,
           toDate: v.get("toDate")
             ? new Date(String(v.get("toDate"))).toISOString()
             : null,
@@ -185,18 +191,27 @@ function MaintenanceChangeForm({
       {item.capabilities.reschedule && (
         <label>
           Новый срок, если нужен перенос
-          <Input name="toDate" type="datetime-local" />
+          <Input
+            name="toDate"
+            type="datetime-local"
+            disabled={loading || busy}
+          />
         </label>
       )}
       <label>
         Причина
-        <Input name="reason" required maxLength={10000} />
+        <Input
+          name="reason"
+          required
+          maxLength={10000}
+          disabled={loading || busy}
+        />
       </label>
       <label>
         Техническое замечание
-        <Textarea name="remark" maxLength={10000} />
+        <Textarea name="remark" maxLength={10000} disabled={loading || busy} />
       </label>
-      <Button variant="primary" type="submit" busy={busy}>
+      <Button variant="primary" type="submit" busy={busy} disabled={loading}>
         Сохранить изменение
       </Button>
     </form>
