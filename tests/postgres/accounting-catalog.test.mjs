@@ -159,4 +159,90 @@ test("Catalog migration and source snapshots survive PostgreSQL transactions, re
     "applied",
   );
   assert.equal((await pg.readState()).account_statements.length, 1);
+  // PostgreSQL decodes timestamptz with .000Z while native BP sends whole
+  // seconds. An unchanged account in a mixed update must remain a safe replay.
+  assert.equal(
+    (
+      await apply(b, {
+        ...finance,
+        messageId: crypto.randomUUID(),
+        items: [statement],
+      })
+    ).result.skipped,
+    1,
+  );
+  assert.equal(
+    (
+      await apply(b, {
+        ...finance,
+        messageId: crypto.randomUUID(),
+        items: [{ ...statement, asOf: "2026-10-22T15:00:00+03:00" }],
+      })
+    ).result.skipped,
+    1,
+  );
+  await a.requestScope({}, () =>
+    saveAccount(a, null, {
+      sourceId: source.id,
+      externalId: "account-2",
+      leaseId: f.lease.id,
+      number: "002",
+      validFrom: "2026-01-01",
+      validTo: null,
+      status: "active",
+    }),
+  );
+  const unchanged = {
+    ...statement,
+    externalId: "statement-2",
+    accountExternalId: "account-2",
+    charged: 0,
+    closing: 0,
+    lines: [],
+  };
+  assert.equal(
+    (
+      await apply(a, {
+        ...finance,
+        messageId: crypto.randomUUID(),
+        items: [unchanged],
+      })
+    ).status,
+    "applied",
+  );
+  const updated = {
+    ...statement,
+    version: 2,
+    charged: 122,
+    closing: 122,
+    lines: [
+      { service: "Аренда", amount: 100 },
+      { service: "Акт", amount: 22 },
+    ],
+  };
+  const mixed = await apply(b, {
+    ...finance,
+    messageId: crypto.randomUUID(),
+    items: [updated, unchanged],
+  });
+  assert.deepEqual(mixed.result, { created: 0, updated: 1, skipped: 1 });
+  const bad = await apply(a, {
+    ...finance,
+    messageId: crypto.randomUUID(),
+    items: [
+      {
+        ...updated,
+        charged: 123,
+        closing: 123,
+        lines: [{ service: "Изменено", amount: 123 }],
+      },
+    ],
+  });
+  assert.equal(bad.status, "failed");
+  assert.equal(
+    (await pg.readState()).account_statements.find(
+      (r) => r.externalId === "statement-1",
+    ).charged,
+    122,
+  );
 });

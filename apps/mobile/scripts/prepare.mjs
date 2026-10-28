@@ -24,13 +24,20 @@ if (
 )
   throw Error("Set VITE_WAREHOUSE_API_BASE_URL to the HTTPS CRM origin");
 const target = path.join(root, ".local/mobile", product);
+const { version } = JSON.parse(
+  fs.readFileSync(path.join(root, "apps/mobile/package.json"), "utf8"),
+);
+if (!/^\d+\.\d+\.\d+$/.test(version))
+  throw Error("A stable mobile version is required");
+const [major, minor, patch] = version.split(".").map(Number),
+  versionCode = major * 10000 + minor * 100 + patch;
 if (path.relative(path.join(root, ".local/mobile"), target) !== product)
   throw Error("Generated product path escaped the workspace");
 fs.mkdirSync(target, { recursive: true });
 fs.writeFileSync(
   path.join(target, "package.json"),
   JSON.stringify(
-    { name: `wirehouse-${product}`, version: "0.3.0", private: true },
+    { name: `wirehouse-${product}`, version, private: true },
     null,
     2,
   ),
@@ -89,14 +96,17 @@ let nativeVersion = fs.readFileSync(nativeVersionFile, "utf8");
 nativeVersion =
   platform === "android"
     ? nativeVersion
-        .replace(/versionCode\s+\d+/, "versionCode 300")
-        .replace(/versionName\s+"[^"]+"/, 'versionName "0.3.0"')
+        .replace(/versionCode\s+\d+/, `versionCode ${versionCode}`)
+        .replace(/versionName\s+"[^"]+"/, `versionName "${version}"`)
     : nativeVersion
         .replace(
           /CURRENT_PROJECT_VERSION = [^;]+;/g,
-          "CURRENT_PROJECT_VERSION = 300;",
+          `CURRENT_PROJECT_VERSION = ${versionCode};`,
         )
-        .replace(/MARKETING_VERSION = [^;]+;/g, "MARKETING_VERSION = 0.3.0;");
+        .replace(
+          /MARKETING_VERSION = [^;]+;/g,
+          `MARKETING_VERSION = ${version};`,
+        );
 fs.writeFileSync(nativeVersionFile, nativeVersion);
 fs.writeFileSync(
   path.join(target, "build-manifest.json"),
@@ -106,7 +116,7 @@ fs.writeFileSync(
       platform,
       appId: `ru.skladkontur.${product}`,
       apiOrigin: api.origin,
-      version: "0.3.0",
+      version,
       builtAt: new Date().toISOString(),
       boundary:
         "Prepared native source; no assertion of device, push or store validation",

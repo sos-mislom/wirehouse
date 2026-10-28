@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "integrations/one-c"))
+import wirehouse_bridge as bridge_module
 from wirehouse_bridge import BridgeError, Config, Worker, Native, load_env, parse_json
 
 
@@ -56,6 +57,14 @@ class FakeTransport:
 
 
 class BridgeTests(unittest.TestCase):
+    def test_cli_does_not_report_success_when_a_business_message_was_rejected(self):
+        from types import SimpleNamespace
+        for count in [0,1]:
+            worker=SimpleNamespace(run_once=lambda:{'sent':0,'received':0,'duplicates':0,'rejected':count})
+            with patch.object(sys,'argv',['wirehouse_bridge.py']),patch.object(bridge_module.Config,'from_env',return_value=self.config),patch.object(bridge_module,'Worker',return_value=worker),redirect_stdout(io.StringIO()) as output:
+                code=bridge_module.main()
+            self.assertEqual(code,1 if count else 0)
+            self.assertEqual(json.loads(output.getvalue())['status'],'failed' if count else 'ok')
     def test_server_connection_and_mutually_exclusive_database_modes(self):
         config=Config("https://crm.example.invalid","source-1","production","x"*43,"",server="one-c.internal:1541",infobase='Accounting "A"',user='integration',password='local-test-only')
         config.validate()

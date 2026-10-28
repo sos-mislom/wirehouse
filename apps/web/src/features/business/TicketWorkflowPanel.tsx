@@ -47,7 +47,7 @@ const actions: Record<string, string> = {
   refuse: "Исполнитель отказался от задания",
 };
 export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
-  const { session, tickets, refreshWorkspace, overview } = useWorkspace(),
+  const { session, tickets, refreshWorkspace } = useWorkspace(),
     { token, user } = session,
     ticket = tickets.find((t) => t.id === ticketId);
   const resource = useResource<{
@@ -81,11 +81,6 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       { items: [] },
     );
   const [termsRevision, setTermsRevision] = useState(0);
-  const dispatch = useResource<{ teams: { id: string; name: string }[] }>(
-    token,
-    "/api/dispatch",
-    { teams: [] },
-  );
   const [reasonAction, setReasonAction] = useState(""),
     w = resource.data.item;
   const execute = (action: string, reason = "") =>
@@ -137,19 +132,9 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
             )}
           </div>
           {w.pauseReason && <p>Причина паузы: {w.pauseReason}</p>}
-          {w.teamId && (
-            <p>
-              Служба:{" "}
-              {dispatch.data.teams.find((r) => r.id === w.teamId)?.name ??
-                "Назначена диспетчером"}
-            </p>
-          )}
+          {w.teamId && <p>Служба: {w.teamName ?? "Назначена диспетчером"}</p>}
           {w.reviewerId && (
-            <p>
-              Принимающий:{" "}
-              {overview.team.find((r) => r.id === w.reviewerId)?.fullName ??
-                "Назначен диспетчером"}
-            </p>
+            <p>Принимающий: {w.reviewerName ?? "Назначен диспетчером"}</p>
           )}
           <dl className="business-stats">
             <div>

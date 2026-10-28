@@ -31,6 +31,12 @@ export function workflowView(db, actor, id) {
   return {
     item: {
       ...w,
+      teamName: w.teamId
+        ? (db.getById("service_teams", w.teamId)?.name ?? null)
+        : null,
+      reviewerName: w.reviewerId
+        ? (db.getById("users", w.reviewerId)?.full_name ?? null)
+        : null,
       amount: financial ? w.amount : null,
       accountId: financial ? w.accountId : null,
     },

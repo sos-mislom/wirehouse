@@ -297,7 +297,8 @@ def main():
             load_env(args.env_file)
         worker = Worker(Config.from_env())
         result = worker.verify() if args.check else worker.run_once()
-        return finish({"status":"ok",**result},0)
+        rejected=bool(result.get("rejected",0))
+        return finish({"status":"failed" if rejected else "ok",**result},1 if rejected else 0)
     except BridgeError as error:
         return finish({"status":"failed","code":str(error)},1)
     except Exception:

@@ -224,6 +224,7 @@ function applyStatements(db, source, items) {
     const { accountExternalId, ...fields } = body;
     const row = {
       ...fields,
+      asOf: new Date(body.asOf).toISOString(),
       id: old?.id ?? crypto.randomUUID(),
       accountId: account.id,
       sourceId: source.id,
@@ -231,13 +232,14 @@ function applyStatements(db, source, items) {
     };
     if (old && body.version <= old.version) {
       const canonical = (r) =>
-        stableJson(
-          Object.fromEntries(
+        stableJson({
+          ...Object.fromEntries(
             Object.entries(r)
               .filter(([k]) => !["id", "updatedAt"].includes(k))
               .sort(([a], [b]) => a.localeCompare(b)),
           ),
-        );
+          asOf: new Date(r.asOf).toISOString(),
+        });
       if (body.version === old.version && canonical(old) !== canonical(row))
         throw businessError(
           "Та же версия содержит другие суммы",

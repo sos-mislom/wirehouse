@@ -168,6 +168,8 @@ export type EntityDocument = {
   links: DocumentLink[];
 };
 export type TicketWorkflow = {
+  teamName?: string | null;
+  reviewerName?: string | null;
   teamId: string | null;
   reviewerId: string | null;
   ticketId: string;

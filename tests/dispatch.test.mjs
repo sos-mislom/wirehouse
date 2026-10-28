@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fixture } from "./fixtures.mjs";
+import { workflowView } from "../apps/api/src/domain/ticket-view.js";
 import {
   saveDispatch,
   dispatchWorkspace,
@@ -59,6 +60,15 @@ test("Category dispatch pins the service/reviewer, checks members and prevents u
     });
     const w = () => workflowFor(f.db, ticket.id);
     assert.deepEqual([w().teamId, w().reviewerId], [team.id, f.manager.id]);
+    const view = workflowView(f.db, f.worker, ticket.id);
+    assert.equal(view.item.teamName, "Электрослужба");
+    assert.equal(view.item.reviewerName, f.manager.full_name);
+    assert.equal(view.item.amount, null);
+    assert.equal(
+      dispatchWorkspace(f.db, f.worker).teams.length,
+      0,
+      "Names in this assigned task do not expose the staff roster",
+    );
     const act = (actor, action) =>
       decideTicket(f.db, actor, ticket.id, {
         updatedAt: w().updatedAt,
