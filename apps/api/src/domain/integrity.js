@@ -7,6 +7,7 @@ const scopes = {
 };
 const documentTypes = new Set([
   "properties",
+  "buildings",
   "units",
   "equipment",
   "leases",
@@ -22,6 +23,30 @@ export function assertBusinessReferences(data) {
     ]),
   );
   const exists = (table, id) => ids.get(table)?.has(id);
+  for (const team of data.service_teams)
+    if (team.memberIds.some((id) => !exists("users", id)))
+      throw businessError("Участник службы не найден", 409, "LINKED_DISPATCH");
+  for (const rule of data.dispatch_rules)
+    if (
+      data.service_teams.find((t) => t.id === rule.teamId)?.propertyId !==
+      rule.propertyId
+    )
+      throw businessError(
+        "Служба другого объекта",
+        409,
+        "DISPATCH_CONTEXT_MISMATCH",
+      );
+  for (const workflow of data.ticket_workflows)
+    if (
+      workflow.teamId &&
+      data.service_teams.find((t) => t.id === workflow.teamId)?.propertyId !==
+        data.tickets.find((t) => t.id === workflow.ticketId)?.property_id
+    )
+      throw businessError(
+        "Служба процесса другого объекта",
+        409,
+        "DISPATCH_CONTEXT_MISMATCH",
+      );
   for (const row of data.ticket_workflows)
     if (
       row.estimateId &&

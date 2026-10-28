@@ -1,4 +1,5 @@
 import { LoginPage } from "../features/auth/LoginPage";
+import { mobileProduct } from "../mobile-product";
 import { DocumentPanel } from "../features/leases/DocumentPanel";
 import { ManagerShell } from "../features/shell/ManagerShell";
 import { Section } from "../features/shell/Section";
@@ -34,6 +35,16 @@ export function WorkspaceRouter() {
     return <main className="loading-shell">{t.loading}</main>;
   }
   if (!session || !overview) return <LoginPage />;
+  if (
+    mobileProduct &&
+    session.user.role !== (mobileProduct === "client" ? "tenant" : "worker")
+  )
+    return (
+      <main className="loading-shell">
+        <p>Эта учетная запись не подходит для выбранного приложения.</p>
+        <Button onClick={handleLogout}>Выйти</Button>
+      </main>
+    );
   if (isManagerShell) {
     return <ManagerShell />;
   }

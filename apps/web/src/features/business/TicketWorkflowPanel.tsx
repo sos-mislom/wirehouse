@@ -30,6 +30,7 @@ const states: Record<string, string> = {
   accepted: "Результат принят",
   closed: "Закрыта",
   rejected: "Отклонена",
+  refused: "Исполнитель отказался — требуется переназначение",
 };
 const actions: Record<string, string> = {
   terms: "Условия изменены",
@@ -43,9 +44,10 @@ const actions: Record<string, string> = {
   accept: "Результат принят",
   return: "Возвращено в работу",
   close: "Заявка закрыта",
+  refuse: "Исполнитель отказался от задания",
 };
 export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
-  const { session, tickets, refreshWorkspace } = useWorkspace(),
+  const { session, tickets, refreshWorkspace, overview } = useWorkspace(),
     { token, user } = session,
     ticket = tickets.find((t) => t.id === ticketId);
   const resource = useResource<{
@@ -79,6 +81,11 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
       { items: [] },
     );
   const [termsRevision, setTermsRevision] = useState(0);
+  const dispatch = useResource<{ teams: { id: string; name: string }[] }>(
+    token,
+    "/api/dispatch",
+    { teams: [] },
+  );
   const [reasonAction, setReasonAction] = useState(""),
     w = resource.data.item;
   const execute = (action: string, reason = "") =>
@@ -130,6 +137,20 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
             )}
           </div>
           {w.pauseReason && <p>Причина паузы: {w.pauseReason}</p>}
+          {w.teamId && (
+            <p>
+              Служба:{" "}
+              {dispatch.data.teams.find((r) => r.id === w.teamId)?.name ??
+                "Назначена диспетчером"}
+            </p>
+          )}
+          {w.reviewerId && (
+            <p>
+              Принимающий:{" "}
+              {overview.team.find((r) => r.id === w.reviewerId)?.fullName ??
+                "Назначен диспетчером"}
+            </p>
+          )}
           <dl className="business-stats">
             <div>
               <dt>Работа</dt>
@@ -182,6 +203,18 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
                 Начать работу
               </Button>
             )}
+            {["registered", "assigned", "awaiting_approval"].includes(
+              w.state,
+            ) &&
+              worker &&
+              ticket?.assignedTo === user.id && (
+                <Button
+                  busy={resource.busy}
+                  onClick={() => setReasonAction("refuse")}
+                >
+                  Отказаться от задания
+                </Button>
+              )}
             {w.state === "in_progress" && worker && (
               <>
                 <Button
@@ -251,11 +284,13 @@ export function TicketWorkflowPanel({ ticketId }: { ticketId: string }) {
               </label>
               <div className="mvp-actions">
                 <Button variant="primary" type="submit" busy={resource.busy}>
-                  {reasonAction === "return"
-                    ? "Вернуть в работу"
-                    : reasonAction === "pause"
-                      ? "Приостановить работу"
-                      : "Отклонить стоимость"}
+                  {reasonAction === "refuse"
+                    ? "Подтвердить отказ"
+                    : reasonAction === "return"
+                      ? "Вернуть в работу"
+                      : reasonAction === "pause"
+                        ? "Приостановить работу"
+                        : "Отклонить стоимость"}
                 </Button>
                 <Button onClick={() => setReasonAction("")}>Отмена</Button>
               </div>

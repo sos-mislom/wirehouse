@@ -3,8 +3,53 @@ import { identity, label, note } from "./accounting.ts";
 import { MAX_WORK_AMOUNT } from "./operations-platform.ts";
 const timestamp = z.iso.datetime({ offset: true });
 const reason = note.refine((v) => v.length > 0, "Укажите причину");
+const dispatchCategory = z.enum([
+  "gates_ramps",
+  "electrical",
+  "plumbing",
+  "heating",
+  "security",
+  "territory",
+  "loading_equipment",
+  "ventilation",
+  "maintenance",
+  "billing",
+  "access",
+  "damage",
+  "cleaning",
+  "other",
+]);
+export const teamInput = z.strictObject({
+  propertyId: identity,
+  name: label,
+  memberIds: z
+    .array(identity)
+    .max(100)
+    .refine((v) => new Set(v).size === v.length),
+  active: z.boolean(),
+  updatedAt: timestamp.nullable(),
+});
+export const dispatchRuleInput = z.strictObject({
+  propertyId: identity,
+  category: dispatchCategory,
+  teamId: identity,
+  reviewerId: identity,
+  active: z.boolean(),
+  updatedAt: timestamp.nullable(),
+});
+export type ServiceTeam = z.infer<typeof teamInput> & {
+  id: string;
+  updatedAt: string;
+  createdAt: string;
+};
+export type DispatchRule = z.infer<typeof dispatchRuleInput> & {
+  id: string;
+  updatedAt: string;
+  createdAt: string;
+};
 export const documentEntity = z.enum([
   "properties",
+  "buildings",
   "units",
   "equipment",
   "leases",
@@ -51,12 +96,14 @@ export const decisionInput = z
       "accept",
       "return",
       "close",
+      "refuse",
     ]),
     reason: note.default(""),
   })
   .refine(
     (v) =>
-      !["decline", "pause", "return"].includes(v.action) || v.reason.length > 0,
+      !["decline", "pause", "return", "refuse"].includes(v.action) ||
+      v.reason.length > 0,
     "Укажите причину",
   );
 export type TicketTermsInput = z.infer<typeof termsInput>;
@@ -121,6 +168,8 @@ export type EntityDocument = {
   links: DocumentLink[];
 };
 export type TicketWorkflow = {
+  teamId: string | null;
+  reviewerId: string | null;
   ticketId: string;
   accountId: string | null;
   estimateId: string | null;
@@ -169,6 +218,16 @@ export type ReadingSubmission = z.infer<typeof readingInput> & {
   reviewedAt: string | null;
 };
 export const businessWorkflowContracts = [
+  {
+    method: "POST",
+    path: /^\/api\/dispatch\/teams(?:\/[a-zA-Z0-9-]+)?$/,
+    schema: teamInput,
+  },
+  {
+    method: "POST",
+    path: /^\/api\/dispatch\/rules(?:\/[a-zA-Z0-9-]+)?$/,
+    schema: dispatchRuleInput,
+  },
   { method: "POST", path: /^\/api\/documents$/, schema: documentInput },
   {
     method: "POST",

@@ -102,11 +102,69 @@ export const unitExchangeInput = z.strictObject({
   building: z.string().trim().max(300),
   entrance: z.string().trim().max(300),
 });
+export const tenantExchangeInput = z.strictObject({
+  externalId: label,
+  version: z.number().int().positive(),
+  name: label,
+  inn: z.string().regex(/^(\d{10}|\d{12})?$/),
+  contactName: z.string().trim().max(300),
+  phone: z.string().trim().max(100),
+  email: z.union([z.literal(""), z.email()]),
+});
+export const leaseExchangeInput = z
+  .strictObject({
+    externalId: label,
+    version: z.number().int().positive(),
+    tenantExternalId: label,
+    unitExternalId: label,
+    contractNumber: label,
+    startDate: date,
+    endDate: date,
+    stage: z.enum([
+      "draft",
+      "formed",
+      "sent",
+      "signed",
+      "active",
+      "prolongation",
+      "terminated",
+    ]),
+    ratePerSqm: z.number().finite().nonnegative().max(1e12),
+    deposit: z.number().finite().nonnegative().max(1e12),
+    indexationPct: z.number().finite().min(0).max(100),
+  })
+  .refine((v) => v.endDate >= v.startDate, "Конец договора раньше начала");
+export const meterExchangeInput = z
+  .strictObject({
+    externalId: label,
+    version: z.number().int().positive(),
+    propertyExternalId: label,
+    unitExternalId: label.nullable(),
+    name: label,
+    resource: z.enum(["electricity", "water", "heating"]),
+    scope: z.enum(["individual", "common"]),
+    serialNumber: z.string().trim().max(300),
+    initialValue: z.number().finite().nonnegative().max(1e12),
+    tariff: z.number().finite().nonnegative().max(1e12),
+    active: z.boolean(),
+  })
+  .refine(
+    (v) => v.scope === "common" || v.unitExternalId !== null,
+    "Укажите помещение прибора",
+  );
 export const exchangeMessage = z.strictObject({
   messageId: identity,
   environment,
   schemaVersion: z.literal(1),
-  kind: z.enum(["properties", "units", "accounts", "statements"]),
+  kind: z.enum([
+    "properties",
+    "units",
+    "tenants",
+    "leases",
+    "meters",
+    "accounts",
+    "statements",
+  ]),
   items: z.array(z.unknown()).min(1).max(500),
 });
 export type AccountingSource = z.infer<typeof sourceInput> & {
@@ -114,6 +172,9 @@ export type AccountingSource = z.infer<typeof sourceInput> & {
   createdAt: string;
   updatedAt: string;
   tokenConfigured: boolean;
+  lastSeenAt?: string | null;
+  lastSuccessfulAt?: string | null;
+  lastError?: string | null;
 };
 export type PersonalAccount = z.infer<typeof accountInput> & {
   id: string;
@@ -155,6 +216,21 @@ export type ExchangeJournalItem = ExchangeEvent & {
   sourceName: string;
 };
 export const accountingContracts = [
+  {
+    method: "POST",
+    path: /^\/api\/integrations\/accounting\/[a-zA-Z0-9-]+\/runs$/,
+    schema: z.strictObject({
+      runId: identity,
+      status: z.enum(["ok", "failed"]),
+      error: z
+        .string()
+        .regex(/^[A-Z0-9_]{1,100}$/)
+        .nullable(),
+      sent: z.number().int().nonnegative().max(10000),
+      received: z.number().int().nonnegative().max(10000),
+      rejected: z.number().int().nonnegative().max(10000),
+    }),
+  },
   { method: "POST", path: /^\/api\/accounting\/sources$/, schema: sourceInput },
   {
     method: "PUT",

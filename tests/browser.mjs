@@ -85,22 +85,33 @@ saveReadingPeriod(f.db, f.admin, {
   thresholdPercent: 50,
 });
 const pg = await postgresFixture(f.db.data);
-const child = spawn(process.execPath, ["apps/api/src/index.js"], {
-  env: {
-    ...process.env,
-    API_HOST: "127.0.0.1",
-    API_PORT: "3001",
-    DATABASE_URL: pg.url,
-    POSTGRES_URL: "",
-    REDIS_URL: "",
-    JWT_ACCESS_SECRET: secret,
-    NOTIFICATION_CHANNELS: "in_app",
-    WAREHOUSE_DOCUMENTS_PATH: f.dir + "/documents",
-    WAREHOUSE_TICKET_ATTACHMENTS_PATH: f.dir + "/tickets",
+// A private launcher can put the API next to a disposable remote PostgreSQL;
+// Chromium still drives the same real HTTP endpoints through loopback.
+const child = spawn(
+  process.env.BROWSER_API_LAUNCHER ? "python" : process.execPath,
+  process.env.BROWSER_API_LAUNCHER
+    ? [process.env.BROWSER_API_LAUNCHER]
+    : ["apps/api/src/index.js"],
+  {
+    env: {
+      ...process.env,
+      API_HOST: "127.0.0.1",
+      API_PORT: "3001",
+      DATABASE_URL: pg.url,
+      POSTGRES_URL: "",
+      REDIS_URL: "",
+      JWT_ACCESS_SECRET: secret,
+      NOTIFICATION_CHANNELS: "in_app",
+      WAREHOUSE_DOCUMENTS_PATH: f.dir + "/documents",
+      WAREHOUSE_TICKET_ATTACHMENTS_PATH: f.dir + "/tickets",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
   },
-  stdio: ["ignore", "pipe", "pipe"],
-});
+);
 let apiLogs = "";
+child.stdout.on("data", (d) => {
+  apiLogs = (apiLogs + d).slice(-512000);
+});
 child.stderr.on("data", (d) => (apiLogs += d));
 const server = http.createServer((req, res) => {
   let file = path.join(
@@ -1465,6 +1476,21 @@ try {
   await page.reload();
   await page.getByRole("button", { name: "Меню", exact: true }).waitFor();
   await navigateManager("Заявки");
+  const ticketSearch = page.getByRole("searchbox", {
+    name: "Поиск по номеру, тексту, помещению, заявителю",
+    exact: true,
+  });
+  await ticketSearch.fill("does-not-exist-wh-20261028");
+  assert.equal(await page.locator(".kanban-ticket").count(), 0);
+  await ticketSearch.fill("");
+  const dispatchPanel = page.locator("details").filter({
+    has: page.locator("summary", { hasText: "Службы и маршруты приемки" }),
+  });
+  await dispatchPanel.locator("summary").click();
+  await dispatchPanel
+    .getByRole("heading", { name: "Служба исполнителей", exact: true })
+    .waitFor();
+  await dispatchPanel.locator("summary").click();
   await page
     .getByRole("group", { name: "Вид заявок" })
     .getByRole("button", { name: "Канбан", exact: true })
@@ -1781,8 +1807,10 @@ try {
 } finally {
   if (browser) await browser.close();
   server.close();
-  child.kill("SIGTERM");
-  await once(child, "exit");
+  if (child.exitCode === null) {
+    child.kill("SIGTERM");
+    await once(child, "exit");
+  }
   if (pg) await pg.cleanup();
   f.cleanup();
 }

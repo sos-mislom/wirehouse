@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { mobileProduct } from "../mobile-product";
 import { initialRoute } from "../navigation";
 import { type OperationsData } from "../features/operations/shared";
 import { documentCategoryOptions } from "../shared/navigation";
@@ -92,7 +93,9 @@ export function useWorkspaceState() {
   });
   const [bootstrapping, setBootstrapping] = useState(true);
   const [tenantConnectionOpen, setTenantConnectionOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"staff" | "tenant">("staff");
+  const [authMode, setAuthMode] = useState<"staff" | "tenant">(
+    mobileProduct === "client" ? "tenant" : "staff",
+  );
   const [tenantOtpRequested, setTenantOtpRequested] = useState(false);
   const [staffAuthStep, setStaffAuthStep] = useState<
     "password" | "mfa" | "reset-request" | "reset-confirm"

@@ -6,12 +6,19 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 NAMESPACE = uuid.UUID("bedc9c76-d156-4db6-b985-5ef4e88a022a")
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 HEADER = '''<?xml version="1.0" encoding="UTF-8"?>
 <MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:v8="http://v8.1c.ru/8.1/data/core" xmlns:xr="http://v8.1c.ru/8.3/xcf/readable" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:app="http://v8.1c.ru/8.2/managed-application/core" version="2.20">'''
 
 # No accounting objects are adopted or changed. Identity is explicit per base.
 REGISTERS = {
+    "WH_Catalog": ({"SourceId":"key","Kind":"short","ExternalId":"key"}, {"Environment":"short","Payload":"text","PayloadHash":"key","Version":"integer"}),
+    "WH_Snapshots": ({"SourceId":"key","Kind":"short","ExternalId":"key"}, {"Payload":"text","PayloadHash":"key","Version":"integer"}),
+    "WH_Streams": ({"SourceId":"key","Kind":"short"}, {"PayloadHash":"key","MessageId":"key"}),
+    "WH_Finance": ({"SourceId":"key","AccountExternalId":"key"}, {"Payload":"text"}),
+    "WH_ActDocuments": ({"SourceId":"key","ActId":"key"}, {"DocumentId":"key","LedgerId":"key","ReceivedAt":"date"}),
+    "WH_Demos": ({"SourceId":"key","DemoKey":"key"}, {"Payload":"text","CreatedAt":"date"}),
+    "WH_MeterBindings": ({"SourceId":"key","ExternalId":"key","ValidFrom":"short"}, {"AccountExternalId":"key","CreatedAt":"date"}),
     "WH_Sources": ({"SourceId": "key"}, {"Environment": "short"}),
     "WH_Accounts": ({"SourceId": "key", "ExternalId": "key"}, {
         "Environment": "short", "LeaseExternalId": "key", "Number": "label",
@@ -29,7 +36,7 @@ REGISTERS = {
     }),
     "WH_Outbox": ({"SourceId": "key", "MessageId": "key"}, {
         "Environment": "short", "Kind": "short", "Payload": "text", "Status": "short",
-        "Attempts": "integer", "LastError": "label", "NextAttemptAt": "date", "UpdatedAt": "date",
+        "Attempts": "integer", "Priority": "integer", "LastError": "label", "NextAttemptAt": "date", "UpdatedAt": "date",
     }),
     "WH_WorkEvents": ({"SourceId": "key", "EventKey": "label"}, {
         "Environment": "short", "Kind": "short", "AccountExternalId": "key",
@@ -82,7 +89,7 @@ def generate(target):
 </Properties></CommonModule>'''
     save(target / 'CommonModules/WH_Exchange.xml', HEADER + module + '</MetaDataObject>')
     source = ROOT / 'integrations/one-c/src/Exchange.bsl'
-    save(target / 'CommonModules/WH_Exchange/Ext/Module.bsl', source.read_text(encoding='utf-8-sig'))
+    save(target / 'CommonModules/WH_Exchange/Ext/Module.bsl', '\n'.join((ROOT / 'integrations/one-c/src' / name).read_text(encoding='utf-8-sig') for name in ['Exchange.bsl','Master.bsl','Demo.bsl','Acts.bsl']))
     for name, (dimensions, resources) in REGISTERS.items():
         generated = ''
         for category in ['Record', 'Manager', 'Selection', 'List', 'RecordSet', 'RecordKey', 'RecordManager']:

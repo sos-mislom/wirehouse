@@ -1,4 +1,5 @@
 import { workflowView } from "../domain/ticket-view.js";
+import { dispatchWorkspace, saveDispatch } from "../domain/dispatch.js";
 import { parseJsonBody } from "../http/body.js";
 import { requireContext } from "../domain/context-access.js";
 import { businessError } from "../domain/accounting.js";
@@ -32,6 +33,7 @@ export function createBusinessWorkflowRoutes({ db, requireAuth, ok, json }) {
       );
     if (
       !workflow &&
+      !path.startsWith("/api/dispatch") &&
       !path.startsWith("/api/readings") &&
       !change &&
       path !== "/api/maintenance/progress"
@@ -40,6 +42,21 @@ export function createBusinessWorkflowRoutes({ db, requireAuth, ok, json }) {
     const actor = requireAuth(request, response);
     if (!actor) return true;
     try {
+      if (path === "/api/dispatch" && method === "GET") {
+        ok(response, dispatchWorkspace(db, actor));
+        return true;
+      }
+      const dispatch = path.match(
+        /^\/api\/dispatch\/(teams|rules)(?:\/([a-zA-Z0-9-]+))?$/,
+      );
+      if (dispatch && method === "POST") {
+        const body = await parseJsonBody(request);
+        const item = db.transaction(() =>
+          saveDispatch(db, actor, dispatch[1], dispatch[2] ?? null, body),
+        );
+        ok(response, { item });
+        return true;
+      }
       if (workflow) {
         requireContext(db, actor, "workspace.read", "tickets", workflow[1]);
         const ticket = db.getById("tickets", workflow[1]);

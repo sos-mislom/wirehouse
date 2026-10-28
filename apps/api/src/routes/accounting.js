@@ -30,7 +30,7 @@ export function createAccountingRoutes({
       return false;
     try {
       const machine = path.match(
-        /^\/api\/integrations\/accounting\/([a-zA-Z0-9-]+)\/(capabilities|messages|outbox\/claim|outbox\/([a-zA-Z0-9-]+)\/ack)$/,
+        /^\/api\/integrations\/accounting\/([a-zA-Z0-9-]+)\/(capabilities|runs|messages|outbox\/claim|outbox\/([a-zA-Z0-9-]+)\/ack)$/,
       );
       if (machine) {
         const source = authenticateSource(
@@ -51,7 +51,16 @@ export function createAccountingRoutes({
             sourceId: source.id,
             environment: exchangeEnvironment,
             schemaVersion: 1,
-            incomingKinds: ["properties", "units", "accounts", "statements"],
+            runReports: true,
+            incomingKinds: [
+              "properties",
+              "units",
+              "tenants",
+              "leases",
+              "meters",
+              "accounts",
+              "statements",
+            ],
             outgoingKinds: [
               "readings",
               "work_results",
@@ -64,6 +73,20 @@ export function createAccountingRoutes({
         if (method !== "POST")
           throw businessError("Метод не поддерживается", 405);
         const input = await parseJsonBody(request);
+        if (machine[2] === "runs") {
+          if (source.lastRunId !== input.runId) {
+            source.lastSeenAt = new Date().toISOString();
+            source.lastRunId = input.runId;
+            source.lastError =
+              input.status === "failed"
+                ? (input.error ?? "EXCHANGE_FAILED")
+                : null;
+            if (input.status === "ok")
+              source.lastSuccessfulAt = source.lastSeenAt;
+          }
+          ok(response, { accepted: true });
+          return true;
+        }
         if (machine[2] === "messages")
           ok(
             response,

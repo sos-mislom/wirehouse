@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 import ssl
 import sys
+import uuid
+from datetime import datetime, timezone
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -45,12 +47,15 @@ class Config:
     database: str
     user: str = ""
     password: str = ""
+    server: str = ""
+    infobase: str = ""
 
     @classmethod
     def from_env(cls):
         result = cls(*(os.environ.get(name, "") for name in [
             "ONE_C_CRM_URL", "ONE_C_SOURCE_ID", "ONE_C_ENVIRONMENT", "ONE_C_SOURCE_TOKEN",
             "ONE_C_DATABASE", "ONE_C_USER", "ONE_C_PASSWORD",
+            "ONE_C_SERVER", "ONE_C_INFOBASE",
         ]))
         result.validate()
         return result
@@ -71,7 +76,10 @@ class Config:
             loopback = url.hostname == "localhost"
         if url.scheme != "https" and not (url.scheme == "http" and self.environment == "test" and loopback):
             raise BridgeError("HTTPS_REQUIRED")
-        if not self.database or not (Path(self.database) / "1Cv8.1CD").is_file():
+        if self.server or self.infobase:
+            if self.database or not re.fullmatch(r"[A-Za-z0-9_.-]+(?::\d{1,5})?", self.server) or not self.infobase.strip() or len(self.infobase)>128 or any(ord(c)<32 for c in self.infobase):
+                raise BridgeError("INVALID_SERVER_DATABASE")
+        elif not self.database or not (Path(self.database) / "1Cv8.1CD").is_file():
             raise BridgeError("FILE_DATABASE_NOT_FOUND")
 
 
@@ -121,6 +129,9 @@ SEMANTIC_ERRORS = {
     "ACT_TOTAL_MISMATCH", "WORK_EVENT_CONFLICT",
 }
 CONFIG_ERRORS = {"INVALID_VERSION", "INVALID_ACCOUNT_STATUS", "INVALID_ACTIVE_FLAG", "STALE_VERSION", "VERSION_CONFLICT", "ACCOUNT_CONTRACT_IMMUTABLE", "METER_IDENTITY_IMMUTABLE", "ENVIRONMENT_IMMUTABLE", "ACCOUNT_BATCH_SIZE", "OUTGOING_NOT_FOUND", "ALREADY_CONFIRMED", "OUTGOING_NOT_RETRYABLE"}
+CONFIG_ERRORS |= {"CATALOG_BATCH_SIZE", "BP_COUNTERPARTY_NOT_FOUND", "BP_ORGANIZATION_NOT_FOUND", "ACCOUNTING_ACCOUNT_NOT_FOUND", "ACCOUNT_ORGANIZATION_MISMATCH", "FINANCE_NOT_CONFIGURED", "UNMAPPED_ACCOUNTING_MOVEMENT", "ACCOUNTING_BALANCE_MISMATCH", "DEMO_CONFIRMATION_REQUIRED"}
+CONFIG_ERRORS |= {"UNSUPPORTED_ACCOUNTING_ANALYTICS", "STATEMENT_LINE_LIMIT", "STATEMENT_PERIOD_IN_FUTURE", "STATEMENT_HISTORY_LIMIT", "ACT_DOCUMENT_CONFLICT", "ACT_DOCUMENT_NOT_FOUND", "NOMENCLATURE_NOT_CONFIGURED", "CURRENCY_NOT_CONFIGURED", "DEMO_ORGANIZATION_REQUIRED"}
+CONFIG_ERRORS |= {"METER_BINDING_MONTH_REQUIRED","METER_BINDING_CONFLICT","METER_BINDING_HAS_READINGS","METER_BINDING_ORDER","DEMO_NOT_FOUND","DEMO_DOCUMENT_MISMATCH"}
 
 
 class Native:
@@ -129,7 +140,8 @@ class Native:
             import win32com.client
             def quote(text):
                 return '"' + text.replace('"', '""') + '"'
-            connection = "File=" + quote(str(Path(config.database).resolve())) + ";"
+            connection = ("Srvr=" + quote(config.server) + ";Ref=" + quote(config.infobase) + ";"
+                          if config.server else "File=" + quote(str(Path(config.database).resolve())) + ";")
             if config.user:
                 connection += "Usr=" + quote(config.user) + ";Pwd=" + quote(config.password) + ";"
             self.connector = win32com.client.dynamic.Dispatch("V83.COMConnector")
@@ -163,11 +175,15 @@ class Worker:
         remote = self.transport.call("/capabilities")
         if remote.get("sourceId") != source or remote.get("environment") != environment or remote.get("schemaVersion") != 1:
             raise BridgeError("CAPABILITIES_MISMATCH")
+        self.reporting = remote.get("runReports") is True
         if "accounts" not in remote.get("incomingKinds", []) or "readings" not in remote.get("outgoingKinds", []):
             raise BridgeError("CAPABILITIES_MISMATCH")
         info = parse_json(self.native.call("AdapterInfo"))
         if info.get("schemaVersion") != 1:
             raise BridgeError("ADAPTER_VERSION_MISMATCH")
+        self.auto_export = info.get("autoExport") is True
+        if self.auto_export and any(kind not in remote.get("incomingKinds", []) for kind in info.get("outgoingKinds", [])):
+            raise BridgeError("CAPABILITIES_MISMATCH")
         self.native.call("InspectState", source, environment)
         supported = info.get("incomingKinds", ["readings"])
         if not isinstance(supported, list) or "readings" not in supported:
@@ -177,15 +193,35 @@ class Worker:
         return {"environment": environment, "schemaVersion": 1}
 
     def run_once(self):
+        run_id = str(uuid.uuid4())
+        try:
+            result = self._run_once()
+        except Exception as error:
+            self.report(run_id, {"status":"failed","error":str(error) if isinstance(error,BridgeError) else "BRIDGE_FAILED","sent":0,"received":0,"rejected":0})
+            raise
+        self.report(run_id, {"status":"failed" if result["rejected"] else "ok","error":"EXCHANGE_REJECTED" if result["rejected"] else None,**result})
+        return result
+
+    def report(self, run_id, result):
+        if getattr(self,"reporting",False):
+            try:
+                self.transport.call("/runs",{"runId":run_id,**{key:result[key] for key in ["status","error","sent","received","rejected"]}})
+            except BridgeError:
+                # Reporting failure cannot undo an already committed exchange.
+                pass
+
+    def _run_once(self):
         self.verify()
         source, environment = self.config.source_id, self.config.environment
         result = {"sent": 0, "received": 0, "duplicates": 0, "rejected": 0}
+        if self.auto_export:
+            self.native.call("QueueAll", source, environment)
         for _ in range(10):
             outgoing = parse_json(self.native.call("ClaimOutgoing", source, environment))
             if outgoing is None:
                 break
             packet = outgoing.get("packet", {})
-            if packet.get("environment") != environment or packet.get("messageId") != outgoing.get("messageId") or packet.get("kind") != "accounts" or packet.get("schemaVersion") != 1:
+            if packet.get("environment") != environment or packet.get("messageId") != outgoing.get("messageId") or packet.get("kind") not in ["properties", "units", "tenants", "leases", "meters", "accounts", "statements"] or packet.get("schemaVersion") != 1:
                 raise BridgeError("OUTGOING_PACKET_MISMATCH")
             answer = self.transport.call("/messages", packet)
             status = answer.get("status")
@@ -193,6 +229,8 @@ class Worker:
                 raise BridgeError("INVALID_CRM_RECEIPT")
             self.native.call("ConfirmOutgoing", source, environment, outgoing["messageId"], status == "applied")
             result["sent" if status == "applied" else "rejected"] += 1
+            if status == "failed":
+                break
         claimed = self.transport.call("/outbox/claim", {"limit": 50, "kinds": self.incoming_kinds})
         items = claimed.get("items")
         if not isinstance(items, list) or len(items) > 50:
@@ -218,7 +256,7 @@ class Worker:
 
 
 def load_env(path):
-    allowed = {"ONE_C_CRM_URL", "ONE_C_SOURCE_ID", "ONE_C_ENVIRONMENT", "ONE_C_SOURCE_TOKEN", "ONE_C_DATABASE", "ONE_C_USER", "ONE_C_PASSWORD"}
+    allowed = {"ONE_C_CRM_URL", "ONE_C_SOURCE_ID", "ONE_C_ENVIRONMENT", "ONE_C_SOURCE_TOKEN", "ONE_C_DATABASE", "ONE_C_USER", "ONE_C_PASSWORD", "ONE_C_SERVER", "ONE_C_INFOBASE"}
     try:
         lines = path.read_text(encoding="utf-8-sig").splitlines()
     except (OSError, UnicodeError) as error:
@@ -242,19 +280,28 @@ def main():
     parser.add_argument("--env-file", type=Path)
     parser.add_argument("--check", action="store_true", help="Validate source/environment and native adapter without delivering messages")
     args = parser.parse_args()
+    def finish(payload, code):
+        if args.env_file:
+            status_file = args.env_file.with_suffix(".status.json")
+            try:
+                value = {"finishedAt":datetime.now(timezone.utc).isoformat(),**payload}
+                temporary = status_file.with_name(status_file.name + "." + str(os.getpid()) + ".tmp")
+                temporary.write_text(json.dumps(value)+"\n",encoding="utf-8")
+                os.replace(temporary,status_file)
+            except OSError:
+                pass
+        print(json.dumps(payload))
+        return code
     try:
         if args.env_file:
             load_env(args.env_file)
         worker = Worker(Config.from_env())
         result = worker.verify() if args.check else worker.run_once()
-        print(json.dumps({"status": "ok", **result}))
-        return 0
+        return finish({"status":"ok",**result},0)
     except BridgeError as error:
-        print(json.dumps({"status": "failed", "code": str(error)}))
-        return 1
+        return finish({"status":"failed","code":str(error)},1)
     except Exception:
-        print(json.dumps({"status": "failed", "code": "BRIDGE_FAILED"}))
-        return 1
+        return finish({"status":"failed","code":"BRIDGE_FAILED"},1)
 
 
 if __name__ == "__main__":

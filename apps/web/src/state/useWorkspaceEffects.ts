@@ -220,6 +220,19 @@ export function useWorkspaceEffects(model: WorkspaceModel) {
 
     void hydrateSession(token, { silentAuthFailure: true });
   }, []);
+  useEffect(() => {
+    const retry = () => {
+      const saved = window.localStorage.getItem(TOKEN_KEY);
+      if (!session && saved && document.visibilityState !== "hidden")
+        void hydrateSession(saved, { silentAuthFailure: true });
+    };
+    window.addEventListener("online", retry);
+    document.addEventListener("visibilitychange", retry);
+    return () => {
+      window.removeEventListener("online", retry);
+      document.removeEventListener("visibilitychange", retry);
+    };
+  }, [session?.token]);
 
   useEffect(() => {
     let cancelled = false;

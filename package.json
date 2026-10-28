@@ -23,6 +23,8 @@
     "typecheck": "tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.modules.json && tsc -p apps/web/tsconfig.json --noEmit",
     "test:browser": "node tests/browser.mjs",
     "test:one-c": "node --test tests/one-c-e2e.mjs",
+    "test:one-c:full": "node --test tests/one-c-full-e2e.mjs",
+    "test:mobile-products": "node --test tests/mobile-products.mjs",
     "check": "npm run typecheck && npm test && npm run build:web",
     "package:release": "node scripts/package-release.mjs",
     "db:migrate": "node --env-file-if-exists=.env apps/api/src/persistence/cli.js migrate",

@@ -17,6 +17,7 @@ const allowed = (file) =>
     "scripts/configure-one-c.py",
     "scripts/inspect-one-c.py",
     "scripts/inspect-one-c-data.py",
+    "scripts/one-c-demo.py",
   ].includes(file) ||
   [
     "apps/api/src/",

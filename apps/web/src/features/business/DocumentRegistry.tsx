@@ -15,6 +15,7 @@ import {
 } from "./shared";
 const entities = {
   properties: "Объект",
+  buildings: "Корпус / строение",
   units: "Помещение",
   equipment: "Оборудование",
   leases: "Договор",
@@ -50,6 +51,9 @@ export function DocumentRegistry({
       statements: [],
       links: [],
     });
+  const structure = useResource<{
+    buildings: { id: string; propertyId: string; name: string }[];
+  }>(token, "/api/documents/contexts", { buildings: [] });
   const [category, setCategory] = useState(""),
     [type, setType] = useState<keyof typeof entities>(
       entityType ?? "properties",
@@ -61,24 +65,36 @@ export function DocumentRegistry({
   const choices = (kind: keyof typeof entities) =>
     kind === "properties"
       ? overview.properties.map((r) => ({ id: r.id, label: r.name }))
-      : kind === "units"
-        ? overview.units.map((r) => ({
+      : kind === "buildings"
+        ? structure.data.buildings.map((r) => ({
             id: r.id,
-            label: `${r.propertyName} · ${r.number}`,
+            label: `${overview.properties.find((p) => p.id === r.propertyId)?.name ?? ""} · ${r.name}`,
           }))
-        : kind === "leases"
-          ? overview.leases.map((r) => ({ id: r.id, label: r.contractNumber }))
-          : kind === "personal_accounts"
-            ? accounts.data.accounts.map((r) => ({ id: r.id, label: r.number }))
-            : kind === "tickets"
-              ? tickets.map((r) => ({
+        : kind === "units"
+          ? overview.units.map((r) => ({
+              id: r.id,
+              label: `${r.propertyName} · ${r.number}`,
+            }))
+          : kind === "leases"
+            ? overview.leases.map((r) => ({
+                id: r.id,
+                label: r.contractNumber,
+              }))
+            : kind === "personal_accounts"
+              ? accounts.data.accounts.map((r) => ({
                   id: r.id,
-                  label: `${r.number} · ${r.title}`,
+                  label: r.number,
                 }))
-              : (
-                  operations?.[kind === "equipment" ? "equipment" : "meters"] ??
-                  []
-                ).map((r) => ({ id: r.id, label: String(r.name) }));
+              : kind === "tickets"
+                ? tickets.map((r) => ({
+                    id: r.id,
+                    label: `${r.number} · ${r.title}`,
+                  }))
+                : (
+                    operations?.[
+                      kind === "equipment" ? "equipment" : "meters"
+                    ] ?? []
+                  ).map((r) => ({ id: r.id, label: String(r.name) }));
   const linkLabel = (l: {
     entityType: keyof typeof entities;
     entityId: string;

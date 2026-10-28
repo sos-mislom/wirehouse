@@ -668,7 +668,10 @@ export function postAcceptedReading(db, user, submissionId) {
   const previous = readings[0]?.value ?? meter.initialValue;
   const value = requireNumber(body.value, "Показание", previous);
   const consumption = Math.round((value - previous) * 1000) / 1000;
-  const total = Math.round(consumption * meter.tariff * 100) / 100;
+  const accountingMaster = Boolean(submission.sourceId);
+  const total = accountingMaster
+    ? 0
+    : Math.round(consumption * meter.tariff * 100) / 100;
   const periodEnd = new Date(
     Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0),
   )
@@ -696,20 +699,22 @@ export function postAcceptedReading(db, user, submissionId) {
   }));
   const denominator = weights.reduce((sum, row) => sum + row.weight, 0);
   let allocated = 0;
-  const allocations = weights.map(({ lease, weight }, index) => {
-    const amount =
-      index === weights.length - 1
-        ? Math.round((total - allocated) * 100) / 100
-        : Math.round(((total * weight) / denominator) * 100) / 100;
-    allocated += amount;
-    return {
-      tenantId: lease.tenant_id,
-      leaseId: lease.id,
-      unitId: lease.unit_id,
-      amount,
-      share: weight / denominator,
-    };
-  });
+  const allocations = (accountingMaster ? [] : weights).map(
+    ({ lease, weight }, index) => {
+      const amount =
+        index === weights.length - 1
+          ? Math.round((total - allocated) * 100) / 100
+          : Math.round(((total * weight) / denominator) * 100) / 100;
+      allocated += amount;
+      return {
+        tenantId: lease.tenant_id,
+        leaseId: lease.id,
+        unitId: lease.unit_id,
+        amount,
+        share: weight / denominator,
+      };
+    },
+  );
   const record = {
     id: id(),
     meterId,
@@ -718,7 +723,7 @@ export function postAcceptedReading(db, user, submissionId) {
     previous,
     value,
     consumption,
-    tariff: meter.tariff,
+    tariff: accountingMaster ? 0 : meter.tariff,
     amount: total,
     allocations,
     unallocated: weights.length ? 0 : total,

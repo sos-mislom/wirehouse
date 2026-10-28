@@ -1,4 +1,5 @@
 import { contextCan, requireContext } from "../domain/context-access.js";
+import { searchTickets } from "../domain/ticket-search.js";
 import crypto from "node:crypto";
 import { canReadDocument } from "../domain/documents.js";
 import path from "node:path";
@@ -47,11 +48,8 @@ export function createTicketsRoutes({
       }
 
       const scopedTickets = getScopedTickets(user);
-      const status = url.searchParams.get("status");
       ok(response, {
-        items: status
-          ? scopedTickets.filter((ticket) => ticket.status === status)
-          : scopedTickets,
+        items: searchTickets(scopedTickets, url.searchParams),
       });
       return true;
     }

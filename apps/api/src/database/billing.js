@@ -14,6 +14,15 @@ import {
 } from "./constants.js";
 
 export class BillingDatabase extends TicketsDatabase {
+  assertLocalAccounting(leaseId) {
+    if (this.data.personal_accounts.some((a) => a.leaseId === leaseId))
+      throw Object.assign(
+        new Error(
+          "Расчеты по договору ведет 1С. Дождитесь учетной выписки; ручной расчет и оплата в CRM запрещены",
+        ),
+        { status: 409, code: "ONE_C_ACCOUNTING_MASTER" },
+      );
+  }
   listBillingInvoices(filters = {}) {
     const rows = this.data.billing_invoices
       .filter((invoice) =>
@@ -63,6 +72,7 @@ export class BillingDatabase extends TicketsDatabase {
   }
 
   createBillingInvoice(payload) {
+    this.assertLocalAccounting(payload.leaseId);
     const lease = this.getLeaseById(payload.leaseId);
     if (!lease) {
       throw new Error("Lease not found");
@@ -112,6 +122,7 @@ export class BillingDatabase extends TicketsDatabase {
     if (!current) {
       return null;
     }
+    this.assertLocalAccounting(current.lease_id);
 
     const rentAmount =
       payload.rentAmount !== undefined
@@ -182,6 +193,7 @@ export class BillingDatabase extends TicketsDatabase {
     if (!invoice) {
       throw new Error("Invoice not found");
     }
+    this.assertLocalAccounting(invoice.lease_id);
     const amount = Number(payload.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error("Payment amount must be positive");
@@ -219,6 +231,10 @@ export class BillingDatabase extends TicketsDatabase {
     if (!invoice) {
       throw new Error("Invoice not found");
     }
+    this.assertLocalAccounting(invoice.lease_id);
+    this.assertLocalAccounting(
+      this.getById("billing_invoices", current.invoice_id)?.lease_id,
+    );
 
     const amount =
       payload.amount !== undefined
@@ -253,13 +269,15 @@ export class BillingDatabase extends TicketsDatabase {
     }
 
     const invoiceId = current.invoice_id;
+    this.assertLocalAccounting(
+      this.getById("billing_invoices", invoiceId)?.lease_id,
+    );
     this.data.billing_payments = this.data.billing_payments.filter(
       (payment) => payment.id !== id,
     );
     this.refreshBillingInvoiceStatus(invoiceId);
     return createChangeResult(1);
   }
-
 
   listMeterReadings(filters = {}) {
     const rows = this.data.meter_readings
@@ -319,6 +337,7 @@ export class BillingDatabase extends TicketsDatabase {
     if (!activeLease) {
       throw new Error("Active lease not found for unit");
     }
+    this.assertLocalAccounting(activeLease.id);
 
     const tenant = this.requireTenant(activeLease.tenant_id);
     const meterType =
@@ -422,6 +441,7 @@ export class BillingDatabase extends TicketsDatabase {
   }
 
   syncInvoiceVariableAmount(leaseId, period) {
+    this.assertLocalAccounting(leaseId);
     const lease = this.getLeaseById(leaseId);
     if (!lease) {
       return null;
@@ -455,5 +475,4 @@ export class BillingDatabase extends TicketsDatabase {
       dueDate,
     });
   }
-
 }

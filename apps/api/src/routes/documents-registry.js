@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { contextCan } from "../domain/context-access.js";
 import path from "node:path";
 import { parseJsonBody } from "../http/body.js";
 import { businessError, requiredRecord } from "../domain/accounting.js";
@@ -22,6 +23,19 @@ export function createDocumentsRegistryRoutes({
     const actor = requireAuth(request, response);
     if (!actor) return true;
     try {
+      if (
+        request.method === "GET" &&
+        url.pathname === "/api/documents/contexts"
+      ) {
+        ok(response, {
+          buildings: db.data.buildings
+            .filter((r) =>
+              contextCan(db, actor, "documents.read", "buildings", r.id),
+            )
+            .map(({ id, name, propertyId }) => ({ id, name, propertyId })),
+        });
+        return true;
+      }
       if (request.method === "GET" && url.pathname === "/api/documents") {
         const type = url.searchParams.get("entityType"),
           id = url.searchParams.get("entityId");

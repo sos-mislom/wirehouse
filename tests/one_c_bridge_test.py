@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "integrations/one-c"))
-from wirehouse_bridge import BridgeError, Config, Worker, load_env, parse_json
+from wirehouse_bridge import BridgeError, Config, Worker, Native, load_env, parse_json
 
 
 class FakeNative:
@@ -56,6 +56,17 @@ class FakeTransport:
 
 
 class BridgeTests(unittest.TestCase):
+    def test_server_connection_and_mutually_exclusive_database_modes(self):
+        config=Config("https://crm.example.invalid","source-1","production","x"*43,"",server="one-c.internal:1541",infobase='Accounting "A"',user='integration',password='local-test-only')
+        config.validate()
+        from types import SimpleNamespace
+        calls=[]
+        connector=SimpleNamespace(Connect=lambda value:(calls.append(value) or SimpleNamespace(WH_Exchange=object())))
+        with patch('win32com.client.dynamic.Dispatch',return_value=connector): Native(config)
+        self.assertEqual(calls,['Srvr="one-c.internal:1541";Ref="Accounting ""A""";Usr="integration";Pwd="local-test-only";'])
+        with self.assertRaisesRegex(BridgeError,"INVALID_SERVER_DATABASE"):
+            Config("https://crm.example.invalid","source-1","production","x"*43,"C:/database",server="one-c.internal",infobase="Accounting").validate()
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)

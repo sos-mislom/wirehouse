@@ -37,6 +37,7 @@ export function resourcesForChanges(collections) {
     }
     if (["buildings", "entrances", "floors"].includes(name))
       topics.add("structure");
+    if (name === "buildings") topics.add("documents");
     if (["external_links", "account_statements"].includes(name))
       topics.add("accounting");
     if (

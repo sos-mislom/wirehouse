@@ -1,5 +1,6 @@
 import { contextCan } from "./context-access.js";
 import { workflowFor } from "./ticket-workflow.js";
+import { canReviewRoutedTicket } from "./dispatch.js";
 export function presentTicket(db, actor, ticket) {
   const financialAccess = contextCan(
     db,
@@ -35,7 +36,7 @@ export function workflowView(db, actor, id) {
     },
     capabilities: {
       approve,
-      accept: contextCan(db, actor, "tickets.accept", "tickets", id),
+      accept: canReviewRoutedTicket(db, actor, ticket, w),
       execute:
         actor.role !== "tenant" &&
         contextCan(db, actor, "tickets.write", "tickets", id) &&

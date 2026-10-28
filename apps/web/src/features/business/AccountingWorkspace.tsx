@@ -335,6 +335,25 @@ export function AccountingWorkspace() {
                 ),
               },
               {
+                key: "connection",
+                label: "Обмен с 1С",
+                render: (s) => (
+                  <>
+                    {s.lastError
+                      ? `Ошибка: ${s.lastError}`
+                      : s.lastSuccessfulAt
+                        ? "Последний проход успешен"
+                        : "Нет подтвержденных запусков"}
+                    {s.lastSeenAt && (
+                      <small>
+                        Проверка:{" "}
+                        {new Date(s.lastSeenAt).toLocaleString("ru-RU")}
+                      </small>
+                    )}
+                  </>
+                ),
+              },
+              {
                 key: "token",
                 label: "Подключение",
                 render: (s) => (

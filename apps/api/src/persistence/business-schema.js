@@ -1,10 +1,53 @@
 import { table } from "./schema-table.js";
 export const businessTables = {
-  accounting_sources: table(
+  service_teams: table(
     {
-      text: "id name environment tokenHash createdBy",
+      text: "id propertyId name",
+      jsonb: "memberIds",
       boolean: "active",
       timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: [
+        "propertyId",
+        "name",
+        "memberIds",
+        "active",
+        "createdAt",
+        "updatedAt",
+      ],
+      references: { propertyId: "properties" },
+      checks: ["jsonb_typeof(member_ids)='array'"],
+    },
+  ),
+  dispatch_rules: table(
+    {
+      text: "id propertyId category teamId reviewerId",
+      boolean: "active",
+      timestamptz: "createdAt updatedAt",
+    },
+    {
+      required: [
+        "propertyId",
+        "category",
+        "teamId",
+        "reviewerId",
+        "active",
+        "createdAt",
+        "updatedAt",
+      ],
+      references: {
+        propertyId: "properties",
+        teamId: "service_teams",
+        reviewerId: "users",
+      },
+    },
+  ),
+  accounting_sources: table(
+    {
+      text: "id name environment tokenHash createdBy lastError lastRunId",
+      boolean: "active",
+      timestamptz: "createdAt updatedAt lastSeenAt lastSuccessfulAt",
     },
     {
       required: ["name", "environment", "active"],
@@ -230,7 +273,7 @@ export const businessTables = {
   ),
   ticket_workflows: table(
     {
-      text: "ticketId accountId estimateId acceptanceBy state pauseReason approvalBy",
+      text: "ticketId accountId estimateId acceptanceBy state pauseReason approvalBy teamId reviewerId",
       boolean: "paid requireBeforePhoto requireAfterPhoto",
       integer: "termsVersion approvedVersion resultVersion",
       numeric: "amount",
@@ -253,12 +296,14 @@ export const businessTables = {
         estimateId: "estimates",
         acceptanceBy: "users",
         approvalBy: "users",
+        teamId: "service_teams",
+        reviewerId: "users",
       },
       checks: [
         "amount >= 0",
         "terms_version > 0",
         "result_version > 0",
-        "state IN ('registered','awaiting_approval','assigned','in_progress','paused','awaiting_acceptance','accepted','closed','rejected')",
+        "state IN ('registered','awaiting_approval','assigned','in_progress','paused','awaiting_acceptance','accepted','closed','rejected','refused')",
       ],
     },
   ),

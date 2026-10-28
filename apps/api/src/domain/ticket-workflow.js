@@ -1,4 +1,9 @@
 import crypto from "node:crypto";
+import {
+  routeTicket,
+  validateDispatchAssignment,
+  canReviewRoutedTicket,
+} from "./dispatch.js";
 import { nextVersionTime } from "./version-time.js";
 import { contextCan, requireContext } from "./context-access.js";
 import {
@@ -16,6 +21,8 @@ export function createTicketWorkflow(db, ticket) {
       !["billing", "lease", "other"].includes(ticket.category) &&
       !ticket.maintenance_plan_id;
   const row = {
+    teamId: null,
+    reviewerId: null,
     ticketId: ticket.id,
     accountId: null,
     estimateId: null,
@@ -38,6 +45,7 @@ export function createTicketWorkflow(db, ticket) {
     acceptanceBy: null,
     updatedAt: now(),
   };
+  routeTicket(db, ticket, row);
   db.data.ticket_workflows.push(row);
   return row;
 }
@@ -158,6 +166,25 @@ export function saveTerms(db, actor, ticketId, body) {
 }
 export function guardTicketTransition(db, current, next, payload) {
   const w = workflowFor(db, current.id);
+  if (
+    next.category !== current.category ||
+    next.property_id !== current.property_id
+  ) {
+    if (
+      !["registered", "assigned", "awaiting_approval", "refused"].includes(
+        w.state,
+      )
+    )
+      throw businessError("Маршрут начатой работы изменять нельзя", 409);
+    routeTicket(db, next, w);
+  }
+  if (next.assigned_to !== current.assigned_to)
+    validateDispatchAssignment(db, next, w);
+  const updatingActor = payload.updatedBy
+    ? db.getById("users", payload.updatedBy)
+    : null;
+  if (w.state === "refused" && updatingActor?.role === "worker")
+    throw businessError("После отказа задание переназначает диспетчер", 409);
   if (next.service_id !== current.service_id) {
     if (
       w.estimateId ||
@@ -191,8 +218,13 @@ export function guardTicketTransition(db, current, next, payload) {
     });
   }
   if (next.assigned_to !== current.assigned_to) {
-    if (["registered", "assigned"].includes(w.state))
-      w.state = next.assigned_to ? "assigned" : "registered";
+    if (["registered", "assigned", "refused"].includes(w.state))
+      w.state =
+        w.paid && w.approvedVersion !== w.termsVersion
+          ? "awaiting_approval"
+          : next.assigned_to
+            ? "assigned"
+            : "registered";
     w.updatedAt = nextVersionTime(w.updatedAt);
   }
   if (
@@ -334,6 +366,8 @@ export function decideTicket(db, actor, ticketId, body) {
     if (w.state !== "awaiting_acceptance")
       throw businessError("Результат не передан на приемку", 409);
     requireContext(db, actor, "tickets.accept", "tickets", ticketId);
+    if (!canReviewRoutedTicket(db, actor, ticket, w))
+      throw businessError("Результат принимает назначенный ответственный", 403);
     if (action === "accept") {
       w.state = "accepted";
       w.acceptanceBy = actor.id;
@@ -366,7 +400,24 @@ export function decideTicket(db, actor, ticketId, body) {
     }
   } else {
     canExecute(db, actor, ticket);
-    if (action === "start" || action === "resume") {
+    if (action === "refuse") {
+      if (
+        !["registered", "assigned", "awaiting_approval"].includes(w.state) ||
+        ticket.assigned_to !== actor.id ||
+        !body.reason?.trim()
+      )
+        throw businessError(
+          "Назначенный исполнитель может отказаться до начала работы с указанием причины",
+          409,
+        );
+      db.updateTicket(ticketId, {
+        status: "deferred",
+        reason: body.reason,
+        updatedBy: actor.id,
+      });
+      w.state = "refused";
+      w.pauseReason = body.reason;
+    } else if (action === "start" || action === "resume") {
       if (
         !(
           action === "resume" ? ["paused"] : ["registered", "assigned"]

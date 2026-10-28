@@ -54,6 +54,44 @@ function setup() {
   return { ...f, source, token, call };
 }
 
+test("Run heartbeat is source-authenticated, replay-safe and preserves the configuration revision", async () => {
+  const f = setup();
+  try {
+    const source = () => f.db.getById("accounting_sources", f.source.id);
+    const revision = source().updatedAt;
+    const report = {
+      runId: "run-1",
+      status: "ok",
+      error: null,
+      sent: 7,
+      received: 1,
+      rejected: 0,
+    };
+    assert.equal((await f.call("/runs", "POST", report, "")).status, 401);
+    assert.equal((await f.call("/runs", "POST", report)).status, 200);
+    const first = source().lastSuccessfulAt;
+    assert.ok(first);
+    assert.equal(source().updatedAt, revision);
+    await f.call("/runs", "POST", report);
+    assert.equal(source().lastSuccessfulAt, first);
+    await f.call("/runs", "POST", {
+      ...report,
+      runId: "run-2",
+      status: "failed",
+      error: "ONE_C_CONNECTION_FAILED",
+    });
+    assert.equal(source().lastError, "ONE_C_CONNECTION_FAILED");
+    assert.equal(source().lastSuccessfulAt, first);
+    assert.equal(
+      (await f.call("/runs", "POST", { ...report, error: "secret password" }))
+        .status,
+      400,
+    );
+  } finally {
+    f.cleanup();
+  }
+});
+
 test("Machine capabilities authenticate their source, expose the environment and never expose source secrets", async () => {
   const f = setup();
   try {

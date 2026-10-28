@@ -9,7 +9,11 @@ import {
   exchangeMessage,
   propertyExchangeInput,
   unitExchangeInput,
+  tenantExchangeInput,
+  leaseExchangeInput,
+  meterExchangeInput,
 } from "../../../../packages/contracts/src/accounting.ts";
+import { saveOperation } from "../operations.js";
 export const stableJson = (value) => JSON.stringify(stableValue(value));
 function stableValue(value) {
   return Array.isArray(value)
@@ -339,7 +343,13 @@ function applyCatalog(db, source, kind, items) {
   const seen = new Set();
   for (const input of items) {
     const body = parseDto(
-      kind === "properties" ? propertyExchangeInput : unitExchangeInput,
+      {
+        properties: propertyExchangeInput,
+        units: unitExchangeInput,
+        tenants: tenantExchangeInput,
+        leases: leaseExchangeInput,
+        meters: meterExchangeInput,
+      }[kind],
       input,
     );
     if (seen.has(body.externalId))
@@ -387,7 +397,84 @@ function applyCatalog(db, source, kind, items) {
     }
     const { externalId, version, propertyExternalId, ...fields } = body;
     let record;
-    if (kind === "properties") {
+    const resolve = (type, id) => {
+      const ref = db.data.external_links.find(
+        (r) =>
+          r.sourceId === source.id &&
+          r.entityType === type &&
+          r.externalId === id,
+      );
+      if (!ref)
+        throw businessError(
+          `Не сопоставлена запись ${type}: ${id}`,
+          422,
+          "MISSING_MAPPING",
+        );
+      return requiredRecord(db, type, ref.localId);
+    };
+    if (kind === "tenants") {
+      // Imported accounting contacts never enroll, reactivate or rebind a user.
+      // Empty contacts are genuinely absent; no fake phones/emails are generated.
+      const { name, inn, contactName, phone, email } = fields;
+      if (
+        inn &&
+        db.data.tenants.some((r) => r.id !== mapping?.localId && r.inn === inn)
+      )
+        throw businessError(
+          "Контрагент с этим ИНН уже существует: требуется явное сопоставление",
+          409,
+          "MISSING_MAPPING",
+        );
+      const values = {
+        name,
+        inn,
+        contact_name: contactName,
+        phone,
+        email,
+        updated_at: now(),
+      };
+      if (mapping) {
+        record = requiredRecord(db, "tenants", mapping.localId);
+        Object.assign(record, values);
+      } else {
+        record = {
+          id: crypto.randomUUID(),
+          ...values,
+          risk_level: "low",
+          status: "active",
+          created_at: now(),
+        };
+        db.data.tenants.push(record);
+      }
+    } else if (kind === "leases") {
+      const { tenantExternalId, unitExternalId, ...conditions } = fields;
+      const data = {
+        ...conditions,
+        tenantId: resolve("tenants", tenantExternalId).id,
+        unitId: resolve("units", unitExternalId).id,
+      };
+      record = mapping
+        ? db.updateLease(mapping.localId, data)
+        : db.createLease(data);
+    } else if (kind === "meters") {
+      const { unitExternalId, ...values } = fields;
+      const data = {
+        ...values,
+        propertyId: resolve("properties", propertyExternalId).id,
+        unitId:
+          unitExternalId === null ? null : resolve("units", unitExternalId).id,
+        responsibleId: null,
+      };
+      // A machine source does not acquire user privileges. Domain validation is
+      // reused with an internal actor only after source-bound parents resolve.
+      record = saveOperation(
+        db,
+        { id: source.createdBy, role: "admin" },
+        "meters",
+        mapping?.localId ?? null,
+        data,
+      );
+    } else if (kind === "properties") {
       record = mapping
         ? db.updateProperty(mapping.localId, fields)
         : db.createProperty(fields);
@@ -480,7 +567,13 @@ export function processExchange(db, sourceId, input, serverEnvironment) {
   row.updatedAt = now();
   const before = structuredClone(db.data);
   try {
-    const result = ["properties", "units"].includes(body.kind)
+    const result = [
+      "properties",
+      "units",
+      "tenants",
+      "leases",
+      "meters",
+    ].includes(body.kind)
       ? applyCatalog(db, source, body.kind, body.items)
       : body.kind === "statements"
         ? applyStatements(db, source, body.items)

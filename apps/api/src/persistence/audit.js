@@ -10,6 +10,16 @@ const excluded = new Set([
 ]);
 const privateKey =
   /password|secret|token|hash|content_base64|contentBase64|image|photo_url|photoUrl|stored_name/i;
+const sourceConfiguration = (row) =>
+  row &&
+  Object.fromEntries(
+    Object.entries(row).filter(
+      ([key]) =>
+        !["lastSeenAt", "lastSuccessfulAt", "lastError", "lastRunId"].includes(
+          key,
+        ),
+    ),
+  );
 function safe(value) {
   if (Array.isArray(value)) return value.map(safe);
   if (value && typeof value === "object")
@@ -36,6 +46,11 @@ export function appendAudit(
       const old = previous.get(entityId),
         next = current.get(entityId);
       if (isDeepStrictEqual(old, next)) continue;
+      if (
+        entityType === "accounting_sources" &&
+        isDeepStrictEqual(sourceConfiguration(old), sourceConfiguration(next))
+      )
+        continue;
       after.audit_log.push({
         id: crypto.randomUUID(),
         actorId: actor?.id ?? null,

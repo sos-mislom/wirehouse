@@ -6,10 +6,21 @@ import { allowedResources } from "./topics.js";
 import { listenForChanges } from "./pg-listener.js";
 
 const loopback = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const mobileOrigins = new Set([
+  "capacitor://localhost",
+  "http://localhost",
+  "https://localhost",
+]);
 export function allowedOrigin(request) {
   try {
     const origin = new URL(request.headers.origin);
     const host = new URL(`http://${request.headers.host}`);
+    if (
+      mobileOrigins.has(request.headers.origin) &&
+      (request.socket.encrypted ||
+        request.headers["x-forwarded-proto"] === "https")
+    )
+      return true;
     if (!["http:", "https:"].includes(origin.protocol)) return false;
     const forwarded = request.headers["x-forwarded-proto"];
     const protocol =
@@ -27,7 +38,14 @@ export function allowedOrigin(request) {
 
 export function attachRealtime(
   server,
-  { db, databaseUrl, jwtSecret, heartbeatMs = 25000, batchMs = 200 },
+  {
+    db,
+    databaseUrl,
+    jwtSecret,
+    heartbeatMs = 25000,
+    batchMs = 200,
+    authTimeoutMs = 5000,
+  },
 ) {
   const wss = new WebSocketServer({
     noServer: true,
@@ -161,8 +179,14 @@ export function attachRealtime(
     };
     peers.set(ws, peer);
     const timeout = setTimeout(
-      () => ws.close(4401, "Authentication timeout"),
-      5000,
+      () =>
+        ws.close(
+          peer.token ? 1013 : 4401,
+          peer.token
+            ? "Authentication storage timeout"
+            : "Authentication required",
+        ),
+      authTimeoutMs,
     );
     ws.on("error", () => {});
     ws.on("pong", () => {

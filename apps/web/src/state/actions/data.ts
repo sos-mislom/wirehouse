@@ -1,5 +1,6 @@
 import { startTransition } from "react";
 import { useQueryClient } from "../../realtime/RealtimeContext";
+import { assertProductRole } from "../../mobile-product";
 import { TOKEN_KEY } from "../../shared/navigation";
 import {
   type BillingInvoice,
@@ -76,8 +77,11 @@ export function useDataActions(
   };
 
   const fetchWorkspaceData = async (token: string) => {
-    const [me, nextOverview, nextTickets] = await Promise.all([
-      apiRequest<{ user: SessionUser }>("/api/auth/me", { token }),
+    const me = await apiRequest<{ user: SessionUser }>("/api/auth/me", {
+      token,
+    });
+    assertProductRole(me.user.role);
+    const [nextOverview, nextTickets] = await Promise.all([
       apiRequest<Overview>("/api/dashboard/overview", { token }),
       apiRequest<{ items: Ticket[] }>("/api/tickets", { token }),
     ]);
@@ -105,14 +109,20 @@ export function useDataActions(
       });
       applyWorkspaceData(nextOverview, nextTickets);
     } catch (caughtError) {
-      window.localStorage.removeItem(TOKEN_KEY);
-      setSession(null);
-      setOverview(null);
-      setTickets([]);
-      setTicketComments([]);
-      setTenantDetail(null);
+      const failure = caughtError as { status?: number; code?: string };
+      const invalid =
+        [401, 403].includes(failure.status ?? 0) ||
+        failure.code === "PRODUCT_ROLE_MISMATCH";
+      if (invalid) {
+        window.localStorage.removeItem(TOKEN_KEY);
+        setSession(null);
+        setOverview(null);
+        setTickets([]);
+        setTicketComments([]);
+        setTenantDetail(null);
+      } else window.localStorage.setItem(TOKEN_KEY, token);
       setError(
-        options.silentAuthFailure
+        options.silentAuthFailure && invalid
           ? ""
           : caughtError instanceof Error
             ? caughtError.message

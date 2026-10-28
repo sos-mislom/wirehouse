@@ -3,6 +3,7 @@ import path from "node:path";
 import { parseJsonBody } from "../http/body.js";
 import { canReadDocument } from "../domain/documents.js";
 import { contextCan } from "../domain/context-access.js";
+import { businessError } from "../domain/accounting.js";
 export function createLeasesRoutes({
   requireAuth,
   buildScopedCollections,
@@ -288,6 +289,17 @@ export function createLeasesRoutes({
             return true;
           }
 
+          if (
+            db.data.external_links.some(
+              (r) => r.entityType === "leases" && r.localId === leaseId,
+            ) ||
+            db.data.personal_accounts.some((r) => r.leaseId === leaseId)
+          )
+            throw businessError(
+              "Реквизиты подключенного договора изменяются в 1С",
+              409,
+              "ONE_C_ACCOUNTING_MASTER",
+            );
           const updatedRecord = db.updateLease(leaseId, body);
           if (!updatedRecord) {
             notFound(response);

@@ -1,4 +1,5 @@
 import { MessengerButtons } from "../../MessengerButtons";
+import { mobileProduct } from "../../mobile-product";
 import { useWorkspaceContext } from "../../app/WorkspaceContext";
 import { Button, Input } from "../../ui";
 export function LoginPage() {
@@ -35,6 +36,7 @@ export function LoginPage() {
     setTenantForm,
     tenantForm,
     setNotice,
+    hydrateSession,
   } = useWorkspaceContext();
 
   return (
@@ -44,7 +46,13 @@ export function LoginPage() {
           <div className="login-brand">
             <div>
               <strong>{productBrand.name}</strong>
-              <span>{productBrand.subtitle}</span>
+              <span>
+                {mobileProduct === "client"
+                  ? "Кабинет собственника и арендатора"
+                  : mobileProduct === "worker"
+                    ? "Задания исполнителя"
+                    : productBrand.subtitle}
+              </span>
             </div>
           </div>
         </div>
@@ -59,7 +67,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        {!tenantConnectionOpen && (
+        {!tenantConnectionOpen && !mobileProduct && (
           <div className="auth-tabs auth-tabs--mvp">
             <Button
               variant="plain"
@@ -89,6 +97,17 @@ export function LoginPage() {
             {error}
           </div>
         ) : null}
+        {error && window.localStorage.getItem("warehouse-platform-token") && (
+          <Button
+            onClick={() =>
+              void hydrateSession(
+                window.localStorage.getItem("warehouse-platform-token")!,
+              )
+            }
+          >
+            Повторить подключение
+          </Button>
+        )}
         {notice ? (
           <div className="banner banner--notice" role="status">
             {notice}

@@ -27,6 +27,13 @@ export function entityContext(db, type, id) {
   if (!row) return null;
   if (type === "properties")
     return { propertyId: id, unitId: null, leaseIds: [], accountId: null };
+  if (type === "buildings")
+    return {
+      propertyId: row.propertyId,
+      unitId: null,
+      leaseIds: [],
+      accountId: null,
+    };
   if (type === "personal_accounts") {
     const context = entityContext(db, "leases", row.leaseId);
     return context ? { ...context, accountId: row.id } : null;

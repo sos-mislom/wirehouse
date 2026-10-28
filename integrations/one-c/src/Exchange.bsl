@@ -1,6 +1,6 @@
 // Wirehouse exchange boundary. No privileged mode and no changes to BP objects.
 Function AdapterInfo() Export
-    Return "{""adapterVersion"":""0.2.0"",""schemaVersion"":1,""incomingKinds"":[""readings"",""work_results"",""work_reopened"",""service_acts""]}";
+    Return "{""adapterVersion"":""0.3.0"",""schemaVersion"":1,""autoExport"":true,""outgoingKinds"":[""properties"",""units"",""tenants"",""leases"",""meters"",""accounts"",""statements""],""incomingKinds"":[""readings"",""work_results"",""work_reopened"",""service_acts""]}";
 EndFunction
 
 Function Decode(Text)
@@ -81,6 +81,9 @@ Function Record(Name, SourceId, KeyName = "", KeyValue = "")
     Result.SourceId = SourceId;
     If KeyName <> "" Then Result[KeyName] = KeyValue; EndIf;
     Result.Read();
+    // Read() clears key fields when the physical record does not exist yet.
+    Result.SourceId = SourceId;
+    If KeyName <> "" Then Result[KeyName] = KeyValue; EndIf;
     Return Result;
 EndFunction
 
@@ -254,7 +257,7 @@ Function ClaimOutgoing(SourceId, Environment) Export
     BeginTransaction();
     Try
         SourceRecord(SourceId, Environment, True);
-        Query = New Query("SELECT TOP 1 MessageId FROM InformationRegister.WH_Outbox WHERE SourceId = &SourceId AND Status <> ""applied"" AND Attempts < 8 AND NextAttemptAt <= &Now ORDER BY UpdatedAt");
+        Query = New Query("SELECT TOP 1 MessageId FROM InformationRegister.WH_Outbox WHERE SourceId = &SourceId AND Status <> ""applied"" ORDER BY Priority, UpdatedAt, MessageId");
         Query.SetParameter("SourceId", SourceId);
         Query.SetParameter("Now", CurrentDate());
         Rows = Query.Execute().Select();
@@ -263,6 +266,9 @@ Function ClaimOutgoing(SourceId, Environment) Export
             Return "null";
         EndIf;
         Row = Record("WH_Outbox", SourceId, "MessageId", Rows.MessageId);
+        If Row.Attempts >= 8 Or Row.NextAttemptAt > CurrentDate() Then
+            CommitTransaction(); Return "null";
+        EndIf;
         Row.Attempts = Row.Attempts + 1;
         Row.NextAttemptAt = CurrentDate() + 60;
         Row.UpdatedAt = CurrentDate();
@@ -336,7 +342,7 @@ Function StoreReading(SourceId, Environment, Data)
     EndIf;
     Meter = Record("WH_Meters", SourceId, "ExternalId", Data.meterExternalId);
     If Not Meter.Selected() Then Raise "METER_NOT_FOUND"; EndIf;
-    If Not Meter.IsActive Or Meter.AccountExternalId <> Data.accountExternalId Then Raise "METER_ACCOUNT_MISMATCH"; EndIf;
+    If Not Meter.IsActive Or MeterAccountForPeriod(SourceId, Data.meterExternalId, Data.period) <> Data.accountExternalId Then Raise "METER_ACCOUNT_MISMATCH"; EndIf;
     Account = Record("WH_Accounts", SourceId, "ExternalId", Data.accountExternalId);
     If Not Account.Selected() Then Raise "ACCOUNT_NOT_FOUND"; EndIf;
     If Account.Status <> "active" Or ISODate(Account.ValidFrom) > EndOfMonth(BillingDate) Then Raise "ACCOUNT_NOT_ACTIVE"; EndIf;
@@ -406,7 +412,7 @@ EndFunction
 Function InspectState(SourceId, Environment) Export
     SourceRecord(SourceId, Environment);
     Result = New Structure;
-    For Each Name In StrSplit("WH_Accounts,WH_Meters,WH_Readings,WH_Inbox,WH_Outbox,WH_WorkEvents", ",") Do
+    For Each Name In StrSplit("WH_Accounts,WH_Meters,WH_Readings,WH_Inbox,WH_Outbox,WH_WorkEvents,WH_Catalog,WH_Finance,WH_ActDocuments,WH_MeterBindings,WH_Snapshots,WH_Streams,WH_Demos", ",") Do
         Rows = QueryRows("SELECT COUNT(*) AS Quantity FROM InformationRegister." + Name + " WHERE SourceId = &SourceId", SourceId);
         Rows.Next();
         Result.Insert(Name, Rows.Quantity);
@@ -494,6 +500,7 @@ Function StoreWorkEvent(SourceId, Environment, Kind, Data)
     Row.Payload = Encode(Data);
     Row.PayloadHash = PayloadHash;
     Row.ReceivedAt = CurrentDate();
+    If Kind = "service_acts" Then CreateServiceActDraft(SourceId, Environment, Data); EndIf;
     Row.Write();
     Return False;
 EndFunction

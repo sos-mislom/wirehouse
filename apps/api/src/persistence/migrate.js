@@ -16,6 +16,10 @@ const migrations = [
   "009-exchange-page-indexes.sql",
   "010-realtime-state.sql",
   "011-catalog-import.sql",
+  "012-accounting-contacts.sql",
+  "013-accounting-status.sql",
+  "014-executor-refusal.sql",
+  "015-dispatch.sql",
 ];
 
 async function sources() {

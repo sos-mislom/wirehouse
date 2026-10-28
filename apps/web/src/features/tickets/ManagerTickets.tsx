@@ -1,10 +1,21 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
+import { useState } from "react";
+import { DispatchWorkspace } from "../business/DispatchWorkspace";
+import { filterTickets } from "../../../../../packages/contracts/src/ticket-search";
+import { ticketCategoryOptions } from "../../projectData";
 import { ticketStatusOptions } from "../../projectData";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import { getSlaState, getTicketStatusLabel } from "../../shared/format";
 import { type TicketFilter } from "../../shared/types";
-import { Button, Select } from "../../ui";
+import { Button, Select, Input } from "../../ui";
 export function ManagerTickets() {
+  const [query, setQuery] = useState(""),
+    [from, setFrom] = useState(""),
+    [to, setTo] = useState(""),
+    [category, setCategory] = useState(""),
+    [unitId, setUnitId] = useState(""),
+    [applicant, setApplicant] = useState(""),
+    [archive, setArchive] = useState(false);
   const {
     managerUi,
     setTicketView,
@@ -15,10 +26,22 @@ export function ManagerTickets() {
     t,
     setManagerScreen,
     moveBoardTicket,
-    filteredTickets,
+    filteredTickets: availableTickets,
     openTicketDetail,
     busyAction,
   } = useWorkspace();
+  const filteredTickets = filterTickets(
+    availableTickets,
+    new URLSearchParams({
+      q: query,
+      from,
+      to,
+      category,
+      unitId,
+      createdBy: applicant,
+      archive: String(archive),
+    }),
+  );
   return (
     <section className="mvp-page">
       <div className="mvp-page-header">
@@ -70,6 +93,99 @@ export function ManagerTickets() {
         </div>
       </div>
 
+      <div className="business-form">
+        <label>
+          Поиск по номеру, тексту, помещению, заявителю
+          <Input
+            type="search"
+            value={query}
+            maxLength={300}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
+        <label>
+          Создана с
+          <Input
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </label>
+        <label>
+          По
+          <Input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </label>
+        <label>
+          Категория
+          <Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">Все категории</option>
+            {ticketCategoryOptions.map((c) => (
+              <option key={c} value={c}>
+                {t.ticketCategories[c as keyof typeof t.ticketCategories]}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label>
+          Помещение
+          <Select value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+            <option value="">Все помещения</option>
+            {[
+              ...new Map(
+                availableTickets.map((t) => [
+                  t.unitId,
+                  {
+                    id: t.unitId,
+                    label: `${t.propertyName ?? ""} · ${t.unitNumber ?? ""}`,
+                  },
+                ]),
+              ).values(),
+            ].map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.label}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label>
+          Заявитель
+          <Select
+            value={applicant}
+            onChange={(e) => setApplicant(e.target.value)}
+          >
+            <option value="">Все заявители</option>
+            {[
+              ...new Map(
+                availableTickets.map((t) => [
+                  t.createdBy,
+                  { id: t.createdBy, name: t.createdByName ?? t.createdBy },
+                ]),
+              ).values(),
+            ].map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={archive}
+            onChange={(e) => setArchive(e.target.checked)}
+          />
+          Только выполненные и архив
+        </label>
+      </div>
       {ticketView === "board" ? (
         <div className="kanban-board">
           {[
@@ -221,6 +337,7 @@ export function ManagerTickets() {
           ) : null}
         </article>
       )}
+      <DispatchWorkspace />
     </section>
   );
 }
