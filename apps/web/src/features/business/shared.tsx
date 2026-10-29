@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
 import { apiRequest, runtimeApiBase } from "../../api/client";
 import { useLiveQuery } from "../../realtime/RealtimeContext";
 export function useResource<T>(token: string, path: string, initial: T) {
@@ -62,29 +62,7 @@ export function Feedback({
 }
 export { ActionIcon } from "./ActionIcon";
 export { Register } from "./Register";
-export function Disclosure({
-  title,
-  children,
-  open = false,
-}: {
-  title: string;
-  children: ReactNode;
-  open?: boolean;
-}) {
-  const [mounted, setMounted] = useState(open);
-  return (
-    <details
-      className="work-disclosure"
-      open={open || undefined}
-      onToggle={(e) => {
-        if (e.currentTarget.open) setMounted(true);
-      }}
-    >
-      <summary>{title}</summary>
-      {mounted && <div className="work-disclosure-body">{children}</div>}
-    </details>
-  );
-}
+export { Disclosure } from "../../ui/Disclosure";
 export async function uploadDocument(
   token: string,
   file: File,

@@ -151,11 +151,17 @@ export const getSlaState = (ticket: Ticket | null, locale: Locale) => {
   if (value.state === "none") return { tone: "info", label: "Срок не задан" };
   if (value.state === "finished")
     return { tone: "success", label: "Завершена · отсчёт остановлен" };
+  const duration =
+    value.hours > 24
+      ? `${new Intl.NumberFormat(locale === "ru" ? "ru-RU" : "en-US", {
+          maximumFractionDigits: 1,
+        }).format(value.hours / 24)} ${locale === "ru" ? "дн." : "d"}`
+      : `${value.hours} ${locale === "ru" ? "ч" : "h"}`;
   if (value.state === "overdue")
-    return { tone: "critical", label: `Просрочено ${value.hours} ч` };
+    return { tone: "critical", label: `Просрочено ${duration}` };
   return {
     tone: value.state === "warning" ? "warning" : "info",
-    label: `Осталось ${value.hours} ч`,
+    label: `Осталось ${duration}`,
   };
 };
 

@@ -1,3 +1,4 @@
+import { Disclosure } from "./ui/Disclosure";
 import { useState } from "react";
 import { apiRequest } from "./api/client";
 import { Button } from "./ui";
@@ -109,8 +110,7 @@ export function BotLinkPanel({
     }
   }
   return (
-    <details className="bot-link-panel">
-      <summary>Подключение мессенджеров</summary>
+    <Disclosure title="Подключение мессенджеров" className="bot-link-panel">
       <p>
         {userId
           ? "Выдайте пользователю одноразовый код для отправки боту."
@@ -158,6 +158,6 @@ export function BotLinkPanel({
           </Button>
         </div>
       )}
-    </details>
+    </Disclosure>
   );
 }

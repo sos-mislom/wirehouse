@@ -116,15 +116,19 @@
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
-.workspace-extra-nav > summary {
+.workspace-extra-toggle {
+  width: 100%;
   min-height: 44px;
   padding: 10px 12px;
   color: var(--ink-soft);
-  cursor: pointer;
   font-size: 15px;
+  justify-content: flex-start;
 }
 .workspace-extra-groups {
   display: grid;
   gap: 20px;
   margin-top: 16px;
+}
+.workspace-extra-groups[hidden] {
+  display: none;
 }

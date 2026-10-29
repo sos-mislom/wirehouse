@@ -83,8 +83,7 @@
   padding: 24px 12px;
   color: var(--ink-soft);
 }
-.register-table .audit-event summary {
-  cursor: pointer;
+.register-table .audit-event .disclosure-toggle {
   color: var(--ui-accent);
   padding-block: 4px;
 }
@@ -115,7 +114,7 @@
 }
 .audit-change {
   display: grid;
-  grid-template-columns: minmax(120px,1fr) minmax(0,2fr) minmax(0,2fr);
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr) minmax(0, 2fr);
   gap: 16px;
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
@@ -129,7 +128,7 @@
 .audit-change small {
   margin: 0 0 4px;
 }
-@media (max-width:760px) {
+@media (max-width: 760px) {
   .register-table .register-details-row td {
     display: block;
     padding: 12px;
@@ -138,7 +137,7 @@
     display: none;
   }
   .audit-change {
-    grid-template-columns: repeat(2,minmax(0,1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px 12px;
   }
   .audit-change dt {
@@ -185,18 +184,51 @@
 }
 .work-disclosure {
   border-top: 1px solid var(--line);
-  padding: 4px 0;
+  padding: 12px 0;
   min-width: 0;
 }
-.work-disclosure > summary {
-  cursor: pointer;
+.disclosure-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.disclosure-heading > h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
   font-weight: 600;
-  min-height: 32px;
-  align-content: center;
+  overflow-wrap: anywhere;
+}
+.disclosure-heading > .disclosure-toggle {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+.work-disclosure.mvp-card {
+  padding: 20px;
+}
+.work-disclosure.workspace-disclosure {
+  padding: 0;
+  border: 1px solid var(--line);
+}
+.workspace-disclosure > .disclosure-heading {
+  padding: 16px 20px;
+}
+.workspace-disclosure > .work-disclosure-body {
+  margin: 0;
+  padding: 0 20px 20px;
+}
+.workspace-disclosure .disclosure-content {
+  padding: 0;
 }
 .work-disclosure-body {
   margin-top: 12px;
   min-width: 0;
+}
+.work-disclosure-body[hidden] {
+  display: none;
 }
 .work-disclosure-body > :first-child {
   margin-top: 0;
@@ -445,8 +477,17 @@
   .register-options label:not(.ui-checkbox) {
     flex: 1 1 140px;
   }
-  .work-disclosure > summary {
+  .disclosure-heading > .disclosure-toggle {
     min-height: 44px;
+  }
+  .work-disclosure.mvp-card {
+    padding: 16px;
+  }
+  .workspace-disclosure > .disclosure-heading {
+    padding: 12px 16px;
+  }
+  .workspace-disclosure > .work-disclosure-body {
+    padding: 0 16px 16px;
   }
   .data-register--compact .register-table td,
   .data-register--comfortable .register-table td {
@@ -464,6 +505,15 @@
   border: 0;
   box-shadow: none;
   padding: 0;
+}
+.structure-units > .ui-button {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  text-align: left;
+}
+.structure-units > .ui-button > strong {
+  white-space: nowrap;
 }
 .register-table tr:not([aria-selected]) {
   cursor: default;

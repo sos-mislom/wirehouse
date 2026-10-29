@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useState } from "react";
 import { isOpenTicket } from "../../../../../packages/contracts/src/domain.js";
 import { Button, Input, Select } from "../../ui";
@@ -135,16 +136,20 @@ export function TicketOperations({
           {error}
         </p>
       )}
-      <details>
-        <summary>
-          Предыдущие обращения по помещению (
-          {
-            tickets.filter(
-              (t) => t.unitId === ticket.unitId && t.id !== ticket.id,
-            ).length
-          }
-          )
-        </summary>
+      <Disclosure
+        title={
+          <>
+            {" "}
+            Предыдущие обращения по помещению (
+            {
+              tickets.filter(
+                (t) => t.unitId === ticket.unitId && t.id !== ticket.id,
+              ).length
+            }
+            ){" "}
+          </>
+        }
+      >
         {tickets
           .filter((t) => t.unitId === ticket.unitId && t.id !== ticket.id)
           .map((t) => (
@@ -158,15 +163,19 @@ export function TicketOperations({
               {t.number} · {t.title} · {statusNames[t.status]}
             </Button>
           ))}
-      </details>
-      <details>
-        <summary>
-          Работы и ТМЦ{" "}
-          {ticket.financialAccess ? ` · затраты ${currency(cost)}` : ""}
-          {ticket.financialAccess && service?.paid
-            ? ` · к оплате ${currency(cost + service.basePrice)}`
-            : ""}
-        </summary>
+      </Disclosure>
+      <Disclosure
+        title={
+          <>
+            {" "}
+            Работы и ТМЦ{" "}
+            {ticket.financialAccess ? ` · затраты ${currency(cost)}` : ""}
+            {ticket.financialAccess && service?.paid
+              ? ` · к оплате ${currency(cost + service.basePrice)}`
+              : ""}{" "}
+          </>
+        }
+      >
         {logs.map((log) => (
           <p key={log.id}>
             {log.description} · {log.hours} ч{" "}
@@ -250,7 +259,7 @@ export function TicketOperations({
             </small>
           </form>
         )}
-      </details>
+      </Disclosure>
     </div>
   );
 }

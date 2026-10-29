@@ -171,7 +171,7 @@ try {
       name: new RegExp("^" + label + "(?: |$)"),
     });
     if (!(await button.isVisible()))
-      await nav.locator(".workspace-extra-nav > summary").click();
+      await nav.locator(".workspace-extra-toggle").click();
     await button.click();
   }
   const errors = [];
@@ -274,8 +274,11 @@ try {
     .getByRole("heading", { name: "Сроки и работы", exact: true })
     .waitFor();
   await page.getByLabel("Период", { exact: true }).selectOption("90");
-  await page.locator(".renewal-editor summary").first().waitFor();
-  await page.locator(".renewal-editor summary").first().click();
+  await page
+    .locator(".renewal-editor .disclosure-heading h3")
+    .first()
+    .waitFor();
+  await page.locator(".renewal-editor .disclosure-toggle").first().click();
   await page
     .getByLabel("Следующий шаг", { exact: true })
     .first()
@@ -290,9 +293,15 @@ try {
     .click();
   await page.getByText("Решение сохранено", { exact: true }).waitFor();
   await page.reload();
-  await page.locator(".renewal-editor summary").first().waitFor();
+  await page
+    .locator(".renewal-editor .disclosure-heading h3")
+    .first()
+    .waitFor();
   assert.match(
-    await page.locator(".renewal-editor summary").first().innerText(),
+    await page
+      .locator(".renewal-editor .disclosure-heading h3")
+      .first()
+      .innerText(),
     /Обсуждаем условия/,
   );
   const calendar = page.waitForEvent("download");
@@ -334,8 +343,15 @@ try {
     .first()
     .waitFor();
   await navigateManager("Помещения");
-  await page.getByText("Структура и планы объекта", { exact: true }).click();
-  await page.getByRole("heading", { name: "Структура и планы" }).waitFor();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("heading", { name: "Структура и планы", exact: true })
+    .waitFor();
   await page.getByRole("button", { name: "Объект А", exact: true }).click();
   await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page.getByRole("button", { name: "Новый план", exact: true }).click();
@@ -391,7 +407,12 @@ try {
     fullPage: true,
   });
   await page.reload();
-  await page.getByText("Структура и планы объекта", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
+      exact: true,
+    })
+    .click();
   await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page
     .getByLabel("Выбор плана", { exact: true })
@@ -433,7 +454,12 @@ try {
     .fill("Осмотр\nПроверка");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page.getByText("Тестовое ППР", { exact: true }).waitFor();
-  await page.getByText("Импорт графика ППР", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Импорт графика ППР$/,
+      exact: true,
+    })
+    .click();
   const schedule = scheduleFile(f);
   await page.getByLabel("Файл графика ППР", { exact: true }).setInputFiles({
     name: schedule.fileName,
@@ -725,7 +751,10 @@ try {
     .locator(".operation-card")
     .filter({ has: page.getByRole("heading", { name: "Иван", exact: true }) });
   await tenantCard
-    .getByText("Подключение мессенджеров", { exact: true })
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Подключение мессенджеров$/,
+      exact: true,
+    })
     .click();
   await tenantCard.getByRole("button", { name: "VK", exact: true }).click();
   await tenantCard.locator(".bot-link-result code").waitFor();
@@ -829,7 +858,9 @@ try {
   );
   await quickNav.getByRole("button", { name: "Платежи", exact: true }).click();
   const forecast = page.locator(".billing-forecast");
-  await forecast.locator(":scope > summary").click();
+  await forecast
+    .locator(":scope > .disclosure-heading > .disclosure-toggle")
+    .click();
   await forecast.locator(".forecast-summary").waitFor();
   await quickNav.getByRole("button", { name: "Главная", exact: true }).click();
   await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
@@ -870,7 +901,12 @@ try {
   await page.setViewportSize({ width: 1100, height: 900 });
   await navigateManager("Помещения");
   await page.getByRole("heading", { name: "Помещения", exact: true }).waitFor();
-  await page.getByText("Структура и планы объекта", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
+      exact: true,
+    })
+    .click();
   assert.ok(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -909,7 +945,12 @@ try {
   );
   await workerPage.goto("http://127.0.0.1:5173");
   await workerPage.getByRole("button", { name: "Меню", exact: true }).waitFor();
-  await workerPage.getByText("Передать показание", { exact: true }).click();
+  await workerPage
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Передать показание$/,
+      exact: true,
+    })
+    .click();
   await workerPage
     .getByRole("combobox", { name: "Прибор", exact: true })
     .selectOption({ label: "Счётчик исполнителя · 101" });
@@ -978,8 +1019,18 @@ try {
     path: ".deploy/business-desktop-accounts.png",
     fullPage: true,
   });
-  await page.getByText("Источники учета и обмен", { exact: true }).click();
-  await page.getByText("Журнал обмена", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Источники учета и обмен$/,
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Журнал обмена$/,
+      exact: true,
+    })
+    .click();
   const journal = page.getByRole("region", { name: "Сообщения", exact: true });
   const journalSearch = journal.getByRole("textbox", {
     name: "Поиск: Сообщения",
@@ -1128,7 +1179,9 @@ try {
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
     );
-    await auditRegister.getByRole("heading").scrollIntoViewIfNeeded();
+    await auditRegister
+      .getByRole("heading", { name: /^Аудит изменений/ })
+      .scrollIntoViewIfNeeded();
     const detail = auditRegister.getByRole("region", {
       name: "Подробности изменения",
       exact: true,
@@ -1320,7 +1373,10 @@ try {
     .getByRole("button", { name: "ППР", exact: true })
     .click();
   await page
-    .getByText("Исполнение ППР: план, факт и переносы", { exact: true })
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Исполнение ППР: план, факт и переносы$/,
+      exact: true,
+    })
     .click();
   await page
     .getByRole("region", { name: "Задания ППР", exact: true })
@@ -1343,7 +1399,12 @@ try {
     .getByText("Изменение задания сохранено", { exact: true })
     .waitFor();
   await navigateManager("Объекты");
-  await page.getByText("Реестр документов", { exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Реестр документов$/,
+      exact: true,
+    })
+    .click();
   const documentRegister = page.getByRole("region", {
     name: "Документы",
     exact: true,
@@ -1378,7 +1439,12 @@ try {
           .click();
       }
       if (name === "Объекты")
-        await page.getByText("Реестр документов", { exact: true }).click();
+        await page
+          .getByRole("button", {
+            name: /^(?:Показать|Скрыть) Реестр документов$/,
+            exact: true,
+          })
+          .click();
       await page.waitForTimeout(100);
       assert.ok(
         await page.evaluate(
@@ -1483,14 +1549,21 @@ try {
   await ticketSearch.fill("does-not-exist-wh-20261028");
   assert.equal(await page.locator(".kanban-ticket").count(), 0);
   await ticketSearch.fill("");
-  const dispatchPanel = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Службы и маршруты приемки" }),
+  const dispatchPanel = page.locator(".work-disclosure").filter({
+    has: page.getByRole("heading", {
+      name: "Службы и маршруты приемки",
+      exact: true,
+    }),
   });
-  await dispatchPanel.locator("summary").click();
+  await dispatchPanel
+    .locator(":scope > .disclosure-heading > .disclosure-toggle")
+    .click();
   await dispatchPanel
     .getByRole("heading", { name: "Служба исполнителей", exact: true })
     .waitFor();
-  await dispatchPanel.locator("summary").click();
+  await dispatchPanel
+    .locator(":scope > .disclosure-heading > .disclosure-toggle")
+    .click();
   await page
     .getByRole("group", { name: "Вид заявок" })
     .getByRole("button", { name: "Канбан", exact: true })
@@ -1502,7 +1575,12 @@ try {
     .first()
     .click();
   const termsPanel = page.locator(".ticket-workflow");
-  await termsPanel.getByText("Условия работы", { exact: true }).click();
+  await termsPanel
+    .getByRole("button", {
+      name: /^(?:Показать|Скрыть) Условия работы$/,
+      exact: true,
+    })
+    .click();
   const paidToggle = termsPanel.getByRole("checkbox", {
     name: "Платная работа",
     exact: true,
@@ -1718,8 +1796,7 @@ try {
     .getByRole("heading", { name: "Результат принят", exact: true })
     .waitFor();
   await proofPanel
-    .locator(".work-disclosure > summary")
-    .filter({ hasText: /^Фотографии работ/ })
+    .getByRole("button", { name: /^Показать Фотографии работ/ })
     .click();
   await proofPanel
     .getByRole("button", { name: "Результат работ.jpg", exact: true })

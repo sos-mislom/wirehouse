@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { Button } from "../../ui";
 import {
@@ -96,11 +97,15 @@ export function OperationCard({
               <p className="preserve-lines">{row.specifications}</p>
             </div>
           </div>
-          <details>
-            <summary>
-              История ремонтов и ППР (
-              {tickets.filter((t) => t.equipmentId === row.id).length})
-            </summary>
+          <Disclosure
+            title={
+              <>
+                {" "}
+                История ремонтов и ППР (
+                {tickets.filter((t) => t.equipmentId === row.id).length}){" "}
+              </>
+            }
+          >
             {tickets
               .filter((t) => t.equipmentId === row.id)
               .map((t) => (
@@ -121,7 +126,7 @@ export function OperationCard({
                   ППР: {p.name} · {date(p.nextDate)}
                 </p>
               ))}
-          </details>
+          </Disclosure>
         </>
       )}
       {tab === "plans" && (
@@ -157,11 +162,16 @@ export function OperationCard({
               <li key={i}>{line}</li>
             ))}
           </ol>
-          <details>
-            <summary>
-              Задания и история выполнения (
-              {tickets.filter((t) => t.maintenancePlanId === row.id).length})
-            </summary>
+          <Disclosure
+            title={
+              <>
+                {" "}
+                Задания и история выполнения (
+                {tickets.filter((t) => t.maintenancePlanId === row.id).length}
+                ){" "}
+              </>
+            }
+          >
             {tickets
               .filter((t) => t.maintenancePlanId === row.id)
               .map((t) => (
@@ -175,7 +185,7 @@ export function OperationCard({
                   {t.title} · {statusNames[t.status]}
                 </Button>
               ))}
-          </details>
+          </Disclosure>
         </>
       )}
       {tab === "services" && (
@@ -217,8 +227,7 @@ export function OperationCard({
           >
             Внести показания
           </Button>
-          <details>
-            <summary>История и распределение</summary>
+          <Disclosure title="История и распределение">
             {data.readings
               .filter((r) => r.meterId === row.id)
               .sort((a, b) => b.period.localeCompare(a.period))
@@ -245,7 +254,7 @@ export function OperationCard({
                   )}
                 </div>
               ))}
-          </details>
+          </Disclosure>
           <small className="field-hint">
             Распределение для проверки. Начисления в счета переносятся
             менеджером после сверки.
@@ -299,12 +308,11 @@ export function OperationCard({
           <small>
             {row.entityType} · {row.entityId}
           </small>
-          <details>
-            <summary>Изменения</summary>
+          <Disclosure title="Изменения">
             <pre className="audit-values">
               {JSON.stringify(row.changes, null, 2)}
             </pre>
-          </details>
+          </Disclosure>
         </>
       )}
     </article>

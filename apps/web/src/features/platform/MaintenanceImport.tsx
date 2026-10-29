@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useState } from "react";
 import { Button, Input } from "../../ui";
 import { ResponsiveTable } from "../../ResponsiveTable";
@@ -101,8 +102,10 @@ export function MaintenanceImport({
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
   return (
-    <details className="mvp-card maintenance-import">
-      <summary>Импорт графика ППР</summary>
+    <Disclosure
+      title="Импорт графика ППР"
+      className="mvp-card maintenance-import"
+    >
       <div className="platform-section">
         <p>
           Загрузите таблицу CSV в UTF-8 или XLSX с одним листом: до 2 МБ и 2000
@@ -113,8 +116,7 @@ export function MaintenanceImport({
             Скачать шаблон ППР
           </Button>
         </div>
-        <details>
-          <summary>Как заполнить таблицу</summary>
+        <Disclosure title="Как заполнить таблицу">
           <p>
             Одна строка — один график. Постоянный код графика уникален внутри
             объекта. Повторная загрузка пропустит этот код; изменения вносите в
@@ -134,7 +136,7 @@ export function MaintenanceImport({
             Графики с прошедшей датой создадут пропущенные задания. Календарную
             сетку с месяцами по колонкам сначала преобразуйте в строки графиков.
           </p>
-        </details>
+        </Disclosure>
         <label>
           Файл графика ППР
           <Input
@@ -239,6 +241,6 @@ export function MaintenanceImport({
           </>
         )}
       </div>
-    </details>
+    </Disclosure>
   );
 }

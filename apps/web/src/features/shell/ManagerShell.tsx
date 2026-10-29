@@ -123,13 +123,22 @@ export function ManagerShell() {
           <div className="mvp-nav-group" aria-label="Основные разделы">
             {managerMainNav.map(navItem)}
           </div>
-          <details
-            className="workspace-extra-nav"
-            open={extraOpen}
-            onToggle={(event) => setExtraOpen(event.currentTarget.open)}
-          >
-            <summary>Другие разделы</summary>
-            <div className="workspace-extra-groups">
+          <div className="workspace-extra-nav">
+            <Button
+              variant="text"
+              type="button"
+              className="workspace-extra-toggle"
+              aria-expanded={extraOpen}
+              aria-controls="workspace-extra-groups"
+              onClick={() => setExtraOpen((value) => !value)}
+            >
+              {extraOpen ? "Скрыть разделы" : "Другие разделы"}
+            </Button>
+            <div
+              id="workspace-extra-groups"
+              className="workspace-extra-groups"
+              hidden={!extraOpen}
+            >
               {managerExtraNavGroups.map((group) => (
                 <div className="mvp-nav-group" key={group.label}>
                   <h2 className="navigation-group-label">{group.label}</h2>
@@ -137,7 +146,7 @@ export function ManagerShell() {
                 </div>
               ))}
             </div>
-          </details>
+          </div>
         </nav>
 
         <div className="mvp-user">

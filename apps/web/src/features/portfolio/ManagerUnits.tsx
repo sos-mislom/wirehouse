@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { StructureWorkspace } from "../platform/StructureWorkspace";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
@@ -196,8 +197,10 @@ export function ManagerUnits() {
           <div className="empty-state">{t.hints.noData}</div>
         ) : null}
       </article>
-      <details className="workspace-disclosure">
-        <summary>Структура и планы объекта</summary>
+      <Disclosure
+        title="Структура и планы объекта"
+        className="workspace-disclosure"
+      >
         <StructureWorkspace
           embedded
           token={session.token}
@@ -212,7 +215,7 @@ export function ManagerUnits() {
           onUnit={openUnitDetail}
           onTicket={openTicketDetail}
         />
-      </details>
+      </Disclosure>
     </section>
   );
 }

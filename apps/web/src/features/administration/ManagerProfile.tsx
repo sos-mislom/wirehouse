@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { Button, Input } from "../../ui";
@@ -64,14 +65,13 @@ export function ManagerProfile() {
               </strong>
             </div>
           </div>
-          <details>
-            <summary>Мои права доступа</summary>
+          <Disclosure title="Мои права доступа">
             <ul>
               {session.user.permissions.map((p) => (
                 <li key={p}>{permissionLabels[p as Permission]}</li>
               ))}
             </ul>
-          </details>
+          </Disclosure>
           <Button
             variant="secondary"
             className="secondary-button profile-logout"

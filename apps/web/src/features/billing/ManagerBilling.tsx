@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useState } from "react";
 import { AccountingWorkspace } from "../business/AccountingWorkspace";
 import { Register } from "../business/shared";
@@ -233,14 +234,19 @@ export function ManagerBilling() {
           ) : null}
 
           {billingReconciliation ? (
-            <details className="work-disclosure billing-reconciliation">
-              <summary>
-                Сверка оплат ·{" "}
-                {billingReconciliation.summary.issues > 0
-                  ? `${billingReconciliation.summary.issues} расхождений`
-                  : "Все счета сходятся"}
-              </summary>
-              <div className="work-disclosure-body">
+            <Disclosure
+              title={
+                <>
+                  {" "}
+                  Сверка оплат ·{" "}
+                  {billingReconciliation.summary.issues > 0
+                    ? `${billingReconciliation.summary.issues} расхождений`
+                    : "Все счета сходятся"}{" "}
+                </>
+              }
+              className="billing-reconciliation"
+            >
+              <div className="business-stack">
                 <div className="mvp-metrics mvp-metrics--compact">
                   <article className="mvp-metric">
                     <span>
@@ -307,7 +313,7 @@ export function ManagerBilling() {
                   ) : null}
                 </div>
               </div>
-            </details>
+            </Disclosure>
           ) : null}
 
           <div className="mvp-grid billing-grid">

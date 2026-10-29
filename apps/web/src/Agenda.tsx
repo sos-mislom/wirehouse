@@ -1,3 +1,4 @@
+import { Disclosure } from "./ui/Disclosure";
 import { useLiveQuery } from "./realtime/RealtimeContext";
 import { useState, type FormEvent } from "react";
 import type {
@@ -294,8 +295,10 @@ function RenewalEditor({
     }
   }
   return (
-    <details className="renewal-editor">
-      <summary>Продление: {renewalLabels[value.status]}</summary>
+    <Disclosure
+      title={<> Продление: {renewalLabels[value.status]} </>}
+      className="renewal-editor"
+    >
       <form onSubmit={save}>
         <Field label="Следующий шаг">
           {(props) => (
@@ -350,6 +353,6 @@ function RenewalEditor({
           </small>
         )}
       </form>
-    </details>
+    </Disclosure>
   );
 }

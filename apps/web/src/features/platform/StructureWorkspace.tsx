@@ -22,6 +22,12 @@ type Props = {
   embedded?: boolean;
 };
 type Node = Partial<Building & Entrance & Floor>;
+const nodeLabel = (kind: string, name: string) =>
+  !name
+    ? `${kind} не указан`
+    : name.toLocaleLowerCase("ru").startsWith(kind.toLocaleLowerCase("ru"))
+      ? name
+      : `${kind} ${name}`;
 export function StructureWorkspace(props: Props) {
   const resource = useLiveQuery<Structure>(props.token, "/api/structure", {
     buildings: [],
@@ -248,68 +254,86 @@ export function StructureWorkspace(props: Props) {
             {data.buildings
               .filter((b) => b.propertyId === property)
               .map((b) => (
-                <details key={b.id} open>
-                  <summary>{b.name || "Корпус не указан"}</summary>
-                  {props.canWrite && (
-                    <Button variant="text" onClick={() => edit("buildings", b)}>
-                      Изменить корпус
-                    </Button>
-                  )}
-                  {data.entrances
-                    .filter((e) => e.buildingId === b.id)
-                    .map((e) => (
-                      <details key={e.id} open>
-                        <summary>{e.name || "Подъезд не указан"}</summary>
-                        {props.canWrite && (
-                          <Button
-                            variant="text"
-                            onClick={() => edit("entrances", e)}
-                          >
-                            Изменить подъезд
-                          </Button>
-                        )}
-                        {data.floors
-                          .filter((f) => f.entranceId === e.id)
-                          .sort((a, b) => a.number - b.number)
-                          .map((f) => (
-                            <details key={f.id} open>
-                              <summary>
-                                {f.name} ·{" "}
-                                {
-                                  props.units.filter((u) => u.floorId === f.id)
-                                    .length
-                                }{" "}
-                                помещений
-                              </summary>
-                              {props.canWrite && (
-                                <Button
-                                  variant="text"
-                                  onClick={() => edit("floors", f)}
-                                >
-                                  Изменить этаж
-                                </Button>
-                              )}
-                              <div className="structure-units">
-                                {props.units
-                                  .filter((u) => u.floorId === f.id)
-                                  .map((u) => (
-                                    <Button
-                                      key={u.id}
-                                      onClick={() => props.onUnit(u.id)}
-                                    >
-                                      <strong>{u.number}</strong>
-                                      <span>
-                                        {u.area} м² ·{" "}
-                                        {u.tenantName || "Без арендатора"}
-                                      </span>
-                                    </Button>
-                                  ))}
-                              </div>
-                            </details>
-                          ))}
-                      </details>
-                    ))}
-                </details>
+                <section className="structure-building" key={b.id}>
+                  <div className="structure-node-header">
+                    <h4>{nodeLabel("Корпус", b.name)}</h4>
+                    {props.canWrite && (
+                      <Button
+                        variant="text"
+                        onClick={() => edit("buildings", b)}
+                      >
+                        Изменить корпус
+                      </Button>
+                    )}
+                  </div>
+                  <div className="structure-entrances">
+                    {data.entrances
+                      .filter((e) => e.buildingId === b.id)
+                      .map((e) => (
+                        <section className="structure-entrance" key={e.id}>
+                          <div className="structure-node-header">
+                            <h5>{nodeLabel("Подъезд", e.name)}</h5>
+                            {props.canWrite && (
+                              <Button
+                                variant="text"
+                                onClick={() => edit("entrances", e)}
+                              >
+                                Изменить подъезд
+                              </Button>
+                            )}
+                          </div>
+                          <div className="structure-floors">
+                            {data.floors
+                              .filter((f) => f.entranceId === e.id)
+                              .sort((a, b) => a.number - b.number)
+                              .map((f) => (
+                                <section className="structure-floor" key={f.id}>
+                                  <div className="structure-node-header">
+                                    <h6>
+                                      {nodeLabel(
+                                        "Этаж",
+                                        f.name || String(f.number),
+                                      )}{" "}
+                                      ·{" "}
+                                      {
+                                        props.units.filter(
+                                          (u) => u.floorId === f.id,
+                                        ).length
+                                      }{" "}
+                                      помещений
+                                    </h6>
+                                    {props.canWrite && (
+                                      <Button
+                                        variant="text"
+                                        onClick={() => edit("floors", f)}
+                                      >
+                                        Изменить этаж
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="structure-units">
+                                    {props.units
+                                      .filter((u) => u.floorId === f.id)
+                                      .map((u) => (
+                                        <Button
+                                          key={u.id}
+                                          onClick={() => props.onUnit(u.id)}
+                                        >
+                                          <strong>{u.number}</strong>
+                                          <span>
+                                            {u.area} м² ·{" "}
+                                            {u.tenantName || "Без арендатора"}
+                                          </span>
+                                        </Button>
+                                      ))}
+                                  </div>
+                                </section>
+                              ))}
+                          </div>
+                        </section>
+                      ))}
+                  </div>
+                </section>
               ))}
           </div>
           {!data.buildings.some((b) => b.propertyId === property) && (

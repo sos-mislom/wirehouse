@@ -1,3 +1,4 @@
+import { Disclosure } from "./ui/Disclosure";
 import type { FinancePoint } from "./shared/types";
 import { currency } from "./features/operations/shared";
 export function ForecastChart({ series }: { series: FinancePoint[] }) {
@@ -31,8 +32,7 @@ export function ForecastChart({ series }: { series: FinancePoint[] }) {
           <p className="field-hint">
             Оплачено по счетам: {currency(month.collected)}
           </p>
-          <details>
-            <summary>Из чего складывается сумма</summary>
+          <Disclosure title="Из чего складывается сумма">
             {month.details.length ? (
               <ul>
                 {month.details.map((row) => (
@@ -52,7 +52,7 @@ export function ForecastChart({ series }: { series: FinancePoint[] }) {
             ) : (
               <p>Нет действующих договоров и счетов</p>
             )}
-          </details>
+          </Disclosure>
         </section>
       ))}
       <p className="field-hint forecast-note">

@@ -1,11 +1,14 @@
+import { Disclosure } from "../../ui/Disclosure";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { ForecastChart } from "../../ForecastChart";
 import { formatCompactMoney } from "../../shared/format";
 export function BillingForecast() {
   const { overview, locale, ui } = useWorkspace();
   return (
-    <details className="workspace-disclosure billing-forecast">
-      <summary>Показать план доходов и расходов</summary>
+    <Disclosure
+      title="План доходов и расходов"
+      className="workspace-disclosure billing-forecast"
+    >
       <div className="disclosure-content">
         <div className="mvp-card-head">
           <div>
@@ -34,6 +37,6 @@ export function BillingForecast() {
         </dl>
         <ForecastChart series={overview.finance.series} />
       </div>
-    </details>
+    </Disclosure>
   );
 }

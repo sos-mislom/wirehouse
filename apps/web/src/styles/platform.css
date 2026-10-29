@@ -155,12 +155,6 @@
   padding: 16px 0;
   min-width: 0;
 }
-.audit-event summary {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  cursor: pointer;
-}
 .audit-event pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -169,28 +163,60 @@
   background: #f7f7f7;
   padding: 16px;
 }
-.structure-tree details {
-  padding: 12px 0;
+.structure-tree,
+.structure-building,
+.structure-entrance,
+.structure-floor {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
-.structure-tree details details {
-  margin-left: 24px;
+.structure-building + .structure-building {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.structure-entrances,
+.structure-floors {
+  display: grid;
+  gap: 20px;
   padding-left: 16px;
   border-left: 1px solid var(--line);
+  min-width: 0;
 }
-.structure-tree summary {
-  cursor: pointer;
+.structure-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+.structure-node-header > :is(h4, h5, h6) {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.structure-node-header > h4 {
   font-size: 16px;
 }
+.structure-node-header > h5 {
+  font-size: 15px;
+}
+.structure-node-header > h6 {
+  font-size: 14px;
+}
 .structure-units {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 12px;
-  flex-wrap: wrap;
-  margin: 12px 0;
+  min-width: 0;
 }
 .structure-units button {
   display: grid;
   text-align: left;
   gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .structure-units span {
   color: var(--ink-soft);
@@ -291,10 +317,8 @@
 .forecast-result dt {
   color: var(--ink);
 }
-.forecast-detail summary {
+.forecast-detail .work-disclosure {
   margin-top: 16px;
-  color: var(--info);
-  cursor: pointer;
 }
 .forecast-detail ul {
   list-style: none;
@@ -361,8 +385,8 @@
   .plan-canvas {
     height: 360px;
   }
-  .structure-tree details details {
-    margin-left: 8px;
+  .structure-entrances,
+  .structure-floors {
     padding-left: 8px;
   }
   .forecast-months {
@@ -372,10 +396,6 @@
     padding: 0 0 24px;
     border: 0;
     border-bottom: 1px solid var(--line);
-  }
-  .audit-event summary {
-    gap: 8px;
-    display: grid;
   }
   .act-signatures {
     display: grid;
@@ -448,13 +468,6 @@
   }
 }
 
-.maintenance-import > summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.maintenance-import[open] > summary {
-  margin-bottom: 24px;
-}
 .maintenance-import .table-scroll {
   max-width: 100%;
   overflow: auto;
@@ -472,16 +485,6 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-}
-.workspace-disclosure > summary {
-  padding: 16px 20px;
-  min-height: 52px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 16px;
-}
-.workspace-disclosure[open] > summary {
-  border-bottom: 1px solid var(--line);
 }
 .workspace-disclosure > .platform-section,
 .disclosure-content {
@@ -509,9 +512,6 @@
 @media (max-width: 760px) {
   .operations-page .operations-subnav {
     display: none;
-  }
-  .workspace-disclosure > summary {
-    padding: 16px;
   }
   .workspace-disclosure > .platform-section,
   .disclosure-content {

@@ -1,3 +1,4 @@
+import { Disclosure } from "../../ui/Disclosure";
 import type { AuditEvent } from "../../../../../packages/contracts/src/registry";
 import { permissionLabels } from "../../../../../packages/contracts/src/permissions";
 import { Button } from "../../ui";
@@ -132,11 +133,10 @@ export function AuditEventDetails({
       ) : (
         <p>Полный состав события доступен ниже.</p>
       )}
-      <details className="audit-event">
-        <summary>Все данные события</summary>
+      <Disclosure title="Все данные события" className="audit-event">
         <p>ID записи: {event.entityId}</p>
         <pre>{JSON.stringify(event.changes, null, 2)}</pre>
-      </details>
+      </Disclosure>
     </section>
   );
 }

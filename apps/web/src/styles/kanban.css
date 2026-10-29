@@ -79,18 +79,11 @@
 .preserve-lines {
   white-space: pre-wrap;
 }
-.operations-page details,
-.ticket-context details {
+.operations-page .work-disclosure,
+.ticket-context .work-disclosure {
   border-top: 1px solid #dce3e9;
   padding-top: 12px;
   margin-top: 12px;
-}
-.operations-page summary,
-.ticket-context summary,
-.unit-structure summary {
-  cursor: pointer;
-  font-weight: 600;
-  line-height: 1.6;
 }
 .operations-page select,
 .operations-page input:not([type="checkbox"]),
@@ -129,7 +122,7 @@
 .ticket-context .mvp-actions {
   flex-wrap: wrap;
 }
-.unit-structure details {
+.unit-structure .work-disclosure {
   margin: 12px 0;
 }
 .unit-map-grid {
@@ -191,7 +184,6 @@
 }
 button:focus-visible,
 select:focus-visible,
-summary:focus-visible,
 input:focus-visible {
   outline: 3px solid #3686b5;
   outline-offset: 3px;

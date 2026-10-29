@@ -910,7 +910,7 @@
 .worker-meters {
   grid-column: 1 / -1;
 }
-.worker-meters details {
+.worker-meters .work-disclosure {
   padding: 12px 0;
 }
 
@@ -1026,11 +1026,6 @@
 }
 .bot-link-panel {
   margin-top: 12px;
-}
-.bot-link-panel summary {
-  cursor: pointer;
-  font-weight: 600;
-  padding-block: 8px;
 }
 .bot-link-panel p {
   font-size: 14px;
