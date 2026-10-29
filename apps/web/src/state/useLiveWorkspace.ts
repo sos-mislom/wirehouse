@@ -202,10 +202,11 @@ export function useLiveWorkspace(m: WorkspaceModel) {
     const snapshots = paths.map((path) =>
       client.snapshot<{ items: TicketComment[] }>(token, path),
     );
-    m.setChatBusy(snapshots.some((s) => !s.data && s.loading));
-    if (snapshots.some((s) => !s.data)) return;
+    m.setChatBusy(
+      snapshots.every((s) => !s.data) && snapshots.some((s) => s.loading),
+    );
     const messages: ChatMessage[] = snapshots.flatMap((snapshot, i) =>
-      snapshot.data!.items.map((comment) => ({
+      (snapshot.data?.items ?? []).map((comment) => ({
         id: comment.id,
         ticketId: m.selectedChatTickets[i].id,
         ticketNumber: m.selectedChatTickets[i].number,

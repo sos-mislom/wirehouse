@@ -94,7 +94,7 @@ export function ManagerChat() {
           </div>
 
           <div className="mvp-chat-body">
-            {chatBusy ? (
+            {chatBusy && chatMessages.length === 0 ? (
               <div className="empty-state">{t.loading}</div>
             ) : chatMessages.length > 0 ? (
               chatMessages.map((message) => (

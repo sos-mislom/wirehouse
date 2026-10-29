@@ -32,7 +32,7 @@ export function usePagedResource<T>(
     query,
     offset,
     limit,
-    loading: resource.loading,
+    loading: resource.loading && !resource.hasData,
     error: resource.error,
     reload: () => {
       void resource.load().catch(() => {});

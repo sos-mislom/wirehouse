@@ -4,7 +4,8 @@ import { useLiveQuery } from "../../realtime/RealtimeContext";
 export function useResource<T>(token: string, path: string, initial: T) {
   const mutationPending = useRef(false);
   const query = useLiveQuery(token, path, initial);
-  const { data, loading, load } = query;
+  const { data, load } = query;
+  const loading = query.loading && !query.hasData;
   const [failure, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);

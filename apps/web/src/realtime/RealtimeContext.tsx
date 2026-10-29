@@ -82,7 +82,13 @@ export function useLiveQuery<T>(
     () => client.request<T>(token!, path, true),
     [client, token, path],
   );
-  return { ...value, data: value.data ?? initial, load, reload: load };
+  return {
+    ...value,
+    data: value.data ?? initial,
+    hasData: value.data !== undefined,
+    load,
+    reload: load,
+  };
 }
 // Variable-length query groups (chat threads) share the same cache and requests.
 export function useLiveBatch(token: string | undefined, paths: string[]) {

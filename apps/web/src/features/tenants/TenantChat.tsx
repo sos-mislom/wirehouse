@@ -88,7 +88,7 @@ export function TenantChat() {
                 )
               : chatMessages;
 
-            if (chatBusy) {
+            if (chatBusy && visibleMessages.length === 0) {
               return <div className="empty-state">{t.loading}</div>;
             }
 
