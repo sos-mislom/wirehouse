@@ -51,6 +51,10 @@ label:not(.secondary-button):has(> .ui-input--file) > span:first-child {
   align-self: end;
   justify-self: start;
 }
+:is(.form-grid, .split-grid, .business-form, .mvp-form, .inline-form)
+  > .mvp-actions {
+  align-self: end;
+}
 .business-form > fieldset {
   display: grid;
   min-width: 0;
@@ -64,6 +68,12 @@ label:not(.secondary-button):has(> .ui-input--file) > span:first-child {
   color: var(--ui-text);
   font-size: 14px;
   line-height: 20px;
+}
+@media (max-width: 1200px) {
+  :is(.form-grid, .split-grid, .business-form, .mvp-form, .inline-form)
+    > .mvp-actions {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 760px) {
   .mvp-page-header {
