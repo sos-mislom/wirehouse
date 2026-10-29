@@ -1,0 +1,78 @@
+/* One caption rhythm and one control baseline across forms and filter rows. */
+label:has(> .ui-control),
+label:not(.secondary-button):has(> .ui-input--file) {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ui-text);
+  font-size: 14px;
+  line-height: 20px;
+}
+label:has(> .ui-control) > span:first-child,
+label:not(.secondary-button):has(> .ui-input--file) > span:first-child {
+  color: inherit;
+  font: inherit;
+}
+.form-grid,
+.split-grid,
+.business-form,
+.mvp-form {
+  align-items: start;
+  gap: 16px;
+}
+.business-form,
+.mvp-form {
+  display: grid;
+}
+.form-grid > .field-hint {
+  grid-column: 1 / -1;
+}
+.form-grid > .ui-checkbox {
+  align-self: end;
+}
+.mvp-card-head > .ui-button {
+  align-self: center;
+}
+.mvp-detail-head:has(> .mvp-back) {
+  justify-content: flex-start;
+  align-items: center;
+}
+.mvp-detail-head > .mvp-back {
+  flex-shrink: 0;
+}
+.mvp-detail-head > .mvp-back + div {
+  min-width: 0;
+}
+.form-grid > .ui-button,
+.business-form > .ui-button,
+.mvp-form > .ui-button,
+.inline-form > .ui-button {
+  align-self: end;
+  justify-self: start;
+}
+.business-form > fieldset {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.business-form > fieldset > legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--ui-text);
+  font-size: 14px;
+  line-height: 20px;
+}
+@media (max-width: 760px) {
+  .mvp-page-header {
+    flex-wrap: wrap;
+  }
+  .mvp-page-header > .mvp-actions > .ui-button {
+    flex-shrink: 0;
+  }
+  label.secondary-button {
+    font-size: 16px;
+  }
+}

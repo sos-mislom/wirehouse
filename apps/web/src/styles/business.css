@@ -203,8 +203,8 @@
 }
 .disclosure-heading > .disclosure-toggle {
   flex-shrink: 0;
-  min-height: 40px;
-  padding: 8px 12px;
+  min-height: var(--ui-control-height);
+  padding: 7px 12px;
 }
 .work-disclosure.mvp-card {
   padding: 20px;
@@ -447,6 +447,14 @@
     border-bottom: 0;
   }
 }
+@media (max-width: 1200px) {
+  .billing-page .billing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .billing-page .billing-grid .mvp-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (max-width: 1100px) {
   .business-split {
     grid-template-columns: minmax(0, 1fr);
@@ -457,6 +465,9 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .billing-page .billing-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .billing-page .billing-grid .mvp-form {
     grid-template-columns: minmax(0, 1fr);
   }
   .business-stats {

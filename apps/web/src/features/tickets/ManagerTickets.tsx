@@ -7,7 +7,7 @@ import { ticketStatusOptions } from "../../projectData";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import { getSlaState, getTicketStatusLabel } from "../../shared/format";
 import { type TicketFilter } from "../../shared/types";
-import { Button, Select, Input } from "../../ui";
+import { Button, Checkbox, Select, Input } from "../../ui";
 export function ManagerTickets() {
   const [query, setQuery] = useState(""),
     [from, setFrom] = useState(""),
@@ -177,14 +177,12 @@ export function ManagerTickets() {
             ))}
           </Select>
         </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={archive}
-            onChange={(e) => setArchive(e.target.checked)}
-          />
+        <Checkbox
+          checked={archive}
+          onChange={(e) => setArchive(e.target.checked)}
+        >
           Только выполненные и архив
-        </label>
+        </Checkbox>
       </div>
       {ticketView === "board" ? (
         <div className="kanban-board">

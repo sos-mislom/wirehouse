@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { type AdminPanel, type ManagerScreen } from "../../shared/types";
 import { Button } from "../../ui";
@@ -15,6 +16,8 @@ export function ManagerFormScreen({
     managerUi,
     cancelAdminEdit,
     setManagerScreen,
+    setAdminPanel,
+    adminPanel,
   } = useWorkspace();
 
   const panel: AdminPanel =
@@ -25,6 +28,9 @@ export function ManagerFormScreen({
         : screen === "unit-add"
           ? "unit"
           : "lease";
+  useEffect(() => {
+    setAdminPanel(panel);
+  }, [panel, setAdminPanel]);
   const isEditing = Boolean(editingAdmin[panel]);
   const title = isEditing
     ? adminSaveChangesLabel
@@ -70,7 +76,13 @@ export function ManagerFormScreen({
         </div>
       </div>
 
-      <article className="mvp-card">{<AdminForm />}</article>
+      <article className="mvp-card">
+        {adminPanel === panel ? (
+          <AdminForm />
+        ) : (
+          <p role="status">Загрузка формы…</p>
+        )}
+      </article>
     </section>
   );
 }

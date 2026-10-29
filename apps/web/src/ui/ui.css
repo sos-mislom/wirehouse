@@ -8,7 +8,8 @@
   --ui-accent: #008060;
   --ui-accent-hover: #006a50;
   --ui-danger: #d70c17;
-  --ui-radius: 4px;
+  --ui-radius: 8px;
+  --ui-field-radius: 2px;
   --ui-control-height: 36px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;
@@ -54,6 +55,8 @@ body {
   padding: 7px 16px;
   border: 1px solid transparent;
   box-shadow: none;
+  font-size: 14px;
+  line-height: 20px;
 }
 .ui-button--primary {
   background: var(--ui-accent);
@@ -61,6 +64,9 @@ body {
 }
 .ui-button--primary:hover:not(:disabled) {
   background: var(--ui-accent-hover);
+}
+.ui-button--primary:active:not(:disabled) {
+  background: var(--primary-700);
 }
 .ui-button--secondary {
   background: white;
@@ -70,6 +76,10 @@ body {
 .ui-button--secondary:hover:not(:disabled) {
   background: #f0f0f0;
 }
+.ui-button--secondary:active:not(:disabled),
+.ui-button--text:active:not(:disabled) {
+  background: var(--neutral-200);
+}
 .ui-button--danger {
   background: #fee8e7;
   color: var(--ui-danger);
@@ -78,9 +88,11 @@ body {
 .ui-button--danger:hover:not(:disabled) {
   background: #fdd8d7;
 }
-.ui-button--text {
+.ui-button.ui-button--text {
   background: transparent;
   color: var(--ui-accent);
+  justify-content: flex-start;
+  text-align: left;
 }
 .ui-button--text:hover:not(:disabled) {
   background: #f0f0f0;
@@ -91,7 +103,6 @@ body {
 }
 .ui-button:focus-visible,
 .ui-control:focus-visible,
-summary:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--ui-accent);
   outline-offset: 3px;
@@ -109,7 +120,7 @@ a:focus-visible {
   color: var(--ui-text);
   background: white;
   border: 1px solid var(--ui-border-strong);
-  border-radius: var(--ui-radius);
+  border-radius: var(--ui-field-radius);
   box-shadow: none;
 }
 .ui-control:hover:not(:disabled) {
@@ -131,7 +142,9 @@ a:focus-visible {
   color: var(--ui-muted);
   cursor: not-allowed;
 }
-.ui-control[aria-invalid="true"] {
+.ui-control[aria-invalid="true"],
+.ui-control[aria-invalid="true"]:hover:not(:disabled),
+.ui-control[aria-invalid="true"]:focus {
   border-color: var(--ui-danger);
 }
 .ui-control[aria-invalid="true"]:focus {
@@ -167,6 +180,8 @@ a:focus-visible {
   border-radius: 0;
   background: transparent;
   font: inherit;
+  font-size: 14px;
+  line-height: 20px;
 }
 .ui-input--file::file-selector-button {
   min-height: var(--ui-control-height);
@@ -177,6 +192,7 @@ a:focus-visible {
   background: var(--ui-surface);
   color: var(--ui-text);
   font: inherit;
+  line-height: 20px;
   cursor: pointer;
 }
 .ui-input--file:hover:not(:disabled)::file-selector-button {
@@ -290,22 +306,31 @@ a:focus-visible {
   display: grid;
   gap: 12px;
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (pointer: coarse) {
   :root {
     --ui-control-height: 44px;
   }
   .ui-button {
     min-width: 44px;
   }
+  .ui-control {
+    font-size: 16px;
+    padding-block: 11px;
+  }
+  .ui-button:not(.ui-button--plain),
+  .ui-input--file {
+    font-size: 16px;
+  }
+  .ui-input--file::file-selector-button {
+    padding-block: 11px;
+  }
+}
+@media (max-width: 760px) {
   .ui-card {
     padding: 16px;
   }
   .ui-page-header h2 {
     font-size: 22px;
-  }
-  .ui-control {
-    font-size: 16px;
-    padding-block: 11px;
   }
 }
 @media (forced-colors: active) {
@@ -342,13 +367,15 @@ label.secondary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 10px 16px;
+  min-height: var(--ui-control-height);
+  padding: 7px 16px;
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius);
   background: white;
   color: var(--ui-text);
-  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
   cursor: pointer;
 }
 @media (max-width: 760px) {

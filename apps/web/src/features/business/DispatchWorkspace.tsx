@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { apiRequest } from "../../api/client";
-import { Button, Input, Select } from "../../ui";
+import { Button, Checkbox, Input, Select } from "../../ui";
 import { Disclosure, Feedback, useResource } from "./shared";
 import { ticketCategoryOptions } from "../../projectData";
 import type {
@@ -99,25 +99,19 @@ export function DispatchWorkspace() {
             <fieldset>
               <legend>Состав службы</legend>
               {people.map((p) => (
-                <label key={p.id}>
-                  <input
-                    type="checkbox"
-                    name="members"
-                    value={p.id}
-                    defaultChecked={team?.memberIds.includes(p.id) ?? false}
-                  />
+                <Checkbox
+                  key={p.id}
+                  name="members"
+                  value={p.id}
+                  defaultChecked={team?.memberIds.includes(p.id) ?? false}
+                >
                   {p.fullName}
-                </label>
+                </Checkbox>
               ))}
             </fieldset>
-            <label>
-              <input
-                type="checkbox"
-                name="active"
-                defaultChecked={team?.active ?? true}
-              />
+            <Checkbox name="active" defaultChecked={team?.active ?? true}>
               Служба активна
-            </label>
+            </Checkbox>
             <Button type="submit" busy={resource.busy}>
               Сохранить службу
             </Button>
@@ -188,14 +182,9 @@ export function DispatchWorkspace() {
                   ))}
               </Select>
             </label>
-            <label>
-              <input
-                type="checkbox"
-                name="active"
-                defaultChecked={rule?.active ?? true}
-              />
+            <Checkbox name="active" defaultChecked={rule?.active ?? true}>
               Маршрут активен
-            </label>
+            </Checkbox>
             <Button type="submit" busy={resource.busy}>
               Сохранить маршрут
             </Button>
