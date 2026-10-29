@@ -75,17 +75,23 @@
 }
 
 .mvp-chat-message {
-  max-width: 78%;
-  padding: 12px 14px;
+  --chat-text: var(--ink);
+  --chat-meta: var(--ink-soft);
+  display: grid;
+  gap: 8px;
+  max-width: min(78%, 70ch);
+  padding: 16px;
   border-radius: 4px;
   background: var(--primary-50);
-  color: var(--ink);
+  color: var(--chat-text);
+  overflow-wrap: anywhere;
 }
 
 .mvp-chat-message--outgoing {
+  --chat-text: var(--surface);
+  --chat-meta: var(--surface);
   align-self: flex-end;
   background: var(--primary-500);
-  color: var(--surface);
 }
 
 .mvp-chat-message strong {
@@ -93,21 +99,29 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.72;
+  color: var(--chat-meta);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
-.mvp-chat-message p {
-  margin-top: 8px;
-  color: inherit;
+.mvp-chat-body .mvp-chat-message > p {
+  margin: 0;
+  color: var(--chat-text);
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .mvp-chat-message small {
   display: block;
-  margin-top: 8px;
-  opacity: 0.7;
+  color: var(--chat-meta);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mvp-chat-message .channel-pill {
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 .channel-pill {
@@ -141,8 +155,9 @@
 }
 
 .mvp-chat-message--outgoing .channel-pill {
-  background: rgba(255, 255, 255, 0.16);
-  color: var(--surface);
+  border-color: currentColor;
+  background: transparent;
+  color: var(--chat-text);
 }
 
 .profile-logout {
