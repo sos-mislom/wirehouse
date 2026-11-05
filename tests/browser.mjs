@@ -766,7 +766,8 @@ try {
   await page.getByRole("button", { name: "Меню", exact: true }).click();
   assert.equal(
     await page
-      .getByRole("button", { name: "Закрыть", exact: true })
+      .locator(".mobile-app-bar")
+      .getByRole("button", { name: "Закрыть меню", exact: true })
       .getAttribute("aria-expanded"),
     "true",
   );
