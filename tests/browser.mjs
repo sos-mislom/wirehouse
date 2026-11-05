@@ -1124,6 +1124,7 @@ try {
     })
     .waitFor();
   await journal.getByText("journal-outbox-010", { exact: true }).waitFor();
+  await journal.locator("tbody tr").nth(11).waitFor({ state: "hidden" });
   assert.equal(await journal.locator("tbody tr").count(), 11);
   for (const width of [1440, 320]) {
     await page.setViewportSize({ width, height: 1000 });
