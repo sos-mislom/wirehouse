@@ -1,0 +1,141 @@
+{
+  "sourceRevision": "08b273609db9522b9bdef671b31394a742283932",
+  "release": "20261105-signal-pilot-08b2736",
+  "publishedAtUtc": "2026-11-05T14:48:02.134337+00:00",
+  "apiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+  "schemaVersion": 16,
+  "buildFilesVerified": 65,
+  "sourceFilesVerified": 329,
+  "directDesktopTlsGets": 67,
+  "oldAssetsPreserved": 530,
+  "currentAssets": 587,
+  "downloadsPreserved": 7,
+  "containersUnchanged": true,
+  "containerCount": 33,
+  "protectedConfigurationsUnchanged": true,
+  "configurationCount": 43,
+  "publicBrowser": {
+    "passed": true,
+    "revision": "08b273609db9522b9bdef671b31394a742283932",
+    "origin": "https://sklad-kontur.92.118.115.96.nip.io",
+    "health": {
+      "status": "ok",
+      "service": "warehouse-api",
+      "databaseBackend": "postgres",
+      "databaseSchema": "relational-v3",
+      "fileStorage": "local",
+      "volatileStore": "postgres"
+    },
+    "checks": [
+      {
+        "width": 1440,
+        "height": 1000,
+        "metrics": {
+          "width": 1440,
+          "scroll": 1440,
+          "font": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+          "fontLoaded": true,
+          "button": "rgb(21, 23, 28)"
+        },
+        "passed": true
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "metrics": {
+          "width": 390,
+          "scroll": 390,
+          "font": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+          "fontLoaded": true,
+          "button": "rgb(21, 23, 28)"
+        },
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "writes": [],
+    "failedResources": [],
+    "boundary": "Actual public TLS frontend/login and health; no login submission, production business writes or physical-device claim."
+  },
+  "fixturePaymentProof": {
+    "passed": true,
+    "fixtureInvoiceId": "43207ae5-98db-4a96-a7c7-23e1ca27db42",
+    "fixturePaymentCount": 0,
+    "allVisiblePayments": 1,
+    "explanation": "The sole existing admin-visible payment belongs to another invoice. Finance QA compared the complete GET response before and after each scenario and made no API writes."
+  },
+  "xlsxDecimals": {
+    "passed": true,
+    "files": [
+      {
+        "file": "admin-1440-closing.xlsx",
+        "bytes": 9940,
+        "sha256": "af76d012988f8e14dc7c419eba85a4d59cf63d16cee858de006ddb314d030c98",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      },
+      {
+        "file": "admin-1440-invoice.xlsx",
+        "bytes": 8379,
+        "sha256": "454a2692665ffd0d8aabd579a4669598e1af701d719b55ca2690fa46af20fff9",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      },
+      {
+        "file": "admin-320-closing.xlsx",
+        "bytes": 9940,
+        "sha256": "dcad1a2dbb36dbdbbf87974314b121fc664649c2cb32e841abdbf1725536a690",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      },
+      {
+        "file": "admin-320-invoice.xlsx",
+        "bytes": 8378,
+        "sha256": "5e6b2119a2eab660de8c87f8e7b3dde260c011ee0b1cd72d45ac4ecd213357b1",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      },
+      {
+        "file": "manager-390-closing.xlsx",
+        "bytes": 9940,
+        "sha256": "561fe0406a7a7f8dba997aa90c4780182ab7bc1a40b4c6c8f70f590f268c60fb",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      },
+      {
+        "file": "manager-390-invoice.xlsx",
+        "bytes": 8378,
+        "sha256": "53dac228634a489e2dc4aa7eea54fd790b7f05c2a5ebdf9ca067739252646e6e",
+        "expectedTotalFoundInXml": true,
+        "matchingXmlPaths": [
+          "xl/sharedStrings.xml"
+        ]
+      }
+    ],
+    "boundary": "Six actual GET XLSX files unpacked locally; XML in each retains11200.25. No production writes or payments."
+  },
+  "publicationLogIncident": {
+    "cause": "PowerShell output redirection locked the same local production-deploy.log that the helper writes after remote completion.",
+    "serverResult": "published",
+    "localReceiptRecoveredBy": "Read-only retrieval of exact original server state.json and result.json, followed by full postflight.",
+    "retry": false,
+    "secondActivation": false,
+    "databaseOrApiChanges": false
+  },
+  "helperSha256": "40f2b6021ede73b8c5be9caa5ceeb352d844907a6f866ebd04e0e22c42b98bb4",
+  "boundaries": [
+    "Static frontend only; no production business writes or new 1C runtime test.",
+    "Public browser checked login rendering and fonts at 1440/390; authenticated workflows checked on isolated demo API.",
+    "No physical-device claim."
+  ]
+}
