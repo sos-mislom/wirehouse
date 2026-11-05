@@ -962,9 +962,10 @@ try {
   // Compact data composition and business functions share the actual working screens.
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Платежи");
-  await page.getByRole("tab", { name: "Счета", exact: true }).click();
+  const billingTabs = page.getByRole("tablist", { name: "Разделы платежей", exact: true });
+  await billingTabs.getByRole("tab", { name: /^Счета(?:\s|$)/ }).click();
   assert.equal(
-    await page.getByRole("tab", { name: "Сверка", exact: true }).getAttribute("aria-selected"),
+    await billingTabs.getByRole("tab", { name: /^Сверка(?:\s|$)/ }).getAttribute("aria-selected"),
     "false",
   );
   const invoiceTableTop = await page
