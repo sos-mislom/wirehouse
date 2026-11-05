@@ -172,8 +172,11 @@ try {
     const button = nav.getByRole("button", {
       name: new RegExp("^" + label + "(?: |$)"),
     });
-    if (!(await button.isVisible()))
-      await nav.locator(".workspace-extra-toggle").click();
+    assert.equal(
+      await button.isVisible(),
+      true,
+      `Navigation ${label} is available without another disclosure`,
+    );
     await button.click();
   }
   const errors = [];
@@ -1099,7 +1102,7 @@ try {
     await page.unroute("**/api/accounting/exchange?**", failSearch);
   }
   await journalSearch.fill("");
-  await journal.getByRole("button", { name: "Фильтры", exact: true }).click();
+  await journal.getByRole("combobox", { name: "Источник", exact: true }).waitFor();
   await journal
     .getByRole("combobox", { name: "Источник", exact: true })
     .selectOption(journalSource.id);
