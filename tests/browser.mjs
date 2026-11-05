@@ -127,6 +127,8 @@ const server = http.createServer((req, res) => {
       ? "application/javascript"
       : file.endsWith(".css")
         ? "text/css"
+        : file.endsWith(".woff2")
+          ? "font/woff2"
         : "text/html",
   );
   res.end(fs.readFileSync(file));
@@ -207,8 +209,12 @@ try {
   );
   await loginPage.goto("http://127.0.0.1:5173");
   await loginPage
-    .getByRole("button", { name: "По телефону", exact: true })
+    .getByRole("tab", { name: "По телефону", exact: true })
     .click();
+  assert.equal(
+    await loginPage.getByRole("tab", { name: "По телефону", exact: true }).getAttribute("aria-selected"),
+    "true",
+  );
   assert.equal(
     await loginPage.locator(".tenant-channel").count(),
     0,
@@ -278,7 +284,7 @@ try {
     .locator(".renewal-editor .disclosure-heading h3")
     .first()
     .waitFor();
-  await page.locator(".renewal-editor .disclosure-toggle").first().click();
+  await page.getByLabel("Следующий шаг", { exact: true }).first().waitFor();
   await page
     .getByLabel("Следующий шаг", { exact: true })
     .first()
@@ -330,7 +336,7 @@ try {
     .waitFor();
   await page.locator(".mvp-table tbody tr").first().click();
   await page
-    .getByRole("heading", { name: "Арендатор", exact: true })
+    .getByRole("heading", { name: f.tenant.name, exact: true })
     .first()
     .waitFor();
   await page.getByRole("button", { name: "Изменить", exact: true }).click();
@@ -339,21 +345,15 @@ try {
     .waitFor();
   await page.getByRole("button", { name: "Отмена", exact: true }).click();
   await page
-    .getByRole("heading", { name: "Арендатор", exact: true })
+    .getByRole("heading", { name: f.tenant.name, exact: true })
     .first()
     .waitFor();
   await navigateManager("Помещения");
+  await page.locator(".workspace-context-row select").selectOption(f.property.id);
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "Планы", exact: true })
     .click();
-  await page
-    .getByRole("heading", { name: "Структура и планы", exact: true })
-    .waitFor();
-  await page.getByRole("button", { name: "Объект А", exact: true }).click();
-  await page.getByRole("button", { name: "Планы", exact: true }).click();
+  await page.locator('.plan-selection-toolbar select:not(:disabled)').waitFor();
   await page.getByRole("button", { name: "Новый план", exact: true }).click();
   const dxf = [
     "0",
@@ -377,7 +377,7 @@ try {
     "0",
     "EOF",
   ].join("\n");
-  await page.locator(".plan-upload input").setInputFiles({
+  await page.locator('input[type="file"][aria-label="Импорт DXF / изображения"]').setInputFiles({
     name: "floor.dxf",
     mimeType: "application/dxf",
     buffer: Buffer.from(dxf),
@@ -393,7 +393,7 @@ try {
   ])
     await page.locator(".plan-canvas").click({ position });
   await page
-    .getByRole("button", { name: "Замкнуть контур", exact: true })
+    .getByRole("button", { name: "Замкнуть", exact: true })
     .click();
   await page
     .getByLabel("Помещение на плане", { exact: true })
@@ -408,15 +408,11 @@ try {
   });
   await page.reload();
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "Планы", exact: true })
     .click();
-  await page.getByRole("button", { name: "Планы", exact: true }).click();
   await page
     .getByLabel("Выбор плана", { exact: true })
-    .selectOption({ label: "Новый план" });
+    .selectOption({ label: "Генплан · Новый план" });
   await page.locator(".plan-canvas polygon").waitFor();
   await page.setViewportSize({ width: 320, height: 844 });
   assert.ok(
@@ -430,7 +426,7 @@ try {
   await page
     .getByRole("heading", { name: "Эксплуатация", exact: true })
     .waitFor();
-  await page.getByRole("button", { name: "Добавить", exact: true }).click();
+  await page.getByRole("button", { name: "Добавить: Оборудование", exact: true }).click();
   await page
     .getByLabel("Название *", { exact: true })
     .fill("Тестовая вентиляция");
@@ -442,10 +438,10 @@ try {
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page.getByText("Тестовая вентиляция", { exact: true }).waitFor();
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "ППР", exact: true })
+    .getByRole("tablist", { name: "Разделы эксплуатации", exact: true })
+    .getByRole("tab", { name: "ППР", exact: true })
     .click();
-  await page.getByRole("button", { name: "Добавить", exact: true }).click();
+  await page.getByRole("button", { name: "Добавить: ППР", exact: true }).click();
   await page.getByLabel("Название *", { exact: true }).fill("Тестовое ППР");
   await page.getByLabel(/^Объект \*/).selectOption(f.property.id);
   await page.getByLabel(/^Помещение \*/).selectOption(f.unit.id);
@@ -455,10 +451,8 @@ try {
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page.getByText("Тестовое ППР", { exact: true }).waitFor();
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Импорт графика ППР$/,
-      exact: true,
-    })
+    .getByRole("tablist", { name: "ППР: представление", exact: true })
+    .getByRole("tab", { name: "Импорт", exact: true })
     .click();
   const schedule = scheduleFile(f);
   await page.getByLabel("Файл графика ППР", { exact: true }).setInputFiles({
@@ -495,7 +489,14 @@ try {
   await page
     .getByText("Загружено графиков: 1. Уже существовали: 0.", { exact: true })
     .waitFor();
+  await page.getByRole("tab", { name: "Графики", exact: true }).click();
   await page.getByText("Проверка фильтра", { exact: true }).waitFor();
+  await page.getByRole("tab", { name: "Импорт", exact: true }).click();
+  await page.getByLabel("Файл графика ППР", { exact: true }).setInputFiles({
+    name: schedule.fileName,
+    mimeType: "text/csv",
+    buffer: Buffer.from(schedule.contentBase64, "base64"),
+  });
   await page
     .getByRole("button", { name: "Проверить файл", exact: true })
     .click();
@@ -512,10 +513,10 @@ try {
   );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "Услуги", exact: true })
+    .getByRole("tablist", { name: "Разделы эксплуатации", exact: true })
+    .getByRole("tab", { name: "Услуги", exact: true })
     .click();
-  await page.getByRole("button", { name: "Материалы", exact: true }).click();
+  await page.getByRole("tab", { name: "Материалы", exact: true }).click();
   await page.getByRole("button", { name: "Добавить", exact: true }).click();
   await page.getByLabel(/^Название/).fill("Кабель ВВГ");
   await page.getByLabel(/^Объект/).selectOption(f.property.id);
@@ -523,10 +524,10 @@ try {
   await page.getByLabel(/^Цена без НДС/).fill("125.50");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page
-    .locator(".platform-row")
+    .getByRole("row")
     .getByText("Кабель ВВГ", { exact: true })
     .waitFor();
-  await page.getByRole("button", { name: "Сметы и акты", exact: true }).click();
+  await page.getByRole("tab", { name: "Сметы и акты", exact: true }).click();
   await page.getByRole("button", { name: "Новая смета", exact: true }).click();
   await page.getByLabel(/^Название/).fill("Проверка тарификации");
   await page.getByLabel(/^Объект/).selectOption(f.property.id);
@@ -539,7 +540,7 @@ try {
     .getByRole("button", { name: "Сохранить черновик", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Проверка тарификации", exact: true })
+    .getByRole("row").filter({ hasText: "Проверка тарификации" })
     .click();
   await page
     .getByRole("button", { name: "На согласование", exact: true })
@@ -717,12 +718,12 @@ try {
   );
   await page.pdf({ path: ".deploy/service-act.pdf", preferCSSPageSize: true });
   await page.emulateMedia({ media: "screen" });
-  await page.getByRole("button", { name: "Закрыть акт", exact: true }).click();
+  await page.getByRole("dialog", { name: /^Акт №/ })
+    .getByRole("button", { name: "Закрыть панель", exact: true }).click();
+  await page.getByRole("dialog", { name: "Проверка тарификации", exact: true })
+    .getByRole("button", { name: "Закрыть панель", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page
-    .getByRole("button", { name: /^Заявки/ })
-    .first()
-    .click();
+  await navigateManager("Заявки");
   await page.locator(".kanban-ticket").first().waitFor();
   await page
     .locator(".kanban-ticket select")
@@ -736,26 +737,17 @@ try {
     .getByRole("row")
     .filter({ has: page.getByText("Электрик", { exact: true }) })
     .click();
-  const workerCard = page.locator(".operation-card").filter({
-    has: page.getByRole("heading", { name: "Электрик", exact: true }),
-  });
+  const workerCard = page.getByRole("dialog", { name: "Электрик", exact: true }).locator(".operation-card");
   await workerCard.getByRole("button", { name: "Изменить" }).click();
   await page.getByLabel("Имя *", { exact: true }).fill("Электрик обновлён");
   await page.getByRole("button", { name: "Сохранить", exact: true }).click();
   await page.getByRole("heading", { name: "Электрик обновлён" }).waitFor();
+  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
   await page
     .getByRole("row")
     .filter({ has: page.getByText("Иван", { exact: true }) })
     .click();
-  const tenantCard = page
-    .locator(".operation-card")
-    .filter({ has: page.getByRole("heading", { name: "Иван", exact: true }) });
-  await tenantCard
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Подключение мессенджеров$/,
-      exact: true,
-    })
-    .click();
+  const tenantCard = page.getByRole("dialog", { name: "Иван", exact: true }).locator(".operation-card");
   await tenantCard.getByRole("button", { name: "VK", exact: true }).click();
   await tenantCard.locator(".bot-link-result code").waitFor();
   assert.match(
@@ -770,6 +762,7 @@ try {
     ),
     "No horizontal page overflow on mobile",
   );
+  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
   await page.getByRole("button", { name: "Меню", exact: true }).click();
   assert.equal(
     await page
@@ -857,10 +850,8 @@ try {
     0,
   );
   await quickNav.getByRole("button", { name: "Платежи", exact: true }).click();
+  await page.getByRole("tab", { name: "План доходов", exact: true }).click();
   const forecast = page.locator(".billing-forecast");
-  await forecast
-    .locator(":scope > .disclosure-heading > .disclosure-toggle")
-    .click();
   await forecast.locator(".forecast-summary").waitFor();
   await quickNav.getByRole("button", { name: "Главная", exact: true }).click();
   await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
@@ -902,10 +893,7 @@ try {
   await navigateManager("Помещения");
   await page.getByRole("heading", { name: "Помещения", exact: true }).waitFor();
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Структура и планы объекта$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "Структура", exact: true })
     .click();
   assert.ok(
     await page.evaluate(
@@ -923,8 +911,10 @@ try {
     createToken({ sub: tenant.id, role: "tenant" }, secret),
   );
   await tenantPage.goto("http://127.0.0.1:5173");
+  await tenantPage.locator(".personal-rental").waitFor();
+  await tenantPage.getByRole("tab", { name: "Услуги", exact: true }).click();
   await tenantPage
-    .getByRole("heading", { name: "Объявления и услуги" })
+    .getByRole("heading", { name: "Объявления", exact: true })
     .waitFor();
   await tenantPage.setViewportSize({ width: 320, height: 844 });
   assert.ok(
@@ -945,11 +935,9 @@ try {
   );
   await workerPage.goto("http://127.0.0.1:5173");
   await workerPage.getByRole("button", { name: "Меню", exact: true }).waitFor();
+  await workerPage.getByRole("tab", { name: /^Показания(?:\s|$)/ }).click();
   await workerPage
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Передать показание$/,
-      exact: true,
-    })
+    .getByRole("button", { name: "Передать показание", exact: true })
     .click();
   await workerPage
     .getByRole("combobox", { name: "Прибор", exact: true })
@@ -973,19 +961,20 @@ try {
   // Compact data composition and business functions share the actual working screens.
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Платежи");
+  await page.getByRole("tab", { name: "Счета", exact: true }).click();
   assert.equal(
-    await page.locator(".billing-reconciliation").getAttribute("open"),
-    null,
+    await page.getByRole("tab", { name: "Сверка", exact: true }).getAttribute("aria-selected"),
+    "false",
   );
   const invoiceTableTop = await page
-    .locator('.data-register[aria-label="Реестр счетов"]')
+    .locator('.data-register[aria-label="Счета арендаторов"]')
     .evaluate((e) => e.getBoundingClientRect().top);
   assert.ok(
     invoiceTableTop < 500,
     "Invoices are visible above the fold on desktop",
   );
   await page
-    .getByRole("button", { name: "Лицевые счета", exact: true })
+    .getByRole("tab", { name: "Лицевые счета", exact: true })
     .click();
   await page
     .getByRole("region", { name: "Лицевые счета", exact: true })
@@ -1019,20 +1008,12 @@ try {
     path: ".deploy/business-desktop-accounts.png",
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Источники учета и обмен$/,
-      exact: true,
-    })
-    .click();
-  await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Журнал обмена$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "Журнал обмена", exact: true })
     .click();
   const journal = page.getByRole("region", { name: "Сообщения", exact: true });
-  const journalSearch = journal.getByRole("textbox", {
+  const journalSearch = journal.getByRole("searchbox", {
     name: "Поиск: Сообщения",
     exact: true,
   });
@@ -1156,8 +1137,8 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Пользователи");
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "Аудит", exact: true })
+    .getByRole("tablist", { name: "Пользователи и доступ", exact: true })
+    .getByRole("tab", { name: "Аудит", exact: true })
     .click();
   const auditRegister = page.getByRole("region", {
     name: "Аудит изменений",
@@ -1165,7 +1146,7 @@ try {
   });
   await auditRegister.locator("tbody tr").first().waitFor();
   await auditRegister
-    .getByRole("textbox", { name: "Поиск: Аудит изменений", exact: true })
+    .getByRole("searchbox", { name: "Поиск: Аудит изменений", exact: true })
     .fill(f.worker.id);
   await auditRegister.locator("tbody tr").first().waitFor();
   await auditRegister
@@ -1209,8 +1190,8 @@ try {
     true,
   );
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "Доступ", exact: true })
+    .getByRole("tablist", { name: "Пользователи и доступ", exact: true })
+    .getByRole("tab", { name: "Доступ", exact: true })
     .click();
   await page.getByRole("heading", { name: /^Контекстные права/ }).waitFor();
   await page
@@ -1337,10 +1318,10 @@ try {
   });
   await navigateManager("Эксплуатация");
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "Счётчики", exact: true })
+    .getByRole("tablist", { name: "Разделы эксплуатации", exact: true })
+    .getByRole("tab", { name: "Счётчики", exact: true })
     .click();
-  await page.getByRole("button", { name: "Показания", exact: true }).click();
+  await page.getByRole("tab", { name: "Показания", exact: true }).click();
   await page
     .getByRole("region", { name: "Показания", exact: true })
     .getByRole("row")
@@ -1368,15 +1349,13 @@ try {
     path: ".deploy/business-desktop-readings.png",
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
   await page
-    .locator(".operations-nav")
-    .getByRole("button", { name: "ППР", exact: true })
+    .getByRole("tablist", { name: "Разделы эксплуатации", exact: true })
+    .getByRole("tab", { name: "ППР", exact: true })
     .click();
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Исполнение ППР: план, факт и переносы$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "План и факт", exact: true })
     .click();
   await page
     .getByRole("region", { name: "Задания ППР", exact: true })
@@ -1400,10 +1379,7 @@ try {
     .waitFor();
   await navigateManager("Объекты");
   await page
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Реестр документов$/,
-      exact: true,
-    })
+    .getByRole("tab", { name: "Документы", exact: true })
     .click();
   const documentRegister = page.getByRole("region", {
     name: "Документы",
@@ -1418,32 +1394,30 @@ try {
     path: ".deploy/business-desktop-documents.png",
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Закрыть панель", exact: true }).click();
   for (const width of [390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     for (const name of ["Платежи", "Пользователи", "Эксплуатация", "Объекты"]) {
       await navigateManager(name);
       if (name === "Платежи")
         await page
-          .getByRole("button", { name: "Лицевые счета", exact: true })
+          .getByRole("tab", { name: "Лицевые счета", exact: true })
           .click();
       if (name === "Пользователи")
         await page
-          .getByRole("combobox", { name: "Раздел", exact: true })
-          .selectOption("access");
+          .getByRole("tab", { name: "Доступ", exact: true })
+          .click();
       if (name === "Эксплуатация") {
         await page
-          .getByRole("combobox", { name: "Раздел", exact: true })
-          .selectOption("meters");
+          .getByRole("tab", { name: "Счётчики", exact: true })
+          .click();
         await page
-          .getByRole("button", { name: "Показания", exact: true })
+          .getByRole("tab", { name: "Показания", exact: true })
           .click();
       }
       if (name === "Объекты")
         await page
-          .getByRole("button", {
-            name: /^(?:Показать|Скрыть) Реестр документов$/,
-            exact: true,
-          })
+          .getByRole("tab", { name: "Документы", exact: true })
           .click();
       await page.waitForTimeout(100);
       assert.ok(
@@ -1476,7 +1450,7 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await navigateManager("Платежи");
   await page
-    .getByRole("button", { name: "Лицевые счета", exact: true })
+    .getByRole("tab", { name: "Лицевые счета", exact: true })
     .click();
   const denseRegister = page.getByRole("region", {
     name: "Лицевые счета",
@@ -1498,7 +1472,7 @@ try {
   await denseRegister.getByText("ЛС-ТЕСТ-010", { exact: true }).waitFor();
   assert.equal(await denseRegister.locator("tbody tr").count(), 10);
   await denseRegister
-    .getByRole("textbox", { name: "Поиск: Лицевые счета", exact: true })
+    .getByRole("searchbox", { name: "Поиск: Лицевые счета", exact: true })
     .fill("ЛС-ТЕСТ-079");
   await denseRegister.getByText("ЛС-ТЕСТ-079", { exact: true }).waitFor();
   assert.equal(
@@ -1507,7 +1481,7 @@ try {
     "Search includes records from all pages",
   );
   await denseRegister
-    .getByRole("textbox", { name: "Поиск: Лицевые счета", exact: true })
+    .getByRole("searchbox", { name: "Поиск: Лицевые счета", exact: true })
     .fill("");
   await denseRegister.getByText("ЛС-ТЕСТ-000", { exact: true }).waitFor();
   for (const width of [1440, 320]) {
@@ -1549,21 +1523,11 @@ try {
   await ticketSearch.fill("does-not-exist-wh-20261028");
   assert.equal(await page.locator(".kanban-ticket").count(), 0);
   await ticketSearch.fill("");
-  const dispatchPanel = page.locator(".work-disclosure").filter({
-    has: page.getByRole("heading", {
-      name: "Службы и маршруты приемки",
-      exact: true,
-    }),
-  });
-  await dispatchPanel
-    .locator(":scope > .disclosure-heading > .disclosure-toggle")
-    .click();
-  await dispatchPanel
+  await page.getByRole("tab", { name: "Службы и маршруты", exact: true }).click();
+  await page
     .getByRole("heading", { name: "Служба исполнителей", exact: true })
     .waitFor();
-  await dispatchPanel
-    .locator(":scope > .disclosure-heading > .disclosure-toggle")
-    .click();
+  await page.getByRole("tab", { name: /^Заявки(?:\s|$)/ }).click();
   await page
     .getByRole("group", { name: "Вид заявок" })
     .getByRole("button", { name: "Канбан", exact: true })
@@ -1574,13 +1538,8 @@ try {
     .getByRole("button")
     .first()
     .click();
-  const termsPanel = page.locator(".ticket-workflow");
-  await termsPanel
-    .getByRole("button", {
-      name: /^(?:Показать|Скрыть) Условия работы$/,
-      exact: true,
-    })
-    .click();
+  await page.getByRole("tab", { name: "Условия", exact: true }).click();
+  const termsPanel = page.locator(".ticket-conditions-panel .ticket-workflow");
   const paidToggle = termsPanel.getByRole("checkbox", {
     name: "Платная работа",
     exact: true,
@@ -1638,10 +1597,12 @@ try {
     201,
     await liveCommentResponse.text(),
   );
+  await page.getByRole("tab", { name: /^Обсуждение(?:\s|$)/ }).click();
   await page
     .locator(".comment-card")
     .getByText(liveComment, { exact: true })
     .waitFor();
+  await page.getByRole("tab", { name: "Условия", exact: true }).click();
   assert.equal(
     await amountField.inputValue(),
     "100",
@@ -1748,23 +1709,26 @@ try {
     .getByRole("button", { name: /^Заявки(?: |$)/ })
     .click();
   await tenantPage
-    .locator(".ticket-card")
+    .getByRole("region", { name: "Мои заявки", exact: true })
+    .getByRole("row")
     .filter({ hasText: "Приемка работы с фотографиями" })
     .click();
-  const proofPanel = tenantPage.locator(".ticket-workflow");
+  const proofPanel = tenantPage.locator(".ticket-work-main .ticket-workflow");
   await proofPanel
     .getByRole("button", { name: "Принять результат", exact: true })
     .waitFor();
   for (const width of [1440, 320]) {
     await tenantPage.setViewportSize({ width, height: 900 });
-    await proofPanel
-      .getByRole("button", { name: "До работ.jpg", exact: true })
+    await tenantPage.getByRole("tab", { name: /^Фото(?:\s|$)/ }).click();
+    const photosPanel = tenantPage.locator(".ticket-files-panel .ticket-workflow");
+    await photosPanel
+      .getByRole("button", { name: "Скачать До работ.jpg", exact: true })
       .waitFor();
-    await proofPanel
-      .getByRole("button", { name: "Результат работ.jpg", exact: true })
+    await photosPanel
+      .getByRole("button", { name: "Скачать Результат работ.jpg", exact: true })
       .waitFor();
     assert.equal(
-      await proofPanel.locator('input[type="file"]').count(),
+      await photosPanel.locator('input[type="file"]').count(),
       0,
       "Acceptance does not grant evidence upload rights",
     );
@@ -1776,32 +1740,32 @@ try {
     );
     if (process.env.WORKFLOW_SCREENSHOTS) {
       fs.mkdirSync("output/playwright", { recursive: true });
-      await proofPanel.screenshot({
+      await photosPanel.screenshot({
         path: `output/playwright/work-acceptance-${width}.png`,
       });
     }
   }
   const proofDownload = tenantPage.waitForEvent("download");
-  await proofPanel
-    .getByRole("button", { name: "Результат работ.jpg", exact: true })
+  await tenantPage.locator(".ticket-files-panel .ticket-workflow")
+    .getByRole("button", { name: "Скачать Результат работ.jpg", exact: true })
     .click();
   assert.equal(
     (await proofDownload).suggestedFilename(),
     "Результат работ.jpg",
   );
+  await tenantPage.getByRole("tab", { name: "Работа", exact: true }).click();
   await proofPanel
     .getByRole("button", { name: "Принять результат", exact: true })
     .click();
   await proofPanel
     .getByRole("heading", { name: "Результат принят", exact: true })
     .waitFor();
-  await proofPanel
-    .getByRole("button", { name: /^Показать Фотографии работ/ })
-    .click();
-  await proofPanel
-    .getByRole("button", { name: "Результат работ.jpg", exact: true })
+  await tenantPage.getByRole("tab", { name: /^Фото(?:\s|$)/ }).click();
+  await tenantPage.locator(".ticket-files-panel .ticket-workflow")
+    .getByRole("button", { name: "Скачать Результат работ.jpg", exact: true })
     .waitFor();
   // Drop one notification, then reconnect without reloading the document.
+  await page.getByRole("tab", { name: /^Обсуждение(?:\s|$)/ }).click();
   const reconnectDraft = "Черновик сохраняется при восстановлении соединения";
   const commentDraft = page.locator('.comment-form textarea[name="content"]');
   await commentDraft.fill(reconnectDraft);
