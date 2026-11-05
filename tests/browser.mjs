@@ -1351,7 +1351,8 @@ try {
   await page
     .getByRole("button", { name: "Сохранить решение", exact: true })
     .click();
-  await page.getByText("Решение сохранено", { exact: true }).waitFor();
+  await page.getByRole("dialog", { name: "Счётчик исполнителя", exact: true })
+    .getByText("Решение сохранено", { exact: true }).waitFor();
   await capture(page, {
     path: ".deploy/business-desktop-readings.png",
     fullPage: true,
