@@ -1,0 +1,93 @@
+{
+  "sourceRevision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+  "release": "20261105-main-2ad17b8",
+  "publishedAtUtc": "2026-11-05T15:46:16.607623+00:00",
+  "origin": "https://sklad-kontur.92.118.115.96.nip.io",
+  "apiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+  "databaseSchemaVersion": 16,
+  "sourceFilesVerified": 329,
+  "buildFilesVerified": 65,
+  "archiveSha256": "aee1a05d5235974da8d725b8fe6c3cdfa08719ca4fdcac96f9635e78c4761dc2",
+  "evidencePath": "docs/ux-2026-11-05/signal-pilot/verification.json",
+  "evidenceSha256": "80ba8f739424d01c67e56da0311552670b80513c411b434f760c91397e51aafd",
+  "applicationMatchesPreviouslyTestedAndPublishedBuild": true,
+  "ci": {
+    "branch": "main",
+    "revision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+    "conclusion": "success",
+    "runId": 42057131074,
+    "url": "https://github.com/sos-mislom/wirehouse/actions/runs/42057131074"
+  },
+  "currentAssets": 587,
+  "previousAssetsPreserved": 587,
+  "downloadsPreserved": 7,
+  "directDesktopTlsGets": 67,
+  "containersUnchanged": true,
+  "containerCount": 33,
+  "protectedConfigurationFilesUnchanged": true,
+  "protectedConfigurationFileCount": 43,
+  "publicBrowser": {
+    "passed": true,
+    "revision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+    "origin": "https://sklad-kontur.92.118.115.96.nip.io",
+    "health": {
+      "status": "ok",
+      "service": "warehouse-api",
+      "databaseBackend": "postgres",
+      "databaseSchema": "relational-v3",
+      "fileStorage": "local",
+      "volatileStore": "postgres"
+    },
+    "checks": [
+      {
+        "width": 1440,
+        "height": 1000,
+        "metrics": {
+          "width": 1440,
+          "scroll": 1440,
+          "font": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+          "fontLoaded": true,
+          "button": "rgb(21, 23, 28)"
+        },
+        "passed": true
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "metrics": {
+          "width": 390,
+          "scroll": 390,
+          "font": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+          "fontLoaded": true,
+          "button": "rgb(21, 23, 28)"
+        },
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "writes": [],
+    "failedResources": [],
+    "boundary": "Actual public TLS frontend/login and health; no login submission, production business writes or physical-device claim."
+  },
+  "freshBaselineReview": {
+    "result": "GO for fresh baseline after independent historical comparison",
+    "stableKeys": {
+      "apiRevision": true,
+      "apiImageId": true,
+      "databaseMigrations": true,
+      "protectedFiles": true,
+      "downloads": true
+    },
+    "publishedAssetsExact": 587,
+    "changedForeignContainers": [
+      "sloppy-prod-api-1",
+      "sloppy-prod-worker-1"
+    ],
+    "allOtherContainerDetailsExact": true,
+    "productionMutationsPerformed": false
+  },
+  "helperSha256": "372f00150a3d94c411febaf92bad2b2dbfa107032b6cb048fa42e8293d4b4505",
+  "productionApiRestarted": false,
+  "databaseMigrationsApplied": false,
+  "businessDataChanged": false
+}
