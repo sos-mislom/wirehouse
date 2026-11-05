@@ -1,0 +1,82 @@
+{
+  "testedRevision": "63b3b460680f19ffd83d57d9164fbcd88e39f5e2",
+  "branch": "main",
+  "checks": {"application":{"pass":90,"fail":0,"skip":0},"postgres":{"pass":26,"fail":0,"skip":0},"fullBrowser":"PASS"},
+  "runId": 42056317256,
+  "jobId": 127345544579,
+  "url": "https://github.com/sos-mislom/wirehouse/actions/runs/42056317256",
+  "status": "completed",
+  "conclusion": "success",
+  "startedAt": "2026-11-05T15:34:20Z",
+  "completedAt": "2026-11-05T15:36:28Z",
+  "steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Initialize containers",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run actions/setup-node@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run npm ci --ignore-scripts",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run npm run check",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run npm run test:postgres",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run npx playwright install --with-deps chromium",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run npm run test:browser",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/setup-node@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Run actions/checkout@v4",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Stop containers",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "publishedApplicationRevision": "08b273609db9522b9bdef671b31394a742283932",
+  "applicationSourcesUnchangedSincePublication": true,
+  "scope": "Full GitHub workflow on exact main test source, including npm run check, PostgreSQL and the entire browser journey. Production frontend was not rebuilt or activated again."
+}
