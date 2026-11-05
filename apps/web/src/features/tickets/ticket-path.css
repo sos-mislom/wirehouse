@@ -157,7 +157,7 @@
   color: var(--neutral-700);
 }
 .ticket-path__sla[data-tone="warning"] {
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 .ticket-path__sla[data-tone="critical"] {
   color: var(--danger);

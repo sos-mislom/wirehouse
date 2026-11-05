@@ -41,7 +41,7 @@ const when = (iso: string) =>
 /**
  * Путь одной заявки: станции с датами из истории статусов.
  * При открытии линия прорисовывается до текущей станции (один раз).
- * Паузы — ветка от «В работе», отмена обрывает линию.
+ * Паузы — ветка от последней станции, отмена обрывает линию.
  */
 export function TicketPath({
   ticket,
@@ -67,16 +67,14 @@ export function TicketPath({
 
   const rejected = ticket.status === "rejected";
   const paused = PAUSES.includes(ticket.status);
-  // Текущая станция: по статусу; для паузы и отмены — последняя пройденная.
-  const lastReached = reachedAt.reduce<number>(
-    (last, time, index) => (time ? index : last),
-    0,
-  );
-  const current = paused
-    ? Math.max(2, lastReached)
-    : rejected
-      ? lastReached
-      : Math.max(stepOf(ticket.status), 0);
+  // После возврата в работу берём последнюю станцию по времени,
+  // а не самую дальнюю из когда-либо достигнутых.
+  const lastStatus = [...events]
+    .reverse()
+    .find((event) => event.toStatus && stepOf(event.toStatus) >= 0)?.toStatus;
+  const current = paused || rejected
+    ? Math.max(stepOf(lastStatus ?? "new"), 0)
+    : Math.max(stepOf(ticket.status), 0);
   const finished = ticket.status === "closed";
   const overdue = slaState(ticket).state === "overdue";
   const sla = getSlaState(ticket as Parameters<typeof getSlaState>[0], locale);

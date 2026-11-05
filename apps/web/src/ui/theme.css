@@ -302,7 +302,7 @@ a:focus-visible {
 }
 .status-pill--in_progress,
 .status-pill--accepted {
-  color: var(--line-500);
+  color: var(--line-600);
 }
 .status-pill--in_progress::before {
   background: currentColor;
@@ -338,13 +338,13 @@ a:focus-visible {
   background: currentColor;
 }
 .ui-badge--warning {
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 .ui-badge--danger {
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 .ui-badge--info {
-  color: var(--link);
+  color: var(--link-hover);
 }
 
 /* Канбан заявок: колонка — станция пути; занятая колонка — графитовая. */

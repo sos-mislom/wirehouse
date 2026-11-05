@@ -11,11 +11,14 @@ colors:
   graphite-pressed: "#0b0c0e"
   graphite-wash: "#f2f3f5"
   route-green: "#0a8f4b"
+  route-green-ink: "#08773e"
   route-green-wash: "#e4f4ea"
   signal-red: "#e4202e"
+  signal-red-ink: "#c21b27"
   signal-red-wash: "#fdecee"
   signal-red-line: "#f5b3ae"
   deadline-amber: "#b86e00"
+  deadline-amber-ink: "#955900"
   link-blue: "#2b6fd0"
   link-blue-hover: "#1f58ab"
   link-blue-wash: "#eaf2fc"
@@ -206,7 +209,7 @@ components:
 
 ### Tertiary
 - **Сигнальный красный** (`signal-red`): станция с просрочкой, факт «просрочено», «без исполнителя» в строке, срочная метка, опасная кнопка (на `signal-red-wash` с рамкой `signal-red-line`).
-- **Янтарь срока** (`deadline-amber`): срок, который скоро истечёт; только в колонке срока.
+- **Янтарь срока** (`deadline-amber`): срок, который скоро истечёт; только в колонке срока. Мелкий текст использует `deadline-amber-ink`, зелёный статус — `route-green-ink`, красный — `signal-red-ink`; фоны и декоративные линии сохраняют исходные цвета. Это сохраняет контраст текста не ниже 4,5:1 на белом и светлых статусных фонах.
 - **Синий ссылки** (`link-blue`): ссылки и текстовые кнопки-действия; наведение на текстовую кнопку — `link-blue-wash`.
 
 ### Neutral

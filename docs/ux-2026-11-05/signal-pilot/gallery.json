@@ -1,0 +1,30 @@
+{
+  "login-1440.png": {
+    "sha256": "4432f1876d249f204114f8aa771ed1b9da2abf469021c3082422386ddc3e4db5",
+    "bytes": 201197
+  },
+  "dashboard-1440.png": {
+    "sha256": "670bd5fd396bf5cf3dd77c32653c4b1492ee4dbd2a38365547c0291874705364",
+    "bytes": 234081
+  },
+  "dashboard-390.png": {
+    "sha256": "ea256803b9a3d9734453b03690565153b659e34ba3fd93db1eeb880c27bfd254",
+    "bytes": 66958
+  },
+  "units-1440.png": {
+    "sha256": "d3cba6132728ca1e7b7f850e12558ceb4e8411e2cd211c4bd80c259a9479693a",
+    "bytes": 73660
+  },
+  "leases-1440.png": {
+    "sha256": "a9e7163c67dbf04e93461ecdfed47bc94241c28f62bec3b9a233dc81a32f8037",
+    "bytes": 84640
+  },
+  "worker-390.png": {
+    "sha256": "97f5b8ae072f97fc8cc6cf0b482ef209ce098bad7ea216208454f2e608c08d6d",
+    "bytes": 45555
+  },
+  "tenant-dialog-390.png": {
+    "sha256": "1e2eb7da2888ebbdb06e3f02a481bdad2b63cc08e3a9cb7f94965d90c0457e3b",
+    "bytes": 51819
+  }
+}

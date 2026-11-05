@@ -196,7 +196,7 @@
   white-space: nowrap;
 }
 .dashboard-workspace .dash-leases__when small {
-  color: var(--warning);
+  color: var(--warning-ink);
   font-weight: 600;
 }
 
@@ -299,7 +299,7 @@
   font-variant-numeric: tabular-nums;
 }
 .dashboard-page.dashboard-workspace .dashboard-ticket-sla[data-tone="warning"] {
-  color: var(--warning);
+  color: var(--warning-ink);
   font-weight: 600;
 }
 .dashboard-page.dashboard-workspace .dashboard-ticket-sla[data-tone="critical"] {

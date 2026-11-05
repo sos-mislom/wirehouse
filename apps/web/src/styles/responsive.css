@@ -890,12 +890,12 @@
 }
 .status-pill--warning {
   background: #fff1d9;
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 .status-pill--critical,
 .status-pill--danger {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 @media (prefers-reduced-motion: reduce) {
   *,

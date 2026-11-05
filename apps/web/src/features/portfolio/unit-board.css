@@ -165,11 +165,13 @@
   gap: 8px;
 }
 .unit-bay__number {
+  min-width: 0;
   font-size: 22px;
   line-height: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 .unit-bay__tickets {
   display: grid;
@@ -214,7 +216,7 @@
   font-variant-numeric: tabular-nums;
 }
 .unit-bay__lease[data-expiring] {
-  color: var(--warning);
+  color: var(--warning-ink);
   font-weight: 600;
 }
 

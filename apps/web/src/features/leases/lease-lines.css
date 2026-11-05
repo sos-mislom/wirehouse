@@ -76,6 +76,7 @@
   font-size: 12px;
   color: var(--neutral-600);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 .lease-line__track {
@@ -185,7 +186,7 @@
   border-color: var(--warning);
 }
 .lease-line[data-state="expiring"] .lease-line__end small {
-  color: var(--warning);
+  color: var(--warning-ink);
   font-weight: 600;
 }
 .lease-line[data-state="expired"] .lease-line__stop--end {

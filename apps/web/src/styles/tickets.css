@@ -158,12 +158,12 @@
 
 .attachment-card--image .attachment-preview {
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--line-600);
 }
 
 .attachment-card--video .attachment-preview {
   background: var(--warning-soft);
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 
 .ticket-ops {
@@ -228,7 +228,7 @@
 .status-pill--overdue,
 .status-pill--maintenance {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 
 .priority-pill--medium,
@@ -238,7 +238,7 @@
 .status-pill--waiting_tenant,
 .status-pill--prolongation {
   background: var(--warning-soft);
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 
 .priority-pill--low,
@@ -249,7 +249,7 @@
 .status-pill--scheduled,
 .status-pill--info {
   background: var(--info-soft);
-  color: var(--info);
+  color: var(--link-hover);
 }
 
 .status-pill--in_progress,
@@ -262,7 +262,7 @@
 .status-pill--completed,
 .status-pill--resolved {
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--line-600);
 }
 
 .status-pill--rejected,

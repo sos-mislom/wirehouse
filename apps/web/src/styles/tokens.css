@@ -48,9 +48,11 @@
   --success-soft:  #e4f4ea;
   --success-line:  #9fd8bf;
   --warning:       #b86e00;
+  --warning-ink:   #955900;
   --warning-soft:  #fff1db;
   --warning-line:  #ffd08a;
   --danger:        #e4202e;
+  --danger-ink:    #c21b27;
   --danger-soft:   #fdecee;
   --danger-line:   #f5b3ae;
   --info:          #2b6fd0;

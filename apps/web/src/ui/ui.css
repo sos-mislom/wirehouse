@@ -288,7 +288,7 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 .ui-alert--error {
-  color: var(--danger);
+  color: var(--danger-ink);
   background: var(--danger-soft);
   border-color: var(--danger-line);
 }
@@ -320,11 +320,11 @@ a:focus-visible {
 }
 .ui-badge--warning {
   background: var(--warning-soft);
-  color: var(--warning);
+  color: var(--warning-ink);
 }
 .ui-badge--danger {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 .ui-badge--info {
   background: var(--info-soft);

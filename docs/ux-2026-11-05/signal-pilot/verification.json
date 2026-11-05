@@ -1,0 +1,2049 @@
+{
+  "change": "Adopt the Линия метро design from klis192/pp_design_v1 design/signal-pilot, preserving Wirehouse behavior and existing production API",
+  "referenceRepository": "https://github.com/klis192/pp_design_v1/tree/design/signal-pilot",
+  "referenceCommit": "066fc05",
+  "baseCommit": "c3aff435f2946747afed279c02dc54fb300e96f7",
+  "apiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+  "apiContractsIntegrationsUnchanged": true,
+  "databaseSchemaVersion": 16,
+  "distIndexSha256": "5ff710a44976afc61597dc6066e28d451c2d52ff371655cbd4d81b096971d46e",
+  "distFiles": {
+    "assets/AccountingWorkspace-KBKQFEjw.js": {
+      "bytes": 16288,
+      "sha256": "d6327fc8a12afe29089d38efe29f7d59b34c1f0815ab3664989a65cbebcdfe14"
+    },
+    "assets/Admin-DV1R5c4N.js": {
+      "bytes": 5130,
+      "sha256": "cd685b23b19d02013a993e657c830f70452cb8849bd26c604fd7ad476a2fc67c"
+    },
+    "assets/DocumentRegistry-DGJspf_I.js": {
+      "bytes": 5256,
+      "sha256": "bda1baafac72423eb99ee42f83c24bdbf0557f8568cd2af44420f52be2ab8c1e"
+    },
+    "assets/FilterBar-BFaOC7Qt.js": {
+      "bytes": 2002,
+      "sha256": "5e0915dadf5ef32617f302656c775137e1f677a0f44790ea833e1ab20323846a"
+    },
+    "assets/index-CuP_55cQ.js": {
+      "bytes": 241175,
+      "sha256": "bd7b0eff59aac752597e32752c5ea9669fbd217f5bf748edc80220c9a3d1640e"
+    },
+    "assets/index-CVRYZW1W.css": {
+      "bytes": 120162,
+      "sha256": "7e45a7baa38a1d94871e68fc94cc57ecd1854b3d540fcc0116dd51d8f68f9fec"
+    },
+    "assets/iso-CyLnQ4BE.js": {
+      "bytes": 85134,
+      "sha256": "e2a102a2c55dc00520d5406f3b044e5c1898c0dec56b922d8e3df2429c06f870"
+    },
+    "assets/Leases-BMlxBkO3.js": {
+      "bytes": 10690,
+      "sha256": "e35bbcdde9d5e3ed7b5cdfe64cbfc4b6107879773703491e7994a4c398354e9c"
+    },
+    "assets/management-mobile-CJnUIK1A.css": {
+      "bytes": 1036,
+      "sha256": "8e8c7f51abca6b3e625c1bbbcc79101c5ac16721b3f4859d578e68a1906e4fa6"
+    },
+    "assets/ManagerBilling-BmiiXv6I.js": {
+      "bytes": 14369,
+      "sha256": "5c5da71fd02d74e6a30553691eeded13ab38495658cb287197d639cb205d6ce0"
+    },
+    "assets/ManagerBilling-BxM9aNe_.css": {
+      "bytes": 4041,
+      "sha256": "19d9d4678a7845002dace6fcb919d4dee79bddb8ec83e5add197f94bfb814373"
+    },
+    "assets/ManagerChat-BlJlHpHd.js": {
+      "bytes": 3264,
+      "sha256": "a595f52bb8350025b74b73930e59c9d6e21292a32d0a25c462ce072a1bb41d38"
+    },
+    "assets/ManagerChat-CVECjooc.css": {
+      "bytes": 2769,
+      "sha256": "ea19aa9fcc0d19df421241c63d1e6a4c451042dd1b8e08c2ec8872406331d733"
+    },
+    "assets/ManagerDashboard-D_7SxeD_.js": {
+      "bytes": 10056,
+      "sha256": "06733f8e943ba4c64a3b8a30f0122b270234eb360c36dae44044d890026d1b9a"
+    },
+    "assets/ManagerDashboard-sFejysHM.css": {
+      "bytes": 9614,
+      "sha256": "0f31f0ca0dc851c1569207c2fff685a9541a8f15cf63fd650a6b4cb7111e499f"
+    },
+    "assets/ManagerImport-WdDLuP-S.js": {
+      "bytes": 10348,
+      "sha256": "499ecdb1e4f9e75c993fc5061fc025e1da51e74cf056fb45d6dd2393c177b969"
+    },
+    "assets/ManagerLeases-C2n-jBng.css": {
+      "bytes": 4336,
+      "sha256": "eac1e6a7f64f1db7bd18d429424e97ef8789692d191b86e17f3dfe2bfe464e50"
+    },
+    "assets/ManagerLeases-UOB4Etn-.js": {
+      "bytes": 8455,
+      "sha256": "d1081676bce8cee9f60fa1f500b98981cd07174d4cc4360aa90fb07707c70745"
+    },
+    "assets/ManagerNotifications-DCt6HF-N.js": {
+      "bytes": 1379,
+      "sha256": "41e1cfb852eb706d100b72c3cfb7b583eb5ae66826ae462dd3ab090f8fa355c9"
+    },
+    "assets/ManagerObjectLaunch-B5sKvlFb.js": {
+      "bytes": 5823,
+      "sha256": "cb4c06128e8bbbad697bd88c70cb0240519c02895566be60b2f4fa4c5348ff3f"
+    },
+    "assets/ManagerObjects-ZyCGqOFY.js": {
+      "bytes": 5017,
+      "sha256": "fa62d28a4790d0088759dfa42c1e76f1dff0db2795092ebfb27a716cf7cdc1ab"
+    },
+    "assets/ManagerProfile-DHKwuoVR.js": {
+      "bytes": 4916,
+      "sha256": "2f13bfcc57454baa5cb5786bde141d1ff8921691802054def48bd90429c4add2"
+    },
+    "assets/ManagerStaff-Bg6kUoam.js": {
+      "bytes": 427,
+      "sha256": "70bf5acc89a2479f11aa7fe61a8f55f54ed2bc2d037e028188f86c52fd6406f2"
+    },
+    "assets/ManagerStaffCreate-TQ7ExnoT.js": {
+      "bytes": 2581,
+      "sha256": "7016bbe205631ef7a262a4eb003479718af1bd583c4bb623d47f74c99c301af6"
+    },
+    "assets/ManagerTenantDetail-BCs3nzPb.js": {
+      "bytes": 13197,
+      "sha256": "e9fe7abca6152b281ed48336f49fb9a674d5e49901a260ed51f4d20347b8d469"
+    },
+    "assets/ManagerTenants-Bb9xzJRM.js": {
+      "bytes": 3292,
+      "sha256": "1699eebacd642f910c0ca7cb0758a44eafc76710fa952f4313441b6c81f001fc"
+    },
+    "assets/ManagerTicketCreate-Cb5vBcLO.js": {
+      "bytes": 1010,
+      "sha256": "11e4ffa8158077f6930688eb45baaaeaeda2e94f11a11dc9ebf0078ed62b2412"
+    },
+    "assets/ManagerTicketDetail-C-d5tQSs.css": {
+      "bytes": 9716,
+      "sha256": "6f77d35d03282f27913ea19d13bf108ebd993c5668d58b2694482ff305ee82aa"
+    },
+    "assets/ManagerTicketDetail-Z-ftv-em.js": {
+      "bytes": 34943,
+      "sha256": "a002a014db3bca5dbefa74097754f0c5810ce1528afe57f8289445fc0a418ff8"
+    },
+    "assets/ManagerTickets-Bhf12Qj0.js": {
+      "bytes": 13110,
+      "sha256": "b8d0615b1ea2e14bc1b66ced31474d9e2215c8144c0024a220fc6f990d936a5b"
+    },
+    "assets/ManagerUnitDetail-6DmQjCDI.js": {
+      "bytes": 7125,
+      "sha256": "0a7f65ba8d308528ffb24d5eae0d9f54004616adc27c983d398b4f59c09edd2a"
+    },
+    "assets/ManagerUnits-CD7nsFOM.js": {
+      "bytes": 8853,
+      "sha256": "cff4c8b39a7a7ef2d7be9557b07f8e3033b456cb99f57ac1c9c9f226df4c34a4"
+    },
+    "assets/ManagerUnits-DzOHgRSq.css": {
+      "bytes": 3934,
+      "sha256": "8da8ba44e486727b9edaf37d3c05ac1937353c6841c3b2e97304b515afa6811d"
+    },
+    "assets/onest-cyrillic-ext-wght-normal-DOFToQv1.woff2": {
+      "bytes": 10540,
+      "sha256": "268f03691b3d06e57abcf20f9277e314ea8784298983aab5b40c1b91965027e1"
+    },
+    "assets/onest-cyrillic-wght-normal-DayYxulF.woff2": {
+      "bytes": 15860,
+      "sha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27"
+    },
+    "assets/onest-latin-ext-wght-normal-QAhDxQuo.woff2": {
+      "bytes": 28452,
+      "sha256": "14e7d3079b75860e2ab50efc6c318c398fdb46ede9b56e625f12ae70a3c5d9a4"
+    },
+    "assets/onest-latin-wght-normal-Dun_Rd-l.woff2": {
+      "bytes": 33760,
+      "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828"
+    },
+    "assets/onest-math-wght-normal-Bl4ZGkZl.woff2": {
+      "bytes": 25480,
+      "sha256": "c74952a8c0c8c558c4f879f83773cf529d11350609f7073f5b2c5999dec46041"
+    },
+    "assets/onest-symbols-wght-normal-DxQzqQfC.woff2": {
+      "bytes": 18168,
+      "sha256": "2ec2d45d2ec0770e2c18cba2dba5126cf2dcff181d23ad192e9fffeb4af4b0b6"
+    },
+    "assets/onest-vietnamese-wght-normal-BBxOatbv.woff2": {
+      "bytes": 12400,
+      "sha256": "d852d4d094a3a46d701d16245deb7ca83b16b5bd69e20aa0aba089392ad69474"
+    },
+    "assets/Operations-1O7p9tXg.js": {
+      "bytes": 72253,
+      "sha256": "425704f3004ccd463d8133e7cd1548420c6a4e4d3bb6ad9d1e1740cb34e18821"
+    },
+    "assets/Operations-BWWEtOhW.css": {
+      "bytes": 1081,
+      "sha256": "43cdf8eb01abe07937a9f2c398046fbb42fc808a02d39c2f4004041246adf509"
+    },
+    "assets/Overview-DBWwDmEc.js": {
+      "bytes": 12754,
+      "sha256": "b7e80c38877be44122a495854b41cd8616988aeceb69f7fd1832ee6bd75a03c4"
+    },
+    "assets/permissions-BLscaukU.js": {
+      "bytes": 2192,
+      "sha256": "c5e3d0d4266106d8bdfb78545befed2e9c1c34f16db29d66f2825cfb3d6b980e"
+    },
+    "assets/personal-mobile-BGnyqMkQ.css": {
+      "bytes": 5074,
+      "sha256": "62f5b31336bcc998e30ed88071fd7c96623418124118e750864485cf86adbcb9"
+    },
+    "assets/Portfolio-DNH7ey7y.js": {
+      "bytes": 7235,
+      "sha256": "15a71783d6a61cd8fc73cba54fb46751c2d757b9c33f1b1648f6926eb033794e"
+    },
+    "assets/ReadingsWorkspace-C_KWahkV.js": {
+      "bytes": 12407,
+      "sha256": "b1592e3c17c0aaa2273538d77b241a896573c1188140fd7e8b67d1f5024f0349"
+    },
+    "assets/ReadingsWorkspace-CmeA-MEk.css": {
+      "bytes": 984,
+      "sha256": "ad9c8b0d21d10d3110fab8f9e4b71f3ad846aca6462b1216eb213e727c0bcd89"
+    },
+    "assets/ResponsiveTable-D2wOxHkl.js": {
+      "bytes": 1128,
+      "sha256": "482d6b70414b376d202435c3b14d21f8b1a5bbf7a32c863aef89d5368288a4ed"
+    },
+    "assets/Service-DKyrWFJW.js": {
+      "bytes": 5976,
+      "sha256": "9db88b7a7a3b994e8a40412cb4cfe934df8ed3593cb46e829df6aa0612d22647"
+    },
+    "assets/shared-Cn0i92Od.js": {
+      "bytes": 6687,
+      "sha256": "ec2dccd17c2eaf038b8eb08dd27f590edc6c5f5852d8a4eae82945e557673940"
+    },
+    "assets/shared-D59aAc_g.js": {
+      "bytes": 1817,
+      "sha256": "a8ad08475f07072d933d994a9d81bc47c7c99416349f13a5f635c39795e8c79e"
+    },
+    "assets/StructureWorkspace-Di-GcFIn.css": {
+      "bytes": 6817,
+      "sha256": "30fe1a58c9c34b86cd5d1b52af9150fffc78562e84a7d63497dbeed3250e4388"
+    },
+    "assets/StructureWorkspace-DyHZzI5k.js": {
+      "bytes": 37954,
+      "sha256": "4af1c0c2ac814a08be1fc41f5c9bb154aee07716fa2ac1dc73b7d92306581c7b"
+    },
+    "assets/TenantChat-CiM8sJgh.js": {
+      "bytes": 4734,
+      "sha256": "89bc37901c322224b42e160af807762e3c23202dfe38932773dfb94237e6762d"
+    },
+    "assets/TenantServices-1VMfCtDn.js": {
+      "bytes": 1460,
+      "sha256": "f3be0ea7e1dc54ba13bcab9cd9050e88d661e9c63399f73b7f43e4f369cb6df5"
+    },
+    "assets/ticket-search-LK6TsXg5.js": {
+      "bytes": 696,
+      "sha256": "cad88e3afbab0a629e136ddde804f5cf03c0acc137df5584239d5847ee8efebb"
+    },
+    "assets/TicketCreateFields-Cb1vFKhw.js": {
+      "bytes": 1751,
+      "sha256": "1f665209ea480a542dbce42c5770854352cbeeab401d2cc00d8a7dd5021d8690"
+    },
+    "assets/usePagedResource-Cgt5JQLz.js": {
+      "bytes": 705,
+      "sha256": "6c5397c2372680aaff1fbe653231c93410af9e50be4f6d56cdc4b6fae26ad2f9"
+    },
+    "assets/useSurfaceView-GlEW9nbS.js": {
+      "bytes": 643,
+      "sha256": "ec82c2b7c05ef0d4c757b5cc7a50112814d54ba48121d91a0248c5b3b6502331"
+    },
+    "assets/useWorkspaceViewState-84dmmkmw.js": {
+      "bytes": 427,
+      "sha256": "7e1c7c0467e2bc485fdfe238c10603c3063af3bc9882ea694ea10a4cd67d861e"
+    },
+    "assets/workspace-BrqaujM7.css": {
+      "bytes": 10591,
+      "sha256": "0146b74774be1e57c82432c63f15064e8d47a67df2e3230e4744281f41211ea3"
+    },
+    "assets/WorkspaceContext-DMo9xo32.css": {
+      "bytes": 13384,
+      "sha256": "e19cdb4b292467028c6ab3421ac0a73b2c9c8f3112c65daf966e1170f6fb2bfb"
+    },
+    "assets/WorkspaceContext-UT4U4hbV.js": {
+      "bytes": 110207,
+      "sha256": "87193c3976d576dac10d73b7cabe4601330c5eb0d4a86494f24532ed38d800a7"
+    },
+    "index.html": {
+      "bytes": 584,
+      "sha256": "5ff710a44976afc61597dc6066e28d451c2d52ff371655cbd4d81b096971d46e"
+    }
+  },
+  "sourceFiles": {
+    "apps/api/package.json": "2e6c2e7ad3a0fe1faed8b8a97bd21b6f0618e612fbe8f7bce71629626c9cd6fe",
+    "apps/api/src/agenda.js": "295ebc4c1502dd9c38ece92c15ac844f7035306fc5461ba03a2bbaa5e9e41e89",
+    "apps/api/src/auth.js": "b6f83c38c30452475aacb9dd204db434cfa6481e921385f09620e43b42df524e",
+    "apps/api/src/bot-links.js": "0dd0f9dab724e055ce1c888278857980a6cebcbb2411d96b502907750215443c",
+    "apps/api/src/config.js": "2e6f0c40eac7c217d1ffd73f67bcbd7f72933be5cf9857a46b3055ad158916ef",
+    "apps/api/src/database.js": "88c9145520cbf8957b9b0e256ba7b479be2c2252bb907ce0f0b9142541094cd8",
+    "apps/api/src/database/auth.js": "4ffc658365779b76ac25afe80982b11f6a76b3a7018c8da478e567d8f77d2bdb",
+    "apps/api/src/database/base.js": "8be8d7a9b69a6e9def73986296f2ef65c4c25d623e3247542aad4f5b802e9d1c",
+    "apps/api/src/database/billing.js": "e64aa0267f18dbb110b0320a57cf0b8b8e115de620fa345d5de1213e67ec724e",
+    "apps/api/src/database/constants.js": "a35491f001b716a2e6d1426b1ef7b005a2a32b1f7c62db23cdbd949056f2b89e",
+    "apps/api/src/database/index.js": "6ff05a5b5ba8dd277772231503552b75b43db24f888d541b04a4c7846c6184de",
+    "apps/api/src/database/leases.js": "66549ac6023097b1ed860bbd231816537c49aa3f7dd472b92f21186cf3e260b0",
+    "apps/api/src/database/notifications.js": "4868b3f3509f5c3722ad258fb7ee889b456c99e9484da67e9ef9aa36c634e6cf",
+    "apps/api/src/database/portfolio.js": "b34ffc3a8acfc52e90e00f18eef63da9e9ea1b0e0108543cf06d9f5cf03cf432",
+    "apps/api/src/database/tenants.js": "e879744f26b99bda8f304a132c847b92ce6fa7d7b6c0b5c71ecb8551ae6dc203",
+    "apps/api/src/database/tickets.js": "a29edb3a10242d76cc3006fdf36f68307da7c4788f8e85b3ec5a80f7b0872ecb",
+    "apps/api/src/domain/accounting.js": "7215db4e47564e24307cfb67663041c4dba503cf73a076384eb141a7f9c5cdb1",
+    "apps/api/src/domain/cad.js": "41dae751b5f1e464a0043e962beb55aaa11b743f75d82197fd49b87654de8fce",
+    "apps/api/src/domain/context-access.js": "926eed753b28f8e81a780b1ad09655881f2ba6ba5059f1b81f1bf3673cb9064b",
+    "apps/api/src/domain/default-floor-plans.js": "56ba8591afc11f5a8b602681f0a6ceec894d0a02cc317ba625a8aad268c33fa9",
+    "apps/api/src/domain/dispatch.js": "498f14d389799624bd74edf347f994ff0c87a7beaa1cde846da033514924ed82",
+    "apps/api/src/domain/documents.js": "9c67f45f6a1634db92bbce868cb55f0b78c2f4823d3c6d97732c0a0ec4331754",
+    "apps/api/src/domain/estimates.js": "e964fadb26ee6055e10dccdee27ac809ccf7dcc892ce3087cc7692f5b2d374af",
+    "apps/api/src/domain/exchange-worker.js": "f35b0b15199b2f2f98488a81fb0abe42bfbaf069042e8d604dcd0bdc5718eb0c",
+    "apps/api/src/domain/financial-access.js": "5d003799affb107dd5bf40a013904274cb003701d8e066bb90e38657fdecd65f",
+    "apps/api/src/domain/integrity.js": "064d31b3409dbf35df68128460d23ce77cd3e6759f782c454e4d47894906c77e",
+    "apps/api/src/domain/maintenance-progress.js": "d5570464b9ac15abe287b543cfb84232e5ae20cc45749be31d210784e749c3c0",
+    "apps/api/src/domain/maintenance.js": "a9a187eee04d96e09fba648cda03e6f77cbb842db2689ce8dd0410cb6bc67244",
+    "apps/api/src/domain/plan-location-scope.js": "fc84b4b8909c0403f0a7ea7d48e0a96f42033bfa9f3c260042765e7f10834418",
+    "apps/api/src/domain/readings.js": "2bc6b5cb561b082e7ce49f6862778e96e53c048580403276bebd1db6635e1bc2",
+    "apps/api/src/domain/structure.js": "d61c53b80d6b0655043e31fc518e9a6b9c70fc555c706440821c871acda7cd42",
+    "apps/api/src/domain/ticket-search.js": "a05fc5c60641b8c2964f202dfe2488fbc580a3e47f1a8051dfc19f62027a5dda",
+    "apps/api/src/domain/ticket-view.js": "cdd7ea1009ee96ffc1645ae218520e83713ffa963b603714651026b3877fa0d2",
+    "apps/api/src/domain/ticket-workflow.js": "1d3583e626921b1e922ee3ef569d8eb2805e2eca2b7a0b93a6175f433348281b",
+    "apps/api/src/domain/version-time.js": "1393e366ca62765ad5c416ed9f5d5ed5a80ecf25cd7792c07c6dcb935d9f2291",
+    "apps/api/src/file-storage.js": "83d26988bfbe24c52ea463cd02776f7b82deb2e41fad48c4ee7c0e52c0434d80",
+    "apps/api/src/http/body.js": "e926aef819c41a668229c7cf16e8637faa8156e269e2a1740a4a5d301748dfb5",
+    "apps/api/src/http/buffered-response.js": "cdb93cd30e948a2ccd83465a3f0a165cdf01b22653643e731dc957c20168f9b0",
+    "apps/api/src/index.js": "dbfb17b9475f12370993726149ace82bf2ab03e076f43b4e413d1e404ef528eb",
+    "apps/api/src/infrastructure/postgres-ttl-store.js": "fefe9296e23fe8c800bf2fc8d617ebc7443678d78a3b0b40570890f60c4ee64d",
+    "apps/api/src/infrastructure/ttl-store.js": "b945c76ace14430c245ca9d234c69f4e759ce2cbfca60137f1cf35b3fd87907a",
+    "apps/api/src/operations.js": "1419589c0701502cf7ff84c899d31452dfd900a0f429d8c4317dc7b7fed572c0",
+    "apps/api/src/persistence/audit.js": "76929552e2b0c728b67fdb801a6d1e687c47dc5ba8d77a0a99f4916b98b0b423",
+    "apps/api/src/persistence/business-schema.js": "e3e7c6492d5682648a311543dc2fc696329c144f1e9808b17caf8b97995d2249",
+    "apps/api/src/persistence/cli.js": "0e241e7151b83660b71fe69fecdf3324ab25f94c1e76d8c89723966ec303861c",
+    "apps/api/src/persistence/database.js": "e94f5567d1be8e65687e65fdd53ff20a82c086b5b6ffaa4b25bc93976783085f",
+    "apps/api/src/persistence/exchange-page.js": "d80fcde8f000ff4c58fe1cb6dadcca66508dcd579aee78143e3eb2b68bb42c7e",
+    "apps/api/src/persistence/migrate.js": "37d24acd3013731e6c1b1f1e83fbb11cdb4e6dc53ff3eaac87507c4580e84433",
+    "apps/api/src/persistence/migrations/001-relational.sql": "1341f9c8e1e919b2f0cc658dba5ccc71f62e342eaeec71c893154d993623c345",
+    "apps/api/src/persistence/migrations/002-remove-legacy-state.sql": "0a756ee1568dd5ff1fda708b72fa5ffd442d86a77b7ebcedac2d9bdd3d3eb094",
+    "apps/api/src/persistence/migrations/003-operations-platform.sql": "662ee13846c822ea7a7ba8288e205a16b3b878a86e95b180833d48e5b521c929",
+    "apps/api/src/persistence/migrations/004-maintenance-import.sql": "ef29237fbd4a2531d969dc3dd2aebbf914a0d7e82ecb910958dc5de63e37c021",
+    "apps/api/src/persistence/migrations/005-business-workflows.sql": "4299522eabc734224f760d8502e8d1032d2ef92c6563b489765df1bfb6fe4c85",
+    "apps/api/src/persistence/migrations/006-context-assignments.sql": "48f3f4e54b88a1bd7592a27f4d9244425dd6c5143fe5a6605f8f657af8e485d8",
+    "apps/api/src/persistence/migrations/007-existing-business-records.sql": "f5490daf8e53648b48c4944298a18099dc3f1775d8847faac240ce189e2c7a4f",
+    "apps/api/src/persistence/migrations/008-work-estimate-binding.sql": "ca1719736b5177b12e48ad9dfa126c4400bf3426f31e9106053ed95312cb0975",
+    "apps/api/src/persistence/migrations/009-exchange-page-indexes.sql": "3a24e78b0bf62771f966d81df51f5fd8213237c6fd098b52d54600c2b48136bd",
+    "apps/api/src/persistence/migrations/010-realtime-state.sql": "090f5e8a86e38868ab41ecca2a81ea0a00a9bc62aaf7528a1e2fbd9f9ffeed9a",
+    "apps/api/src/persistence/migrations/011-catalog-import.sql": "8dfe17ba99e42441c7b25fc88ea4cf96053d2632720acce2fc13efd0e08a87ae",
+    "apps/api/src/persistence/migrations/012-accounting-contacts.sql": "a5637e964c3e9e0b14a550b0100530d60dc80495eeea2914a731df153ba96197",
+    "apps/api/src/persistence/migrations/013-accounting-status.sql": "75974260d1ae71bc11ad5769877ca1c21f940ad8a6c202714debe1bc69e8afda",
+    "apps/api/src/persistence/migrations/014-executor-refusal.sql": "f58a130df52c335eb6ffdcad7a94ddcfd074f1507860c42f7eb3bc112ba70603",
+    "apps/api/src/persistence/migrations/015-dispatch.sql": "a7b59fcf3011e4c597d0e19044353e97ab55c740c9c3fe9f3092a7f9b5b576d2",
+    "apps/api/src/persistence/migrations/016-default-building-plans.sql": "ff753273eba94c5374bc05b165bd6b7ce6eb647cac5b60d8155ce9e66ca49e5b",
+    "apps/api/src/persistence/pool.js": "d0f510fc213298f9fc162cec9f2fa22fa209c7d80bbbd8a60fc29a14171e4477",
+    "apps/api/src/persistence/read-profiles.js": "6688f5a4cef9162836901cc536cf8d16547e38f97a03f6124cdc4e13eca28952",
+    "apps/api/src/persistence/rows.js": "95adc9dfc92ee6d099e66a55a6581887aa73b706c6fdb3139daa1988644ed29a",
+    "apps/api/src/persistence/schema-table.js": "5c3376b3f49435ce0e2bd6ff5b0febd95629e3829271c3f567d8663b8e2cbd07",
+    "apps/api/src/persistence/schema.js": "e57a16add36192361fa7d9f0d4eeab63a420a1880dc048e95d11f4256a81b4b6",
+    "apps/api/src/persistence/search.js": "6ab9717201706acbe4e45a4c5ca6a63795f58d50a9d1ff102d65caac9fb0e80e",
+    "apps/api/src/realtime/pg-listener.js": "83711794d48086da5ea6348b1ed1b0f4eca00e38157081baefe91a23b47f6718",
+    "apps/api/src/realtime/server.js": "650aff7b564acd4825d0cefb166eff7abcb67d8685c83a5133198b7403e013df",
+    "apps/api/src/realtime/topics.js": "6490555b1cf75b406a69d5145b983df77805346ef9ffa62df468cc9441297c88",
+    "apps/api/src/routes/accounting.js": "d6d7916c84bb3df290061b7bdf8a0b41b3cda4bf9c88814279aa794eb62de404",
+    "apps/api/src/routes/agenda.js": "67c41c25b761b35ce9e0fa54f2975ce85a59ae2501664058005663f639f75764",
+    "apps/api/src/routes/auth.js": "28bb9a11f496ce44c399223cdccb89a25c06247109c2e25d99ae80d5c7bfd867",
+    "apps/api/src/routes/billing.js": "b97e04a82f6060bf7203fe28ebd8c3c833843c0ffdf1ce6bd3299c22c262c0dd",
+    "apps/api/src/routes/business-workflows.js": "fc04206923a25faf51386cda11c27391c314d75ed7dc5a8f7e340645eb421168",
+    "apps/api/src/routes/context-access.js": "a146bb1b93b15ced35cf80da6813edfe5061250981c5875d97a204ba7efddc95",
+    "apps/api/src/routes/dashboard.js": "5ed7d480d4ef2934d283ebb5061680e4b3e7b46d71ed02f3398bcc103b7b448c",
+    "apps/api/src/routes/documents-registry.js": "b4a604cd4c239c21ed832ff2fd1590f00d1fdc7ec6b5d3ef5fc059b3016198e9",
+    "apps/api/src/routes/exports.js": "741b0784c8a97a76cdc0cf9da28db6efffd27f131e5d1dce0d2ab1e1adb95494",
+    "apps/api/src/routes/imports.js": "fbb96ce21b63197c74de651e355ddfbddedd034c9df2371d0f2ba8ec6d68ed22",
+    "apps/api/src/routes/leases.js": "36938b550e3c6954bbbe3fd951948237cbb05fffdaaeddce7b13faa6f113d78a",
+    "apps/api/src/routes/maintenance-import.js": "6bffac729eaf58df4464eaf11bca9a71b558f2ee967c2f69050bd352c3f35d1c",
+    "apps/api/src/routes/operations.js": "4df98cc68747860b90f117f902ef3913599bc862f2c84d88a98d6fcb116413b5",
+    "apps/api/src/routes/platform.js": "acef829284756c67c337383b1dc1a7c300e6a5d20348fa0b2ca7c68cce16065c",
+    "apps/api/src/routes/properties.js": "4e775bd9a997f1bfc75885c5f8ff768e3395081220f8606e4ade4b9120ad8c5a",
+    "apps/api/src/routes/system.js": "20189ff8606de0dedef864e09ff7bf5b9349733193c9509a29cf1553bb3d6b73",
+    "apps/api/src/routes/tenants.js": "37f4c30207c06b84732f9f77376853c6f6fa105dd4fa9711f66f5c82e4f25ed9",
+    "apps/api/src/routes/tickets.js": "e2506bc1997e7dfcbbc0ab77fb0eb444ff84a082f33d71aa350e4bfe574e432b",
+    "apps/api/src/routes/units.js": "6b89f1cab013115af06bbe79df9010424afefc32170b47be27e711519fe8db09",
+    "apps/api/src/routes/users.js": "afed23f218703f78f8c4329c33d81c1fb0406cf394ec87219e96d16965dbab3d",
+    "apps/api/src/services/access.js": "e8e0ff4d7331e2238863756ffdf58e7e5b6cf91ce68fd060521669a9ead5c058",
+    "apps/api/src/services/bots.js": "f874b9e9902f3d3b5187e7f700f6d247973395126b98c3af875fe198545afbd5",
+    "apps/api/src/services/bots/context.js": "0491ce82c43686c13627a936bde9f552a887066517a59166e0bbb2834b0da643",
+    "apps/api/src/services/bots/media.js": "93daed2c774cc44beb377193be4bc50ae1956ce7f43c5c05049b54b1aecbe45d",
+    "apps/api/src/services/bots/telegram.js": "bf39b70ce10b31831099ae0e0d440046e27c80615272a764a11ef47883941d88",
+    "apps/api/src/services/bots/vk.js": "d372eec87b9f3fc265630cf77d97b2e4f78f24312281f7032a53ed7aa911eb9a",
+    "apps/api/src/services/delivery.js": "77e76096c907dc69b44be495828eae2f8823e7832b0258f7da3a348e02b52059",
+    "apps/api/src/services/documents.js": "8a16329dceb2c7b95d8167b7547a645694e9733e70ef8f44c12ec805766fd44d",
+    "apps/api/src/services/domain-utils.js": "93e37e3e531309aa6b9caa84ae3d49443793291b4d81a870d842b87ea8ce34f3",
+    "apps/api/src/services/exports.js": "9cdd74fb0543bf9eff4c036cebe57dbe04f96c95bb15af1cb6a44dba671e0ff9",
+    "apps/api/src/services/imports.js": "9474db81e9c9b9674cb5f6df169f545f3fcb5607bbd22a127cdfc112a5e6d049",
+    "apps/api/src/services/maintenance-import.js": "06de31b15f7d6f076e807813b72c2ae7e66e5fa5ab3e2436fd9f524fe3abd430",
+    "apps/api/src/services/maintenance-sheet.js": "f0b9077c74e04a6900af730a189db0cd79d6eaf8dc82d0cd69568db705ab1d32",
+    "apps/api/src/services/normalizers.js": "da87aa4b4430487c592fe6538a1b757ef698117f8a2c7233fe943dfe0040d32d",
+    "apps/api/src/services/notifications.js": "34d1f491edf2922b42cd6bf720048acedbaff555f46342e5fea1d632c337e363",
+    "apps/api/src/services/permissions.js": "5b298dceea4420deafa2ebe57cc784484ad09fde873eb8a2e54208fda641fbbc",
+    "apps/api/src/services/queries.js": "bd1e8b412b61adc3f057fc8a143e679c201762c44b1bb3baa10576920c00fa98",
+    "apps/api/src/services/queries/finance.js": "4d62f6ee765a743c8a53ff9f69a612390cb4d57f9fb9eb4524a3357be727b6f4",
+    "apps/api/src/services/queries/tenant.js": "60f68b9f31e64cc5b896e72f6a728734d818394caab19ad255277aff5a5914cd",
+    "apps/api/src/services/queries/workspace.js": "4bef2749256a200f97153d7cc03c5c63a9e3d63f4170ba8deb47b313b42ed460",
+    "apps/api/src/services/spreadsheet.js": "3131d89fbcc37107fcb26137d4a59496b81bafae35148cbd1a4f9f1d856bd8f4",
+    "apps/api/src/services/storage-utils.js": "1b8624e1ae28db6deb0b03afa6ff8a64bbdffdfb20d312780dfce920494d7a5b",
+    "apps/api/tsconfig.modules.json": "1cd5ed761b1ec3a29cf3bbe03e009e25c6a1c01301e4f0e387b2aeca751f45c6",
+    "apps/web/package.json": "afa34db9f1b2495b8e83505af2ac5bd4e2d5d354ddd11b09076991acc9109ff6",
+    "apps/web/src/Agenda.tsx": "26a7279e475eacd08d8f8636fd9779df95746e6f0dcd80b92dc1e13897d3242b",
+    "apps/web/src/App.tsx": "8ac764d2f37d21139ced5c52e5d33a522b6df367a6da7652ff533aac99459210",
+    "apps/web/src/ForecastChart.tsx": "f4180b05ea8acb4ac4d00ce9ce6cafac5d16c6d7b80e616c018ed58f4386715d",
+    "apps/web/src/MessengerButtons.tsx": "b920248b6d194661bdaaf210d6cfa4ce563ea6d194a8f41beda746b8d3409dd6",
+    "apps/web/src/ResponsiveTable.tsx": "fde0a637eeefe7db4adb753f4bcf1780633dff85736856dab5eb7ca860065e32",
+    "apps/web/src/agenda.css": "e353193e7c762d7733b69d6dac8aff4da1aa36e826f39fcad3990da0a543f071",
+    "apps/web/src/api/client.ts": "a30d4e44f465383d014c6dd4293b8e8972988fb9c491b04435ff79f261131836",
+    "apps/web/src/api/operation-form.ts": "7d8bb1daaf31b858231d73ac3f66f586964b4932cf66f65e39816d62cd6b3478",
+    "apps/web/src/api/read-errors.ts": "d25cb2b0d0167a3d944419d84d35feb4da9ac96f809ad521c62c32ad3464356d",
+    "apps/web/src/app/PageBoundary.tsx": "a8913fe6e062997ea3c1c80d7f6ddc6355a99b10bf32ce05a63f66fef5d8bf69",
+    "apps/web/src/app/WorkspaceContext.tsx": "0aeb3f0f22e3cc32b28a671321fac74dd9392b23ec90d240d9770a307c6c4b23",
+    "apps/web/src/app/WorkspaceRouter.tsx": "1aa1044a96904466df26fccd36c27356ad28402730b68849b58297c03e82d19d",
+    "apps/web/src/app/personal-shell.css": "a6d01779d0fd68e1beab8d7148b4f47dfc9ab57f2b36f234083c54c2f0e8ef72",
+    "apps/web/src/features/administration/Admin.tsx": "ed27a07e986f362227eb91aa0de5a80202b8c3ddfddf81de97b40f8817f4becf",
+    "apps/web/src/features/administration/AdminForm.tsx": "4d6a2b01bff86b230e9ad26f0135d9f86f6ae2602448ec5577759996feb7db58",
+    "apps/web/src/features/administration/AdminRegistry.tsx": "d3ea7cdc822cf4dab4c270eab3464b5c69ce0868f8c9a2bd9b265f3cbaaa37df",
+    "apps/web/src/features/administration/ManagerProfile.tsx": "9ddae6f51ce0b17777507dc762560459ed7cecd70c8e77512ad083944f6d3a71",
+    "apps/web/src/features/administration/ManagerStaff.tsx": "dfeac0a57054064cc8177cbd321bcc7a00735677a151028e4b818601dd21b1ce",
+    "apps/web/src/features/administration/ManagerStaffCreate.tsx": "b19af7de8507704018ba17b5c47e57a16adbf1d63c15685b252d654d28751cf0",
+    "apps/web/src/features/administration/management-mobile.css": "e625def21110080235e613bbaf4cf42bda9d420597c3ae1b60dd4195789126ad",
+    "apps/web/src/features/auth/LoginPage.tsx": "ff33e6406f2cb1b7571bae40c9685a697bc921f3532f6373d463da592e41e00a",
+    "apps/web/src/features/auth/LoginSitePlan.tsx": "37e4f8ce978d99b897fcdfe1a57e520ee7ae01240dcafc108dc942db04992b45",
+    "apps/web/src/features/billing/BillingForecast.tsx": "461a234515bbc593c94852effaeacafb382e8432aa4e97b34414738920b36dae",
+    "apps/web/src/features/billing/ManagerBilling.tsx": "c15f329384ddec0a05e747fde4ddcb33c1a8adb166bc20378c8fc794c7256d1d",
+    "apps/web/src/features/billing/billing-view.ts": "08a8b8573367c040d814f1dc2ce95e2ca505fd16cb938a5d7e4217f51495fe2d",
+    "apps/web/src/features/billing/format.ts": "cb0721e35459c6b9c1de2e83a3d4d3354290df51628210b9c599c3b7cf5ca1c3",
+    "apps/web/src/features/billing/workspace.css": "d1d63b843f3c0939a8b4116e88c08428370425379d1ab296ee68653b995a9f0a",
+    "apps/web/src/features/business/AccessWorkspace.tsx": "c32298759c263a019af169c6e58ebba592e5913f9a560e66b10b61697d9a2baf",
+    "apps/web/src/features/business/AccountingWorkspace.tsx": "52f7b0c8abb60a1528577a1c3baef166b1a23d6875fca31dc8a590c841d1c3b4",
+    "apps/web/src/features/business/ActionIcon.tsx": "e3dc30c9af3cef87d3dfb4c91daffce8a6a6673569f20b82c88f3866d28c504b",
+    "apps/web/src/features/business/DispatchWorkspace.tsx": "e157ceca05f624a6245967f925d608107b1e64afba8b0658de52237eebc7c316",
+    "apps/web/src/features/business/DocumentRegistry.tsx": "5f3ec33c54c91d97bd0b6996b1a0ee0886c797d298988f28b3858ca2697569fd",
+    "apps/web/src/features/business/ExchangeJournal.tsx": "90ff54703bf5ec40d0214c7648a540fbed228d2f22c53db475c22d801bfd7fa1",
+    "apps/web/src/features/business/FilterBar.tsx": "b8793b5863b52334d9bf24c58ae5a6726be796c8f38e26f668d9a235f04d2c2d",
+    "apps/web/src/features/business/MaintenanceProgress.tsx": "9c34ec5c39fec97e3d46a77b5485c666bf5e75ee003b38282f93743cbaf43c12",
+    "apps/web/src/features/business/ReadingsWorkspace.tsx": "1b07c3e86712fc4f25f10904bd671b690c5f752eed818e4ad61360f21940cde7",
+    "apps/web/src/features/business/Register.tsx": "7cd3d75a03524b1435fba03aa4159c5f5c30334d37af818df05dd404e2ef5bbf",
+    "apps/web/src/features/business/TicketWorkPhotos.tsx": "7c7fdd3501449fe06538f2973ba7f81eee904219d50726917d9666788f753b55",
+    "apps/web/src/features/business/TicketWorkTerms.tsx": "12a7d2f1d0e8f16c1a5ba933f4c2e4a70380b20fe49eb489446cd9be2bf982f5",
+    "apps/web/src/features/business/TicketWorkflowPanel.tsx": "5be9070cf101c5de498dbf87bd6cf4a951d0642abd5b97ecb53e76c91cc7d30c",
+    "apps/web/src/features/business/readings-photo.css": "4822d568afc99168296515f52d96420033fbe6e46baacb2ac1152facc692fa54",
+    "apps/web/src/features/business/register-preferences.ts": "2082b8b7f4acf0a5b6de65c337fff0e0f5e49cc7de07b446ce5db27cfcd98bc0",
+    "apps/web/src/features/business/shared.tsx": "8c214453590cf2daa7fd42a7855c03b6a21a3a5c2a952f8e298c91921f0f2129",
+    "apps/web/src/features/business/usePagedResource.ts": "fe3e639531390c0c147652bc7c1ca55dd20fcae02b6f066c18702639f2ca7ef3",
+    "apps/web/src/features/chat/ManagerChat.tsx": "d8203adaaca0b162f89a400ec1b8958585a5c2c4b3be95378a8a8875d18a748c",
+    "apps/web/src/features/chat/workspace.css": "b9054e927b26923c4919c49d1e61f95f556dfe6328549fce0582aafa686994cc",
+    "apps/web/src/features/dashboard/ManagerDashboard.tsx": "6633db1e57bdfe43fffb3a34aa28c4419887cb611deea1b01233e71c52364aba",
+    "apps/web/src/features/dashboard/ManagerNotifications.tsx": "f911f37dd8c70224f2b25e886cba6f8c30b442833271943f3d66bd42a1a809e3",
+    "apps/web/src/features/dashboard/Overview.tsx": "da8ebf22971ceb0a6102d7d0d2ff593366701e5d6bb22dd57825e80be2ee5f5a",
+    "apps/web/src/features/dashboard/manager-dashboard.css": "f61d72c4e114ec97d79ee065fa1816803394119323e18dd48530b7a820b3df5e",
+    "apps/web/src/features/imports/ManagerImport.tsx": "3bc1cb5edaa07758ecf8f403d24cc16057ac0c686c0835fb631179096dcd5cb4",
+    "apps/web/src/features/leases/DocumentPanel.tsx": "6b65c4aa04b877b83e843249a285303fd1b2a6f278cd0822d09224c4ad3290a0",
+    "apps/web/src/features/leases/LeaseLines.tsx": "6c9706ffc7bf94b52d3bf027443c2e12cee03799d977c614022ae22257b0c79d",
+    "apps/web/src/features/leases/Leases.tsx": "c691323c02461da6f829289a58ee5f0fab2c91fa3eadaae1e2c226719b7eb1e7",
+    "apps/web/src/features/leases/ManagerLeases.tsx": "e682f56e94c32734b3a176fbfe691391e1034b4258ad9edfc6546df406b4d7ed",
+    "apps/web/src/features/leases/lease-lines.css": "73ae959cb5085c6e76d48c8b85231fdf371b9e634fb3cf3564c753082cece7ac",
+    "apps/web/src/features/operations/OperationCard.tsx": "b4240f457e73f689c9efce7d1e4498c626b08e2567bfd8a3ccee19b6aacb2d60",
+    "apps/web/src/features/operations/OperationEditor.tsx": "e6acb3f1f65557a35ba1ccc60544da773931db053766b04c151a258075a1fa03",
+    "apps/web/src/features/operations/Operations.tsx": "3c10d38c32f57965e547c0678a84f4370b874b6419e61adea10bf57becdcb8f5",
+    "apps/web/src/features/operations/TenantServices.tsx": "64eb954785e6a0dac114aba665745857deab1104b2048f2238f5069fa782749c",
+    "apps/web/src/features/operations/TicketOperations.tsx": "bc541dd99186537a33a40e8ee8dcaa3d53d48a991b9410c7d5772abbbc1694a1",
+    "apps/web/src/features/operations/WorkerMeters.tsx": "2ccbb00a6279f8bf90d9b498e84898a75a8fb2cafaa188f91fc74ec3544ffa07",
+    "apps/web/src/features/operations/shared.ts": "a8cfb431ba24fff74f61107403977eb785ad38b1d2b67994840786004dbcc44d",
+    "apps/web/src/features/operations/useOperationsModel.tsx": "cbde46f9685dbba40f78ebd6833021d4c68abdcc574bbeb9b850ab372b41bfd6",
+    "apps/web/src/features/operations/useSurfaceView.ts": "52f1e6b63163f787aa9540e62e75df1e7b4be6a10e4ddae71bfbcf0585eda600",
+    "apps/web/src/features/operations/workspace.css": "ac11a92fed25b9ea75e02dcce84fbdbcf65c5d36994551f3521450aca57343d0",
+    "apps/web/src/features/platform/AuditEventDetails.tsx": "5a3a7ff9936c58f4d62c9fcf33d12ef914097f14b65920175c9c73fc5f01ea52",
+    "apps/web/src/features/platform/AuditLog.tsx": "a71873b38ab90499acffc9299ce7ab7860564a281b7befd004223106ef902ec3",
+    "apps/web/src/features/platform/Catalog.tsx": "3ff26b79507da5fbb17985a53d9aad0a9449be652da6ee8d2faecf0e4e50670d",
+    "apps/web/src/features/platform/EstimateLines.tsx": "f154ff09cd819768a52fcb003119de1c80a56181d038e3e7d7888d0940ca5af2",
+    "apps/web/src/features/platform/Estimates.tsx": "5f394a234899d83614281ed912befaea192c0bc2244fc12d3eac5d390711285b",
+    "apps/web/src/features/platform/FloorSelect.tsx": "d9719106ba6e6d005c1f1d513757f28e97c29cc1757f2a842c9bc38a9c5b2f0d",
+    "apps/web/src/features/platform/MaintenanceImport.tsx": "c639d6dcd695599a413bf5b45b6e319943db5397f644c4e48f19e0c6ee0f43ff",
+    "apps/web/src/features/platform/StructureWorkspace.tsx": "714e03d60f93bfdaee0cda8a7db7e95675fd029536bc60e29fea85d5a84d9c6d",
+    "apps/web/src/features/platform/TemplateSelect.tsx": "3dc965eaa133f85f526acfa83e5012d4bf2bd0ab1d7efb96becddeda9c484f6e",
+    "apps/web/src/features/platform/plans/PlanCanvas.tsx": "bae5f07cfd07c175fa73c919ca35ac7e860a8dc0ce80d3ac710290110b6c3667",
+    "apps/web/src/features/platform/plans/PlanEditor.tsx": "efe4eed37ebc78ff2a2abf4842e4562b66cc2e2b69ab1c175afc4b601b453879",
+    "apps/web/src/features/platform/plans/geometry.ts": "0b91a26aae41e1365b0bd05900d4380bffa24ec334cf3f135f4158df031f132c",
+    "apps/web/src/features/platform/plans/plan-editor.css": "384603975ca5746bc10199a17462b1fcad320f58fa3d7abbbb2e60237bae8dce",
+    "apps/web/src/features/platform/plans/usePlanEditor.ts": "a3a20906b6bd400a6ad7960d1173f19f78c6c1324a8f5b88111d4342bedd1164",
+    "apps/web/src/features/platform/plans/viewer/BuildingPlanCard.tsx": "39b726003b2c9d9a80885f70a537cae0ca951efc7f21b486c16cb4197a83a1b6",
+    "apps/web/src/features/platform/plans/viewer/plan-label.ts": "0333a34d7b72f16726e0d9c3e0c71e627b254f00930565006af05f3b4d2e2f02",
+    "apps/web/src/features/platform/plans/viewer/plan-viewer.css": "9e8a201871e78a30f6016628fca79985cb321d19464adf0670e70cc204530919",
+    "apps/web/src/features/platform/usePlatform.ts": "2f003493339e13a7ad7f093f3c0818e584a1e112db1a11545cc9c4bc25336d62",
+    "apps/web/src/features/portfolio/ManagerObjectLaunch.tsx": "0fd9d310f9db2f41c311044af689ac77d934d0f0e52b77e7ebb397c2b7bfec83",
+    "apps/web/src/features/portfolio/ManagerObjects.tsx": "e919a17493985ce368e93dfea0f2c7a896cdd9723ebb956d7c37e5df335cf0fb",
+    "apps/web/src/features/portfolio/ManagerUnitDetail.tsx": "6c41535790fb54e1c626e59ad02fbbefea9e603eab3af5b9d08fa2566bf2bba9",
+    "apps/web/src/features/portfolio/ManagerUnits.tsx": "016754725680555eee1b112461c70e165a2b935bafb13ba50d4696beb09bf245",
+    "apps/web/src/features/portfolio/Portfolio.tsx": "8e54f940f0e6838e1382205ed66f93e4bb08193ff190a698789c7fe4b7655593",
+    "apps/web/src/features/portfolio/UnitBoard.tsx": "7d20ffb7c627a8bd297cfa96d6c86db7110c28561346370a4c64a281e63d83be",
+    "apps/web/src/features/portfolio/unit-board.css": "3d7eb56a884593cf2ad43a8d35a38b151fc1a3618ac7192c4aa56beee7b945f1",
+    "apps/web/src/features/portfolio/workspace.css": "c80874c8159f391513e00a0c18e636fd16b8aa6858fb3b42aae46370e83e2e15",
+    "apps/web/src/features/shell/ManagerFormScreen.tsx": "0e624e18a02139ca231b5c1793d3d3c7e22e3c3024298ed8ffca591627f2fd00",
+    "apps/web/src/features/shell/ManagerScreen.tsx": "60c31863e6830d5e50703630e42bc138db35c0e5d4c147b80a1e9bda49334502",
+    "apps/web/src/features/shell/ManagerShell.tsx": "0518f6065ba0b68109de950061d6d6da340e5aed7818125d5ba6835f3825a121",
+    "apps/web/src/features/shell/NavigationIcon.tsx": "f3aa8e7f23e34305c24598c26a6143459be11a34de46099360b9eb5b30406912",
+    "apps/web/src/features/shell/Section.tsx": "d805ea55ee88451f6b553d7c05dc6ea170a70d03700a227423746453b42e935e",
+    "apps/web/src/features/shell/WorkspaceQuickActions.tsx": "c81b3fc2cd864298103b8fa1905435d700ae7b0abe288bb39ec58cce28c058fa",
+    "apps/web/src/features/tenants/ManagerTenantDetail.tsx": "aa5bc6fb0912c6bd87de5f0a4e7fb7b33f12e2c41b24fad33ea315c30e01a79b",
+    "apps/web/src/features/tenants/ManagerTenants.tsx": "21d32c523c0f2743033c1517682f56d828ad31336b7aa576ebab6c3e60f8cf3f",
+    "apps/web/src/features/tenants/TenantChat.tsx": "3c5c0c794e27511f8235d84c6d83576e5ed2d6a3fc90f72aef4733a938d92b10",
+    "apps/web/src/features/tenants/components/TenantContractsTab.tsx": "37fa494371a2222063944266970c2c52b59cb61a418fb2d7be1ccb273957e17c",
+    "apps/web/src/features/tenants/components/TenantInfoTab.tsx": "3357206f9e462f9abbf0153fad0b4a9dd7ac9acd15d7e33b18761682d9d74f1a",
+    "apps/web/src/features/tenants/components/TenantMetersTab.tsx": "36516b78f6fe74e952426051801b3971ce7efcb008c81eaf9f2b5115b103850b",
+    "apps/web/src/features/tenants/components/TenantNotesTab.tsx": "885c90f4189244dc90e61266d16d52991913179f3645bbee7c20f8b309d57b2e",
+    "apps/web/src/features/tenants/components/TenantPaymentsTab.tsx": "ec2e0d150d2de05a55f08deef32ba0d0c816eee7d24733bf1748dc43e6f5a3a0",
+    "apps/web/src/features/tenants/components/TenantRisksTab.tsx": "c283273d1684481195160c8b0d683f4efd9db111840e3283721bef0f0beac8e0",
+    "apps/web/src/features/tenants/components/TenantTicketsTab.tsx": "25682024e3b9f73a87c19f06be2492fe500067a67b4568f6878c42dce5ad7282",
+    "apps/web/src/features/tenants/personal-mobile.css": "64373948914a50a0233b2c50fa7e9f0a616004c26cc343cc7ff39f142364a363",
+    "apps/web/src/features/tickets/ManagerTicketCreate.tsx": "05c538db5c3ef452d5bd17d0b5990b795cfb66bfdd3df40c5943e7dd152e15fb",
+    "apps/web/src/features/tickets/ManagerTicketDetail.tsx": "7a1509e2f9b7895276af1ae9fc595ffc297d32aefcea7b8fb855c4deba2fbbb9",
+    "apps/web/src/features/tickets/ManagerTickets.tsx": "c1b1374b83d753594287eec20d4a7b0468df2b3936b8e99f3ccb62ba757a90d9",
+    "apps/web/src/features/tickets/Service.tsx": "352fe2d8ab3c260ca73008f054b5608c837385d1c4c324113875e6c3bd48b611",
+    "apps/web/src/features/tickets/TicketAttachmentBlock.tsx": "b54a46036bb788bdecb02ebabcfc0154aa631a2f13b6d5b104059fac9703c3fd",
+    "apps/web/src/features/tickets/TicketCreateFields.tsx": "7758e2e0662c9523f8d2e3e1e507d57d56b710491f6cace3ac352706eef9f174",
+    "apps/web/src/features/tickets/TicketOperationsBlock.tsx": "3fa8d225fa3a65c1c3f0b5e8a02324437cd3085175dce306f238ae248025ea5a",
+    "apps/web/src/features/tickets/TicketPath.tsx": "abdf1dd1c2e02168a7c293841160386ed0684c4644ff7e42e9825bbfaccfd08b",
+    "apps/web/src/features/tickets/mobile-service.css": "23d92a482dacdf67c73c89d0778ea0ecd4a5c8126197432b3e3188b6156433ac",
+    "apps/web/src/features/tickets/ticket-path.css": "bb426618a4fb7d735ff3c77629e8bd796be15da119d0ff4a2a10cefd008f1338",
+    "apps/web/src/features/tickets/workspace.css": "d8a0563b6f5affce5694222fc227345ece5e7b9a4862a7d801b99ae29e7e1d59",
+    "apps/web/src/main.tsx": "a0d8cf21a990ece4cf836c1a252e0e63e1ffc326ee7f87efce1725b63ef7c8e7",
+    "apps/web/src/mobile-product.ts": "afd5bba7b0cf249cfd77fa722e262b0eef1bf268fca21118f52402aa4019c338",
+    "apps/web/src/navigation.ts": "f63845d43df275aac512fadf33f43383faec39603571fdf47509add976522cdc",
+    "apps/web/src/projectData.ts": "ff97e4cffcb13451d01e075475548496acc7904fbf33dd7183e9a00af451e9cf",
+    "apps/web/src/realtime/RealtimeContext.tsx": "7b9b32aa107302754fd370b4bef9bc6970848cd99fc5514e1ee08c71878732bc",
+    "apps/web/src/realtime/connection.ts": "eb3044fa04d5ee921e55476fccaa1809c227048cb6b080511b7719ea8e9c090c",
+    "apps/web/src/realtime/query-client.ts": "300eaaf731fe8605e9e99ae9c24a4a011b6d16670ca87c8170d5e104df4944e4",
+    "apps/web/src/shared/agenda-route.ts": "4467ac1492d1e8ca25cc3effa30b7e673fd6cf79b395c6ee6d3be038920975c8",
+    "apps/web/src/shared/copy.ts": "08b4aa85125d540b2d7333dd6dc9a75855a9e3a0ec4efec936c06ba01a58452e",
+    "apps/web/src/shared/format.ts": "b898c655167cc4dea74f57fd4e9cfef5d2cbdf24c293dac7963af3027970807b",
+    "apps/web/src/shared/navigation.ts": "bbb36dc7292babcae7f951fb98041475bf16375a1a267096313832255b676988",
+    "apps/web/src/shared/operations-route.ts": "53751e115216f9dd82e0ddfa6f4603b516d15fe192dc139b31bcb12ef04cf787",
+    "apps/web/src/shared/ticket-route.ts": "c980f828b049b2f3903ba0f71dafdb9a817165f898943dd887bb16b84a941852",
+    "apps/web/src/shared/types.ts": "e712f401fd7f373e4f127eacff9bf0e880cb63ef6c401868ccf8c81e87bf8d30",
+    "apps/web/src/state/actions/auth.ts": "1b6d9b8ac2f70ed6f70b188b9752b6c722bd00e3104521b6ce378462e9bc585b",
+    "apps/web/src/state/actions/billing.ts": "f20ab65d841620b06c24c6338bc7d1ff031848c2d18f157b74596d0a97167f30",
+    "apps/web/src/state/actions/data.ts": "ca53607dd527d3d094058baf93ed97e65ef6aaf2dd7468bba72da6cd041ea918",
+    "apps/web/src/state/actions/documents.ts": "1ea943184b1c6dd74aa0d9ab6b49e0c63fc612471141efe4f732d05afbcc430b",
+    "apps/web/src/state/actions/files.ts": "e3f0145f8f93a27b5c1a01e3850532ed12e8f735127a48856b8fddaf2c748207",
+    "apps/web/src/state/actions/imports.ts": "037261b23b4574cce54360e2bfadb1cdbac9f17078285660a57e1bf3f4e996bd",
+    "apps/web/src/state/actions/navigation.ts": "b2dbcb5bbd770d8f6566076235f58414994c869938181a17ecab41d94e9bd44a",
+    "apps/web/src/state/actions/portfolio.ts": "9dc0a1151e765702c933934ddde7b9f92f3b95c08cb06d9935948b59697eb665",
+    "apps/web/src/state/actions/tenant-notes.ts": "08b9a1fd5c06ecf6d912bf39df087d676e87328f984d92f802d5cf98f3249f8e",
+    "apps/web/src/state/actions/tickets.ts": "efb5650b0fb599d0807fd8846bfe6bc3d2657b13175105fac7171fd019db29ee",
+    "apps/web/src/state/types.ts": "4e221bf6f4ff7742ce8d05ed25aba0f04132f8f85632d27a88900c326b7a55b2",
+    "apps/web/src/state/useLiveWorkspace.ts": "c4117ca7248946c7ba4b24f6b70ed13a13422c02ad9a2ee91df2b49af99552d9",
+    "apps/web/src/state/useWorkspaceEffects.ts": "08ca0c0fe4c9f8d2b6b96d658cdce1963c73065c4bfec181ed9a8d61ae24ca8d",
+    "apps/web/src/state/useWorkspaceModel.ts": "4297ce7e399d48347dfb8ec128847977423a4e0d48c737d4efde18b9353801a4",
+    "apps/web/src/state/useWorkspaceState.ts": "408ead39b1950513adf474620535f55dac12e159d71a64ce4a2e0fabb9a20fca",
+    "apps/web/src/state/useWorkspaceView.ts": "3128eab63b4e4b8df82be85186e8addfbd98f359bf9b831e7e63abdf0fc669bc",
+    "apps/web/src/styles.css": "c6b470121192ef3b1f6f3c52659644ee1659e3cb477573b2ddecbbca11201363",
+    "apps/web/src/styles/auth.css": "7968f16b05caf36de3b7bbf8e98cef0017e799972dd9365db64165054fe01b82",
+    "apps/web/src/styles/base.css": "b82fd6ccf88a347542d0bbd57875a528b9ccd24f211d14e0ca586bb8a70aef95",
+    "apps/web/src/styles/board.css": "ff3d972df31ae3d52914e457a08a927b0a6bad0d92178c53484bfeefe2df2fde",
+    "apps/web/src/styles/business.css": "1c2b8e5cd79f1465a022c7ebbca05c1db6e0c64017c665bea477f8310eea9c82",
+    "apps/web/src/styles/chat.css": "e63dcc06e4bed1f5f92f80a0a23996393c53792681bde5a657ee9bbdac885fa8",
+    "apps/web/src/styles/controls.css": "5d5c001f8a8e1d81817878bd500b1c66065f7bc7558b21bea3df10124d213437",
+    "apps/web/src/styles/dashboard.css": "8ef3fd942d04ae203f3c955b062af4849422fe0cd4407660183f8df2bf79f1f1",
+    "apps/web/src/styles/documents.css": "7797739efbd84cbf1f4e203a733c6aaa5605335d5718672370600a2b36c7b4ed",
+    "apps/web/src/styles/forms.css": "ee19dd6afc9c027946a7fd2dcf012407b42e33e5ca69e8fca0e7b0f6d354fa7b",
+    "apps/web/src/styles/kanban.css": "b1a426c821ca2faa240084d708405927ed75da8ae19103d21c92071b831ddd50",
+    "apps/web/src/styles/navigation.css": "53f2e92ae5eec8a98478273bc6b39711dba9eaf51a891eeacd63d616e02d07d8",
+    "apps/web/src/styles/platform.css": "e564fc296a5e2ef6ea94c39b7fdbc3b4d49a9479b390687b2a4903b140da0c1b",
+    "apps/web/src/styles/properties.css": "5ad991bef219872766a9541d35676259d8bfb75de52b790585a214fc7e20bdd7",
+    "apps/web/src/styles/responsive.css": "128980f9ece59097b25ff5acb03a5f04fccfb703d35a3068a9509cc31bdae7b4",
+    "apps/web/src/styles/shell.css": "dd833ce3bc79146552a561ab3bc13f845aa12a82aea4415c651e6e0a88644c71",
+    "apps/web/src/styles/surfaces.css": "51f9a4d7fb113c31bbdc1727df11e7fd3a1b701e21a46cc2361ad141badf7148",
+    "apps/web/src/styles/tables.css": "74b9cb31a3287ea828b566ac94ee0ecda020bc8e8445692028f57f17c5f4dbe8",
+    "apps/web/src/styles/tenants.css": "591b681f5e707c902ffa80fdb8dbd86243582ee6f1f05cff728d92d1f45cf888",
+    "apps/web/src/styles/tickets.css": "03af2ef7c7efb0b653ba17c348ee337b3186f3ff38351df6978dfab888eec615",
+    "apps/web/src/styles/tokens.css": "5fefd0facd974d8ffbf0ce7159e406507373bc16fb1743d5fa25128f90cc382b",
+    "apps/web/src/ui/Checkbox.tsx": "021575107a49284358240b28aa1810ba82a69a21f5d1819abb0fa54469eb0d81",
+    "apps/web/src/ui/Disclosure.tsx": "e01cd15e9a9ed7684dfe0a376c783302893012d451a759666365b444a7fc0de8",
+    "apps/web/src/ui/SidePanel.tsx": "33784fac53455f5aad794b410844cf99f467a148318f5aa2834d4b22f503484c",
+    "apps/web/src/ui/WorkspaceHeaderActions.tsx": "aa6485b155e104329c24556c919826b7762c8a4cf68c941eff8fd2f6a4748238",
+    "apps/web/src/ui/WorkspaceTabs.tsx": "9c62fbf1539f7c7b5cf49c74e357ae14a3867dc1dc2308191470b162b0ad3b56",
+    "apps/web/src/ui/checkbox.css": "db15d05f21542d349a10cf0655f58aff677c4bcc9dc864889e406b77e9b06b53",
+    "apps/web/src/ui/dashboard-workspace.css": "693e1312c223ba6a1f68579215389e07ba1eb7b83352691c8029caf4502c5920",
+    "apps/web/src/ui/form-layout.css": "ee8d55a6a85163cccfebb11bf49221084cde6cb2949989603ea329830965440c",
+    "apps/web/src/ui/index.tsx": "d6d7b9aa3cf1786b0a19a923cfab4ec5c9c258978c4b31305577a7f91ac20d38",
+    "apps/web/src/ui/navigation.css": "4841007244d59da01120d5c014e9c8311e8e6f770af6a3b62fd4630e5715f57f",
+    "apps/web/src/ui/scrollbars.css": "d29d498e7a4970d6aed424701a2fafdc13ae9d683e7672be3199db75621606f0",
+    "apps/web/src/ui/theme.css": "7aabd279383197a08bb2c12ebce93ccb817e8873d8da1bce94b3c839937d9604",
+    "apps/web/src/ui/ui.css": "65897f02c5856493c3b2912a91e64e607911bfee13f812dbde1b692c0c9b5789",
+    "apps/web/src/ui/useWorkspaceViewState.ts": "dd4f640394abcfb288ccc36d4fc4872c47ff07f9b886d9cfc2aeecd251d9c1e1",
+    "apps/web/src/ui/workspace-density.css": "91c740b7d41a559d700d205334bd0eea6012bc752d12f2b62129b4cbb02f6126",
+    "apps/web/src/ui/workspace.css": "4b59debcac48eef35fea6c02b94873eae236ac059f0079ee424190fb2e9f1577",
+    "apps/web/tsconfig.json": "6b3eee6d00882c52ca4f44ecf6f53c2d1b589f6366dab7a9a3c4b7414586a1ec",
+    "apps/web/vite.config.ts": "fead10cde349e5cead214cfb95a7a515050e7f9c3e38a54afcf1ed88ae7a30c7",
+    "infra/deploy/Dockerfile": "b834b0ed836c41dd15ae56148452ef3e4a9e67eaab83cf4a5ce7c90960296599",
+    "package-lock.json": "7df54bd69ba6236bae038b64244115fbc1a09c2abe0a8d801437638c208a0756",
+    "package.json": "c2335ee269a095e37a2b8259beed5ccc699ff1a0a1809b3645be7dacb0822f26",
+    "packages/contracts/package.json": "9baba2413e6d46dd48f7cae0985a049617def38d631a0e47c3c575e1da7f2af3",
+    "packages/contracts/src/access.ts": "38b11020c481ac6bf9fa461e1eca26064f0f0b6ddffec176b8de0e2bc7710b14",
+    "packages/contracts/src/accounting.ts": "f677a40a6a341e0260fccff60dc100fea819d106f9a14be3a9b1fb11857c7e55",
+    "packages/contracts/src/agenda.ts": "95f071c56e095879e0ddbcf89dab169aad98305eec258fc30ee02b83fdb901d1",
+    "packages/contracts/src/business-workflows.ts": "a5cf46fd239613efdb22d44c6a13450464d677d2856c5d1b462e2b8751b3d385",
+    "packages/contracts/src/domain.d.ts": "6b19055e397c1384eafb0aea9daee9eae78569cd6557ee762d1b8fbe44d817d3",
+    "packages/contracts/src/domain.js": "6b22447f0d41f92cd7ba4e2a23e71a860f71a6a6cc8ecdd3a9b2c73074b14b48",
+    "packages/contracts/src/floor-plans.ts": "a1f141f96386613b5b1dc839d27e0a8efc7f63693cd0c1283b7f6848411300bc",
+    "packages/contracts/src/index.ts": "dee7fdcc14de0db2d9613c67a96a25d639c9ead759e42e3ef6d90ceebca5cebd",
+    "packages/contracts/src/maintenance-import.ts": "68f9b90266ffc3ba5834a50947e4f9d05f5c4092ec4da44d7b5952819128ece5",
+    "packages/contracts/src/operations-platform.ts": "14566db6816814e66785467c5190641e04576c1ec039e59bada132c7d908b17d",
+    "packages/contracts/src/permissions.ts": "aabcf55bd16e8e4b26cfd8f1312ed7287a0a0a5c911e0382f9e02a7c61728b17",
+    "packages/contracts/src/read-models.ts": "204f59f4243ed188c7f1688296f4ae0e3cd0404f4db5b4405be1c76f14ad6ca0",
+    "packages/contracts/src/realtime-schema.ts": "d5af8ebcc2fee8049d79f8fc46a3a7b1071a3a549943b35834231a98d95fe2ff",
+    "packages/contracts/src/realtime.ts": "7a6bb49bc7e635d3ccb4723c2feeeb224b98c957260a027655052d96316d291e",
+    "packages/contracts/src/registry.ts": "9827d02bec32643bc32c64a53a79f4c531491de491e78d50d52beeb40f698546",
+    "packages/contracts/src/requests.ts": "d66e6bd57bd24f8f8903b7a357554def9894b5bf738a01124ca1bc2cd1bf2cca",
+    "packages/contracts/src/ticket-search.ts": "a013a0209ea4f716883c86e430b714636b79e0fa7d48f746ae9dbfb1949f1c92",
+    "packages/contracts/tsconfig.json": "644091dbfd61459905bde5df8ee5c86b3e60171d58dd742ba2d68b937c78606c",
+    "scripts/create-initial-admin.mjs": "b6ff9241501b238cb6dbd3b8abbb9afc453b67480d7f6eafabea3cc03d10ac6b"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "unit": {
+      "pass": 88,
+      "fail": 0,
+      "skip": 2,
+      "postgresTestsRun": false
+    },
+    "finalBuild": "PASS",
+    "gitDiffCheck": "PASS"
+  },
+  "browser": {
+    "management": {
+      "passed": true,
+      "origin": "http://wirehouse.localhost:5190",
+      "checks": [
+        {
+          "name": "login-font-responsive",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "login-font-responsive",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "login-font-responsive",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "admin",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "admin",
+          "width": 1024,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "admin",
+          "width": 768,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "admin",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "admin",
+          "width": 320,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "manager",
+          "width": 1440,
+          "passed": true
+        },
+        {
+          "name": "dashboard-filter-open-real-ticket-path",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "board-opens-unit-and-all-existing-tabs",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "lease-lines-table-existing-edit",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-billing",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-operations",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-objects",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-tenants",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-agenda",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        },
+        {
+          "name": "screen-profile",
+          "role": "manager",
+          "width": 390,
+          "passed": true
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "failedRequests": [],
+      "boundary": "Built frontend with actual isolated persisted Wirehouse API and four demo roles; all API writes blocked. No production or real messages/payments."
+    },
+    "worker": {
+      "passed": true,
+      "origin": "http://wirehouse.localhost:5190",
+      "api": "http://127.0.0.1:3012",
+      "checks": [
+        {
+          "scenario": "worker-record-all-tabs-camera-pause-comment-drafts",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "scenario": "worker-readings-notifications-messengers-search-status",
+          "width": 390,
+          "height": 844,
+          "passed": true,
+          "firstCardY": 294.1875,
+          "tabTargets": [
+            {
+              "label": "Задания6",
+              "height": 44,
+              "width": 89.796875
+            },
+            {
+              "label": "Показания",
+              "height": 44,
+              "width": 79.8125
+            },
+            {
+              "label": "Уведомления1",
+              "height": 44,
+              "width": 120.328125
+            },
+            {
+              "label": "Связь",
+              "height": 44,
+              "width": 49.078125
+            }
+          ]
+        },
+        {
+          "scenario": "worker-record-all-tabs-camera-pause-comment-drafts",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "scenario": "worker-readings-notifications-messengers-search-status",
+          "width": 320,
+          "height": 640,
+          "passed": true,
+          "firstCardY": 338.1875,
+          "tabTargets": [
+            {
+              "label": "Задания6",
+              "height": 44,
+              "width": 146
+            },
+            {
+              "label": "Показания",
+              "height": 44,
+              "width": 146
+            },
+            {
+              "label": "Уведомления1",
+              "height": 44,
+              "width": 146
+            },
+            {
+              "label": "Связь",
+              "height": 44,
+              "width": 146
+            }
+          ]
+        },
+        {
+          "scenario": "worker-record-all-tabs-camera-pause-comment-drafts",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "scenario": "worker-readings-notifications-messengers-search-status",
+          "width": 844,
+          "height": 390,
+          "passed": true,
+          "firstCardY": 391.484375,
+          "tabTargets": [
+            {
+              "label": "Задания6",
+              "height": 44,
+              "width": 83.9375
+            },
+            {
+              "label": "Показания",
+              "height": 44,
+              "width": 73.03125
+            },
+            {
+              "label": "Уведомления1",
+              "height": 44,
+              "width": 116.8125
+            },
+            {
+              "label": "Связь",
+              "height": 44,
+              "width": 44
+            }
+          ]
+        },
+        {
+          "scenario": "worker-record-all-tabs-camera-pause-comment-drafts",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        },
+        {
+          "scenario": "worker-readings-notifications-messengers-search-status",
+          "width": 1440,
+          "height": 900,
+          "passed": true,
+          "firstCardY": 275.484375,
+          "tabTargets": [
+            {
+              "label": "Задания6",
+              "height": 44,
+              "width": 83.9375
+            },
+            {
+              "label": "Показания",
+              "height": 44,
+              "width": 73.03125
+            },
+            {
+              "label": "Уведомления1",
+              "height": 44,
+              "width": 116.8125
+            },
+            {
+              "label": "Связь",
+              "height": 44,
+              "width": 44
+            }
+          ]
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "assigned",
+          "passed": true
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "awaiting_approval",
+          "passed": true
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "refused",
+          "passed": true
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "awaiting_acceptance",
+          "passed": true
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "paused",
+          "passed": true
+        },
+        {
+          "scenario": "workflow-state-capability",
+          "state": "in_progress",
+          "passed": true
+        },
+        {
+          "scenario": "manager-shared-record-regression",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "scenario": "manager-shared-record-regression",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "boundary": "Actual isolated API reads; browser desktop/touch emulation. API writes blocked. No physical device, production or real saves."
+    },
+    "tenant": {
+      "passed": true,
+      "origin": "http://wirehouse.localhost:5190",
+      "checks": [
+        {
+          "name": "rental-entry-tabs",
+          "width": 390,
+          "height": 844,
+          "overflow": false
+        },
+        {
+          "name": "filters-contract-documents-preserved",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "name": "proof-dirty-continue-discard-file",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "name": "readings-documents-services-connection",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "name": "chat-master-detail-draft",
+          "width": 390,
+          "height": 844,
+          "metrics": {
+            "body": {
+              "x": 33,
+              "y": 205.25,
+              "width": 324,
+              "height": 448.75,
+              "top": 205.25,
+              "right": 357,
+              "bottom": 654,
+              "left": 33
+            },
+            "composer": {
+              "x": 33,
+              "y": 670,
+              "width": 324,
+              "height": 77,
+              "top": 670,
+              "right": 357,
+              "bottom": 747,
+              "left": 33
+            }
+          }
+        },
+        {
+          "name": "rental-entry-tabs",
+          "width": 320,
+          "height": 640,
+          "overflow": false
+        },
+        {
+          "name": "filters-contract-documents-preserved",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "name": "proof-dirty-continue-discard-file",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "name": "readings-documents-services-connection",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "name": "chat-master-detail-draft",
+          "width": 320,
+          "height": 640,
+          "metrics": {
+            "body": {
+              "x": 29,
+              "y": 205.25,
+              "width": 262,
+              "height": 244.75,
+              "top": 205.25,
+              "right": 291,
+              "bottom": 450,
+              "left": 29
+            },
+            "composer": {
+              "x": 29,
+              "y": 466,
+              "width": 262,
+              "height": 77,
+              "top": 466,
+              "right": 291,
+              "bottom": 543,
+              "left": 29
+            }
+          }
+        },
+        {
+          "name": "rental-entry-tabs",
+          "width": 844,
+          "height": 390,
+          "overflow": false
+        },
+        {
+          "name": "filters-contract-documents-preserved",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "name": "proof-dirty-continue-discard-file",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "name": "readings-documents-services-connection",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "name": "chat-master-detail-draft",
+          "width": 844,
+          "height": 390,
+          "metrics": {
+            "body": {
+              "x": 29,
+              "y": 133,
+              "width": 786,
+              "height": 103,
+              "top": 133,
+              "right": 815,
+              "bottom": 236,
+              "left": 29
+            },
+            "composer": {
+              "x": 29,
+              "y": 244,
+              "width": 786,
+              "height": 53,
+              "top": 244,
+              "right": 815,
+              "bottom": 297,
+              "left": 29
+            }
+          }
+        },
+        {
+          "name": "rental-entry-tabs",
+          "width": 1440,
+          "height": 900,
+          "overflow": false
+        },
+        {
+          "name": "filters-contract-documents-preserved",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        },
+        {
+          "name": "proof-dirty-continue-discard-file",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        },
+        {
+          "name": "readings-documents-services-connection",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        },
+        {
+          "name": "chat-master-detail-draft",
+          "width": 1440,
+          "height": 900,
+          "metrics": {
+            "body": {
+              "x": 708.984375,
+              "y": 188.75,
+              "width": 686,
+              "height": 496.75,
+              "top": 188.75,
+              "right": 1394.984375,
+              "bottom": 685.5,
+              "left": 708.984375
+            },
+            "composer": {
+              "x": 708.984375,
+              "y": 701.5,
+              "width": 686,
+              "height": 77,
+              "top": 701.5,
+              "right": 1394.984375,
+              "bottom": 778.5,
+              "left": 708.984375
+            }
+          }
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "boundary": "Actual tenant token + isolated persisted API3002. All writes blocked; forms/files/dirty handling tested without submit; no production, messages or financial writes."
+    },
+    "shell": {
+      "passed": true,
+      "origin": "http://wirehouse.localhost:5190",
+      "checks": [
+        {
+          "role": "worker",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "role": "worker",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "role": "worker",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "role": "worker",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        },
+        {
+          "role": "tenant",
+          "width": 390,
+          "height": 844,
+          "passed": true
+        },
+        {
+          "role": "tenant",
+          "width": 320,
+          "height": 640,
+          "passed": true
+        },
+        {
+          "role": "tenant",
+          "width": 844,
+          "height": 390,
+          "passed": true
+        },
+        {
+          "role": "tenant",
+          "width": 1440,
+          "height": 900,
+          "passed": true
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "boundary": "Actual roles and API reads on the isolated schema16 stand. No API mutations; desktop/mobile emulated browser sizes."
+    },
+    "finalAffected": {
+      "passed": true,
+      "entry": "index-CuP_55cQ.js",
+      "checks": [
+        {
+          "role": "worker",
+          "width": 320,
+          "height": 640,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          },
+          "pathHeight": 218.5
+        },
+        {
+          "role": "worker",
+          "width": 390,
+          "height": 844,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          },
+          "pathHeight": 218.5
+        },
+        {
+          "role": "worker",
+          "width": 1440,
+          "height": 900,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          },
+          "pathHeight": 137.5
+        },
+        {
+          "role": "tenant",
+          "width": 320,
+          "height": 640,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          }
+        },
+        {
+          "role": "tenant",
+          "width": 390,
+          "height": 844,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          }
+        },
+        {
+          "role": "tenant",
+          "width": 1440,
+          "height": 900,
+          "passed": true,
+          "font": {
+            "family": "\"Onest Variable\", Onest, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif",
+            "ready": true
+          }
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "boundary": "Final built CSS/font/long-wrap affected checks. Actual isolated Wirehouse reads on3012, emulated browser sizes. No API mutations, no physical camera/device or production data."
+    },
+    "historyAndLongIdentifiers": {
+      "passed": true,
+      "checks": [
+        {
+          "width": 320,
+          "scenario": "refuse-before-start",
+          "current": 0,
+          "states": [
+            "current",
+            "todo",
+            "todo",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        },
+        {
+          "width": 320,
+          "scenario": "reopen-then-pause",
+          "current": 2,
+          "states": [
+            "done",
+            "done",
+            "current",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        },
+        {
+          "width": 320,
+          "scenario": "reopen-then-rejected",
+          "current": 2,
+          "states": [
+            "done",
+            "done",
+            "current",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        },
+        {
+          "width": 1440,
+          "scenario": "refuse-before-start",
+          "current": 0,
+          "states": [
+            "current",
+            "todo",
+            "todo",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        },
+        {
+          "width": 1440,
+          "scenario": "reopen-then-pause",
+          "current": 2,
+          "states": [
+            "done",
+            "done",
+            "current",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        },
+        {
+          "width": 1440,
+          "scenario": "reopen-then-rejected",
+          "current": 2,
+          "states": [
+            "done",
+            "done",
+            "current",
+            "todo",
+            "todo"
+          ],
+          "passed": true
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "boundary": "Controlled browser GET fixtures over isolated demo API. No persisted modifications, production or messages. Final built frontend."
+    },
+    "finance": {
+      "passed": true,
+      "origin": "http://wirehouse.localhost:5190",
+      "apiUrl": "http://127.0.0.1:3012",
+      "checks": [
+        {
+          "role": "manager",
+          "width": 390,
+          "height": 844,
+          "invoiceId": "43207ae5-98db-4a96-a7c7-23e1ca27db42",
+          "amount": 11200.25,
+          "paymentsBefore": 0,
+          "paymentsAfter": 0,
+          "name": "Persisted invoice detail, native decimal boundary, GET exports and dirty form",
+          "passed": true,
+          "validity": [
+            {
+              "value": "0.25",
+              "valid": true
+            },
+            {
+              "value": "0",
+              "valid": false
+            },
+            {
+              "value": "-1",
+              "valid": false
+            },
+            {
+              "value": "0.001",
+              "valid": false
+            },
+            {
+              "value": "1.001",
+              "valid": false
+            },
+            {
+              "value": "11200.25",
+              "valid": true
+            }
+          ]
+        },
+        {
+          "role": "admin",
+          "width": 1440,
+          "height": 1000,
+          "invoiceId": "43207ae5-98db-4a96-a7c7-23e1ca27db42",
+          "amount": 11200.25,
+          "paymentsBefore": 1,
+          "paymentsAfter": 1,
+          "name": "Persisted invoice detail, native decimal boundary, GET exports and dirty form",
+          "passed": true,
+          "validity": [
+            {
+              "value": "0.25",
+              "valid": true
+            },
+            {
+              "value": "0",
+              "valid": false
+            },
+            {
+              "value": "-1",
+              "valid": false
+            },
+            {
+              "value": "0.001",
+              "valid": false
+            },
+            {
+              "value": "1.001",
+              "valid": false
+            },
+            {
+              "value": "11200.25",
+              "valid": true
+            }
+          ]
+        },
+        {
+          "role": "admin",
+          "width": 320,
+          "height": 640,
+          "invoiceId": "43207ae5-98db-4a96-a7c7-23e1ca27db42",
+          "amount": 11200.25,
+          "paymentsBefore": 1,
+          "paymentsAfter": 1,
+          "name": "Persisted invoice detail, native decimal boundary, GET exports and dirty form",
+          "passed": true,
+          "validity": [
+            {
+              "value": "0.25",
+              "valid": true
+            },
+            {
+              "value": "0",
+              "valid": false
+            },
+            {
+              "value": "-1",
+              "valid": false
+            },
+            {
+              "value": "0.001",
+              "valid": false
+            },
+            {
+              "value": "1.001",
+              "valid": false
+            },
+            {
+              "value": "11200.25",
+              "valid": true
+            }
+          ]
+        }
+      ],
+      "errors": [],
+      "writes": [],
+      "downloads": [
+        {
+          "role": "manager",
+          "width": 390,
+          "kind": "invoice",
+          "bytes": 8378
+        },
+        {
+          "role": "manager",
+          "width": 390,
+          "kind": "closing",
+          "bytes": 9940
+        },
+        {
+          "role": "admin",
+          "width": 1440,
+          "kind": "invoice",
+          "bytes": 8379
+        },
+        {
+          "role": "admin",
+          "width": 1440,
+          "kind": "closing",
+          "bytes": 9940
+        },
+        {
+          "role": "admin",
+          "width": 320,
+          "kind": "invoice",
+          "bytes": 8378
+        },
+        {
+          "role": "admin",
+          "width": 320,
+          "kind": "closing",
+          "bytes": 9940
+        }
+      ],
+      "boundary": "Real isolated invoice fixture, GET reads/exports only. Native payment submit captured before React/API. No payments created or financial facts changed."
+    }
+  },
+  "independentCodeReview": {
+    "purpose": "Independent functional/code review of signal-pilot frontend before publication",
+    "baseline": "c3aff435f2946747afed279c02dc54fb300e96f7",
+    "reference": "066fc05",
+    "sourceSha256": {
+      "apps/web/src/features/tickets/TicketPath.tsx": "abdf1dd1c2e02168a7c293841160386ed0684c4644ff7e42e9825bbfaccfd08b",
+      "apps/web/src/styles/tokens.css": "5fefd0facd974d8ffbf0ce7159e406507373bc16fb1743d5fa25128f90cc382b",
+      "apps/web/src/ui/theme.css": "7aabd279383197a08bb2c12ebce93ccb817e8873d8da1bce94b3c839937d9604",
+      "apps/web/src/ui/ui.css": "65897f02c5856493c3b2912a91e64e607911bfee13f812dbde1b692c0c9b5789",
+      "apps/web/src/styles/tickets.css": "03af2ef7c7efb0b653ba17c348ee337b3186f3ff38351df6978dfab888eec615",
+      "apps/web/src/styles/responsive.css": "128980f9ece59097b25ff5acb03a5f04fccfb703d35a3068a9509cc31bdae7b4",
+      "apps/web/src/features/tickets/ticket-path.css": "bb426618a4fb7d735ff3c77629e8bd796be15da119d0ff4a2a10cefd008f1338",
+      "apps/web/src/features/dashboard/manager-dashboard.css": "f61d72c4e114ec97d79ee065fa1816803394119323e18dd48530b7a820b3df5e",
+      "apps/web/src/features/leases/lease-lines.css": "73ae959cb5085c6e76d48c8b85231fdf371b9e634fb3cf3564c753082cece7ac",
+      "apps/web/src/features/portfolio/unit-board.css": "3d7eb56a884593cf2ad43a8d35a38b151fc1a3618ac7192c4aa56beee7b945f1",
+      "apps/web/DESIGN.md": "ece8598fa79c5a815d27f4139362d2d4955701db1bf886846700adb272542405"
+    },
+    "ticketPath": {
+      "result": "PASS",
+      "method": "Actual TSX transpiled with TypeScript and rendered through ReactDOMServer; formatting and SLA imports isolated by stubs",
+      "cases": [
+        {
+          "history": [
+            "new",
+            "deferred"
+          ],
+          "status": "deferred",
+          "current": 0
+        },
+        {
+          "history": [
+            "new",
+            "waiting_tenant"
+          ],
+          "status": "waiting_tenant",
+          "current": 0
+        },
+        {
+          "history": [
+            "new",
+            "completed",
+            "in_progress",
+            "deferred"
+          ],
+          "status": "deferred",
+          "current": 2
+        },
+        {
+          "history": [
+            "new",
+            "completed",
+            "in_progress",
+            "rejected"
+          ],
+          "status": "rejected",
+          "current": 2
+        },
+        {
+          "history": [],
+          "status": "deferred",
+          "current": 0
+        },
+        {
+          "history": [
+            "new",
+            "accepted",
+            "in_progress",
+            "completed",
+            "closed"
+          ],
+          "status": "closed",
+          "current": 4
+        }
+      ],
+      "originalCreatedAtPreserved": true
+    },
+    "longIdentifiers": {
+      "result": "PASS",
+      "method": "Actual UnitBoard/LeaseLines TSX and scoped CSS rendered in Chromium; isolated formatting helpers and native fallback font",
+      "cases": [
+        {
+          "width": 390,
+          "long": false,
+          "documentScrollWidth": 390,
+          "unitNumberHeight": 26
+        },
+        {
+          "width": 390,
+          "long": true,
+          "documentScrollWidth": 390,
+          "unitNumberHeight": 130
+        },
+        {
+          "width": 1440,
+          "long": false,
+          "documentScrollWidth": 1440,
+          "unitNumberHeight": 26
+        },
+        {
+          "width": 1440,
+          "long": true,
+          "documentScrollWidth": 1440,
+          "unitNumberHeight": 52
+        }
+      ],
+      "identifiers": {
+        "unitNumberChars": 120,
+        "contractNumberChars": 144
+      }
+    },
+    "contrast": {
+      "method": "WCAG sRGB relative luminance ratio",
+      "backgrounds": [
+        "#ffffff",
+        "#f6f7f9",
+        "#f1f3f5",
+        "#e4f4ea",
+        "#fff1db",
+        "#fdecee",
+        "#eaf2fc"
+      ],
+      "text": {
+        "success": "#08773e",
+        "warning": "#955900",
+        "danger": "#c21b27",
+        "info": "#1f58ab"
+      },
+      "minimumAcrossMatrix": 4.950585,
+      "minimumRequired": 4.5,
+      "decorativeTokensPreserved": [
+        "--line-500",
+        "--warning",
+        "--danger",
+        "--info"
+      ],
+      "ratios": {
+        "success": {
+          "#ffffff": 5.647264,
+          "#f6f7f9": 5.268301,
+          "#f1f3f5": 5.076865,
+          "#e4f4ea": 4.955386,
+          "#fff1db": 5.070977,
+          "#fdecee": 4.950585,
+          "#eaf2fc": 5.003204
+        },
+        "warning": {
+          "#ffffff": 5.665167,
+          "#f6f7f9": 5.285002,
+          "#f1f3f5": 5.092959,
+          "#e4f4ea": 4.971095,
+          "#fff1db": 5.087053,
+          "#fdecee": 4.966279,
+          "#eaf2fc": 5.019066
+        },
+        "danger": {
+          "#ffffff": 6.034593,
+          "#f6f7f9": 5.629638,
+          "#f1f3f5": 5.425072,
+          "#e4f4ea": 5.295261,
+          "#fff1db": 5.418781,
+          "#fdecee": 5.290131,
+          "#eaf2fc": 5.346359
+        },
+        "info": {
+          "#ffffff": 6.902887,
+          "#f6f7f9": 6.439664,
+          "#f1f3f5": 6.205664,
+          "#e4f4ea": 6.057175,
+          "#fff1db": 6.198468,
+          "#fdecee": 6.051307,
+          "#eaf2fc": 6.115626
+        }
+      }
+    },
+    "diffCheck": "PASS",
+    "boundaries": [
+      "No API/1C/permissions/infra changes in incoming branch",
+      "No production writes or deployment performed by this reviewer",
+      "Not a full application browser-flow test; root runs the final bundle review"
+    ]
+  },
+  "independentDeploymentReview": {
+    "result": "GO",
+    "scope": "Independent read-only review of local deployment helper and captured evidence only; no production requests/writes",
+    "helperSha256": "40f2b6021ede73b8c5be9caa5ceeb352d844907a6f866ebd04e0e22c42b98bb4",
+    "derivedHelperSha256": "bc736d4c30a2fcec7318cc137f3e2d66a210fa78b6661d7d2229efea4bacf85f",
+    "helperChanges": [
+      "Old Web revision/release advances from mobile-roles to brand-text",
+      "New release prefix 20261105-signal-pilot",
+      "Expected assets advances497 to530 and foreign container count29 to33",
+      "Both artifact allowlists add only .woff2; archive/path/hash checks remain"
+    ],
+    "snapshotSha256": "901260cab48994d5baea1b067089c957f6015687e66c8ded7f8adf3557d02d8f",
+    "stableSnapshotSha256": "b86cd5472c95325e7841b19f9773f2571a20b198be73b5b1af9d68ed67d80cb6",
+    "stableKeys": [
+      "current",
+      "currentLink",
+      "webRevision",
+      "apiRevision",
+      "apiImageId",
+      "databaseMigrations",
+      "ownership",
+      "protectedFiles",
+      "containers",
+      "indexSha256",
+      "assets",
+      "downloads"
+    ],
+    "historicalDrift": {
+      "changedForeignContainers": [
+        "sloppy-prod-api-1",
+        "sloppy-prod-proxy-1",
+        "sloppy-prod-worker-1",
+        "sloppy-reader-browser-1",
+        "sloppy-reader-gateway-1",
+        "sloppy-reader-proxy-1",
+        "sloppy-search-search-1"
+      ],
+      "changedForeignConfigs": [
+        "/etc/nginx/sites-enabled/sloppy.conf"
+      ],
+      "allOtherContainersExact": true,
+      "allOtherConfigsExact": true
+    },
+    "protected": {
+      "apiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+      "apiImageId": "sha256:79f6f978c87154a173f5c9e29c72471c97c494fe0ea82e6137eb0e7b890bedc7",
+      "schemaMigrations": 16,
+      "migrationChecksumsExact": true,
+      "publishedWebRevisionIndexExact": true,
+      "assetsExact": 530,
+      "downloadsExact": 7,
+      "containers": 33,
+      "configs": 43
+    },
+    "guardsPreserved": [
+      "Pinned SSH key and RejectPolicy",
+      "Clean source/commit + complete source and dist maps",
+      "Protected API/contracts and all16 migration checksums",
+      "All protected snapshots checked before staging and again before live pointer change",
+      "Exclusive deploy flock, new release paths, archive path/member/hash checks",
+      "Preserve old assets/downloads, atomically switch static symlink, verify public SHA and health",
+      "No API/DB/compose/nginx/service/1C mutation"
+    ]
+  },
+  "limits": [
+    "Browser viewport/touch emulation; no physical phone/camera/iOS/APK validation.",
+    "Isolated persisted demo data and explicitly controlled browser GET fixtures; all writes blocked or captured before submit.",
+    "No production financial changes, outgoing messages, migrations, API/container/1C restarts, or new 1C exchange test.",
+    "Early harness failures (health field/path, occupied local port, localhost API shortcut, stale selectors, DNS route.fetch and fixture workflow selection) are retained privately; final affected runs passed."
+  ]
+}
