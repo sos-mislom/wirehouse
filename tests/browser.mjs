@@ -847,13 +847,14 @@ try {
   );
   assert.equal(await page.locator(".dashboard-page .mvp-metric").count(), 0);
   assert.equal(
-    await page.locator(".dashboard-page .forecast-summary").count(),
+    await page.locator(".dashboard-page .billing-forecast-view").count(),
     0,
   );
   await quickNav.getByRole("button", { name: "Платежи", exact: true }).click();
   await page.getByRole("tab", { name: "План доходов", exact: true }).click();
-  const forecast = page.locator(".billing-forecast");
-  await forecast.locator(".forecast-summary").waitFor();
+  const forecast = page.locator(".billing-forecast-view");
+  await forecast.locator(".billing-summary").waitFor();
+  assert.equal(await forecast.locator(".billing-forecast-month").count(), 3);
   await quickNav.getByRole("button", { name: "Главная", exact: true }).click();
   await page.getByRole("heading", { name: "Главная", exact: true }).waitFor();
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
