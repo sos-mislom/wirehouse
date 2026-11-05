@@ -1,0 +1,368 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-05",
+  "project": "Склад Контур / Wirehouse",
+  "codeRevision": "d3c072a338b80ec7d2bc7f6f0d5e334d8b6d5d30",
+  "publishedWebRevision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+  "publishedApiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+  "databaseSchemaVersion": 16,
+  "source": {
+    "pathRelativeToRepository": "../materials/specification-original.docx",
+    "version": "1.0, сентябрь 2026",
+    "sha256": "efbb3352de407c93668f242d4716b29ac9ae9eea39a1618fad36196bceeb4a01",
+    "xmlParagraphCount": 315,
+    "selectedStatementsCheckedAgainstOriginal": 155,
+    "allSelectedStatementTextsMatch": true,
+    "embeddedFiguresVisuallyReviewed": 3,
+    "paragraphReferenceConvention": "TZ-Pnnn is the zero-based XML paragraph index, not a page number"
+  },
+  "conclusion": {
+    "entireSpecificationClosed": false,
+    "fullMvpIndustrialAcceptanceClosed": false,
+    "coreProcessesImplementedAndApplicationTested": true,
+    "completionPercentageCalculated": false,
+    "reasonNoPercentage": "The source repeats requirements across roles, MVP and acceptance, and separates implementation from deployment/external acceptance."
+  },
+  "evidence": {
+    "fullMainCiUrl": "https://github.com/sos-mislom/wirehouse/actions/runs/42057131074",
+    "mainCiRevision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+    "applicationChecks": {
+      "pass": 90,
+      "fail": 0,
+      "skip": 0
+    },
+    "separatePostgresChecks": {
+      "pass": 26,
+      "fail": 0,
+      "skip": 0
+    },
+    "fullBrowserScenario": "PASS",
+    "localFullBrowserScenario": "PASS",
+    "nativeOnecAcceptanceInThisAudit": "not-run",
+    "physicalMobileAcceptanceInThisAudit": "not-run",
+    "realOtpDeliveryInThisAudit": "not-run",
+    "historicalNativeEvidence": "docs/WORKING_BP_DEMO_2026-10-28.md",
+    "freshProductionExchange": {
+      "date": "2026-11-05",
+      "receipt": "exchange-proof.json",
+      "oneCToSite": "counterparty name changed and restored; both site states verified",
+      "siteToOneC": "accepted November meter reading previous110/value120/consumption10, outbox applied and native WH_Readings row visually verified",
+      "financialPostingPerformed": false,
+      "allExchangeKindsFreshlyRetested": false,
+      "continuousConnectionAcceptanceComplete": false,
+      "observedLimit": "Intermittent HTTPS connection failures CRM_UNAVAILABLE; successful automatic passes between failures."
+    }
+  },
+  "mvpOpen": [
+    {
+      "id": "MVP-REGISTRATION",
+      "kind": "implementation",
+      "priority": "P0",
+      "sourceParagraphs": [
+        92,
+        102,
+        122
+      ],
+      "finding": "No separate actual applicant/contact in the dispatcher form; technical source_channel exists but is not a complete manual registration process. Archive searches createdBy, which is the registering user.",
+      "evidence": [
+        "apps/web/src/features/tickets/TicketCreateFields.tsx:25",
+        "apps/api/src/database/tickets.js:100",
+        "packages/contracts/src/requests.ts:69",
+        "packages/contracts/src/ticket-search.ts:30"
+      ],
+      "exitCriterion": "Dispatcher records another applicant, contact and channel while author stays in audit; archive finds that applicant."
+    },
+    {
+      "id": "MVP-AMBIGUOUS-LEASE",
+      "kind": "implementation",
+      "priority": "P0",
+      "sourceParagraphs": [
+        16,
+        88,
+        102
+      ],
+      "finding": "Creation UI lacks explicit leaseId selection. Tenant API safely rejects ambiguous leases; staff client picks first nonterminated lease to infer tenantId.",
+      "evidence": [
+        "apps/web/src/state/actions/tickets.ts:106",
+        "apps/api/src/routes/tickets.js:102",
+        "apps/web/src/features/tickets/TicketCreateFields.tsx"
+      ],
+      "exitCriterion": "Explicitly select the allowed contract/account when more than one applies; wrong and expired contexts are rejected."
+    },
+    {
+      "id": "MVP-NOTIFICATION-EVENTS",
+      "kind": "implementation",
+      "priority": "P0",
+      "sourceParagraphs": [
+        38,
+        66,
+        255
+      ],
+      "finding": "In-app/email notification infrastructure exists; workflow decisions, reading reviews and maintenance changes do not cover the complete agreed event/recipient delivery matrix.",
+      "evidence": [
+        "apps/api/src/services/notifications.js:47",
+        "apps/api/src/routes/tickets.js:141",
+        "apps/api/src/routes/business-workflows.js:71",
+        "apps/api/src/routes/business-workflows.js:101"
+      ],
+      "exitCriterion": "Event/recipient/channel/deep-link matrix is implemented with scope checks, deduplication and retry."
+    },
+    {
+      "id": "MVP-MOBILE-RELEASE",
+      "kind": "implementation-and-external-acceptance",
+      "priority": "P0/P1",
+      "sourceParagraphs": [
+        12,
+        38,
+        41,
+        125,
+        239,
+        241,
+        282,
+        309
+      ],
+      "finding": "Two product projects and historical debug APKs exist. Four signed iOS/Android release builds and physical camera/files/network/session/background acceptance are not complete. Site update does not update packaged APK resources.",
+      "evidence": [
+        "apps/mobile/README.md:17",
+        "apps/mobile/README.md:23",
+        "apps/mobile/scripts/prepare.mjs:54",
+        "apps/mobile/scripts/prepare.mjs:70",
+        "apps/mobile/scripts/prepare.mjs:122"
+      ],
+      "exitCriterion": "Client and worker builds signed, installed and accepted on Android/iOS with the latest resources."
+    },
+    {
+      "id": "MVP-MOBILE-NOTIFICATION-CHANNEL",
+      "kind": "implementation-and-external-acceptance",
+      "priority": "P0/P1",
+      "sourceParagraphs": [
+        38,
+        66,
+        255
+      ],
+      "finding": "APNs/FCM device registry and delivery are absent in the inspected API/contracts/mobile scripts. Specification requires notifications but does not name APNs/FCM literally; delivery expectations for a closed application must be agreed.",
+      "evidence": [
+        "apps/api/src/services/notifications.js",
+        "apps/mobile/README.md:23",
+        "apps/mobile/package.json",
+        "packages/contracts/src/requests.ts"
+      ],
+      "exitCriterion": "Agreed mobile delivery transport works with registration/revocation, permissions, foreground/background/closed-app cases and authorized navigation."
+    },
+    {
+      "id": "MVP-ADMIN-RULES",
+      "kind": "implementation-and-business-decision",
+      "priority": "P1",
+      "sourceParagraphs": [
+        76,
+        121,
+        301
+      ],
+      "finding": "Teams/routes are editable, but statuses and default SLA values remain constants; no administrative SLA/escalation editor.",
+      "evidence": [
+        "apps/api/src/database/constants.js:58",
+        "apps/api/src/database/constants.js:174",
+        "apps/api/src/domain/dispatch.js"
+      ],
+      "exitCriterion": "Agreed rule configuration and escalation work with audit while preserving server workflow invariants."
+    },
+    {
+      "id": "MVP-IMPORTED-METER-RESPONSIBLE",
+      "kind": "implementation-regression-and-demo-readiness",
+      "priority": "P1",
+      "sourceParagraphs": [
+        156,
+        157
+      ],
+      "finding": "Applying a newer imported meter version explicitly sets responsibleId to null and overwrites a site-managed worker assignment. The current DEMO worker has no assigned meter, so worker reading submission is not ready for demonstration. Tenant submission followed by engineer review is a separate route; unchanged repeated versions are skipped.",
+      "evidence": [
+        "apps/api/src/domain/accounting.js:468",
+        "apps/api/src/domain/accounting.js:389",
+        "apps/api/src/operations.js:333",
+        "apps/api/src/operations.js:620",
+        "apps/web/src/features/business/ReadingsWorkspace.tsx:164",
+        "docs/demo-2026-11-05/DATA_READINESS_RU.md"
+      ],
+      "exitCriterion": "Preserve the existing operational assignment when applying a newer imported meter version; allow creation without assignment. Pass a targeted merge test, narrow worker authorization checks and a real repeat import before demonstrating this worker route."
+    },
+    {
+      "id": "MVP-MAINTENANCE-PLAN-DOCUMENT",
+      "kind": "business-clarification",
+      "priority": "P1-if-required",
+      "sourceParagraphs": [
+        180,
+        182
+      ],
+      "finding": "Documents link to equipment and task/ticket, but maintenance_plan is not a supported document entity. Whether documents must version the regulation itself needs confirmation.",
+      "evidence": [
+        "packages/contracts/src/business-workflows.ts:50",
+        "apps/api/src/domain/documents.js"
+      ],
+      "exitCriterion": "Customer accepts equipment/task linkage or explicit maintenance-plan/version linkage is implemented."
+    }
+  ],
+  "externalAcceptanceOpen": [
+    {
+      "id": "EXT-ONEC",
+      "sourceParagraphs": [
+        15,
+        185,
+        215,
+        217,
+        218,
+        219,
+        220,
+        259,
+        286,
+        288,
+        306
+      ],
+      "finding": "Specific configurations/versions, two real independent sources, service rights/license, server cluster, current bidirectional delivery and durable schedule require actual deployment acceptance. File/Srvr parameters do not prove universal compatibility."
+    },
+    {
+      "id": "EXT-ACCOUNTING-POSTING",
+      "sourceParagraphs": [
+        185,
+        209,
+        298
+      ],
+      "finding": "Acts.bsl:43 saves a draft using Doc.Write(); PostDemoAct creates a separate marked manual ledger movement. Normal sales/VAT posting is not proven and is not an unconditional literal MVP requirement; agree the desired accounting result."
+    },
+    {
+      "id": "EXT-OTP",
+      "sourceParagraphs": [
+        17,
+        272
+      ],
+      "finding": "Real agreed phone/channel login and delivery must be accepted; passwords or admin-issued sessions do not prove OTP delivery."
+    },
+    {
+      "id": "EXT-PPR-FILE",
+      "sourceParagraphs": [
+        150,
+        151,
+        152,
+        153,
+        302
+      ],
+      "finding": "CSV/XLSX mechanism is implemented; actual customer file and unambiguous matching must be accepted."
+    },
+    {
+      "id": "EXT-BUSINESS-MATRIX",
+      "sourceParagraphs": [
+        295,
+        296,
+        297,
+        298,
+        299,
+        300,
+        301,
+        302,
+        303
+      ],
+      "finding": "Contract/account rules, owner/tenant rights, source ownership, meter master, approvers, tariffs, SLA and optional EDI/payment integrations remain customer decisions."
+    },
+    {
+      "id": "EXT-PILOT",
+      "sourceParagraphs": [
+        265,
+        266
+      ],
+      "finding": "A controlled demo is not evidence of a completed customer pilot and industrial acceptance."
+    }
+  ],
+  "nextStageOpen": [
+    {
+      "id": "NEXT-COST",
+      "sourceParagraphs": [
+        20,
+        240,
+        254
+      ],
+      "state": "partial",
+      "finding": "Estimates and work-log amounts exist; full cost calculation and deep commercial calculations do not."
+    },
+    {
+      "id": "NEXT-PAYROLL",
+      "sourceParagraphs": [
+        132,
+        242
+      ],
+      "state": "not-closed",
+      "finding": "Hours/work logs do not implement payroll distribution."
+    },
+    {
+      "id": "NEXT-STOCK",
+      "sourceParagraphs": [
+        21,
+        212,
+        244
+      ],
+      "state": "not-implemented",
+      "finding": "Material catalog/estimate lines are not stock balances, batches, reservations, movements or accounting write-offs."
+    },
+    {
+      "id": "NEXT-TELEMETRY",
+      "sourceParagraphs": [
+        22,
+        162,
+        246
+      ],
+      "state": "not-implemented",
+      "finding": "Manual validated readings are not automated meter telemetry."
+    },
+    {
+      "id": "NEXT-GEOMETRY",
+      "sourceParagraphs": [
+        23,
+        248
+      ],
+      "state": "partial",
+      "finding": "DXF/layers/optimistic versioning exist; a full historical archive and restoration of replanning geometry do not."
+    },
+    {
+      "id": "NEXT-BI",
+      "sourceParagraphs": [
+        24,
+        250
+      ],
+      "state": "partial",
+      "finding": "Dashboard/NOI/forecast are not a full agreed BI/P&L model."
+    },
+    {
+      "id": "NEXT-PAYMENTS",
+      "sourceParagraphs": [
+        24,
+        252
+      ],
+      "state": "not-implemented-as-target-contour",
+      "finding": "Manual payment/proof and 1C payment display are not acquiring/bank payment integrations."
+    },
+    {
+      "id": "NEXT-HANDOVER",
+      "sourceParagraphs": [
+        221,
+        222,
+        226,
+        228,
+        230,
+        232,
+        234,
+        256
+      ],
+      "state": "not-implemented",
+      "finding": "No unified inspection/defect/reinspection/handover-act/key-transfer process. Service act is not handover act."
+    }
+  ],
+  "claimsNotSupported": [
+    "All specification and industrial acceptance completed",
+    "Install one CFE into any typical 1C without configuration/version assessment",
+    "Always-on exchange with client closed or PC off in the historical local configuration",
+    "Engineer accepted equals native 1C received",
+    "Saved service act equals normal sales document and VAT posting",
+    "Emulated mobile browser equals physical Android/iOS/push acceptance",
+    "Published web automatically updates old packaged APKs",
+    "Basic financial dashboard equals completed full P&L or inventory accounting",
+    "Imported meter worker assignment remains durable across newer 1C versions without the responsibleId fix and repeat-import acceptance"
+  ]
+}

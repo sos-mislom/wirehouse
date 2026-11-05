@@ -1,0 +1,92 @@
+{
+  "inputSha256": "e204de828d8478313cd7a1462a8d088f52bc59846f294028f84fef82018add16",
+  "rolesSha256": "4715b0195e29ac3a8c742db941b65feaee6bbc44f3f108dfa5a5bc564763c2c5",
+  "roleGallerySha256": "803a6652e5030a8dc095819edf2ed4b7b1622668c6d4699077d8e3314397909b",
+  "roleRoadmapSha256": "4c9c060af8a106aa137631e633146696dc823ab6e8b76fa6e4d7d6733e4c053c",
+  "roleScreenshots": 5,
+  "specSha256": "b9108d4a67be2b256657a0d8066f4455bc22e991bf38a00c39ebbf786395bf5e",
+  "htmlSha256": "542962bb21eab25812bbf0ff1825daee76447ff3adc76fd23c41848b7211a667",
+  "bytes": 2298468,
+  "exchangeDirections": 2,
+  "exchangeSteps": 7,
+  "roleProcesses": 17,
+  "samplePhotos": 2,
+  "embeddedImages": [
+    {
+      "path": "repo/.local/demo-2026-11-05/photo-research/05.jpg",
+      "bytes": 63202,
+      "sha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/photo-research/03.jpg",
+      "bytes": 129091,
+      "sha256": "f23a1a1fc04de2898a8e896bb9dc8029364b0a252b30418db38e995be5ddb20e"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/onec-name-before.png",
+      "bytes": 55098,
+      "sha256": "ca9972b3ceef64f1063c25f487f9b19c28bc4579506a129b7c79dce48d7cf57e"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/onec-name-saved.png",
+      "bytes": 55657,
+      "sha256": "6f8c359484d230595b629dc4e394dee30c15f68e58c3989915be32e780f7b2f3"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/exchange-site-name-changed.png",
+      "bytes": 78320,
+      "sha256": "3af65a5677a0c1ba61903f0ab0e3032fc118ee13c1fa8a3653dbbe9cb6e7cbe0"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/exchange-site-name-before.png",
+      "bytes": 77438,
+      "sha256": "5e527c136e3ee4d662efde9e9de1196823650bec70930d71d8dad37f3276aa85"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/exchange-reading-form.png",
+      "bytes": 87966,
+      "sha256": "b5b1420010304eecc11adc1104624aaeb2c4b0f67be3c68f3638ad9944919945"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/exchange-reading-accepted.png",
+      "bytes": 103187,
+      "sha256": "4437b0c20ff830b40071b7e7eab791999975bb78b0b4db5a9ccae9422c67bb04"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/exchange-journal.png",
+      "bytes": 78885,
+      "sha256": "add1251626ce5f370cf0845bf23ed841cf679a64b7ae021db6887598ee5638fd"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/onec-reading-record.png",
+      "bytes": 52920,
+      "sha256": "7895b69b30a8e665a99fbc8bd4f3db492c1afa4cb645d3dc13d7cd78a052ac91"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/role-admin-accounts-1440.png",
+      "bytes": 86423,
+      "sha256": "ed3d09078d70b915ae9b554444b5ee2cdd8f793d3e24759aa5ae6a99fe32723a"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/role-manager-dashboard-1440.png",
+      "bytes": 152951,
+      "sha256": "13d104279c41cdd5d6b4e5b85a3b52e10b461677701c09b5d95cf274e61b71f8"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/role-worker-queue-390.png",
+      "bytes": 55447,
+      "sha256": "88e683740a1927b241faab20e16693f30a3f7a50be5fdb4b5ee9a3bb36375c90"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/role-tenant-leases-390.png",
+      "bytes": 25832,
+      "sha256": "d20dd0ed081d6ba4747088c43b55385c9d21c81b248d8641404d3efc077d3208"
+    },
+    {
+      "path": "repo/.local/demo-2026-11-05/screens/role-combined-leases-1440.png",
+      "bytes": 47713,
+      "sha256": "c0c6c70f30a1b2f63a5bd393f98297d0f11a947e01a66f9199252965a9a1aa00"
+    }
+  ],
+  "testOnly": false
+}

@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-05",
+  "files": [
+    {
+      "file": "guide.html",
+      "sha256": "542962bb21eab25812bbf0ff1825daee76447ff3adc76fd23c41848b7211a667",
+      "bytes": 2298468
+    },
+    {
+      "file": "guide.manifest.json",
+      "sha256": "ccee65b0ec8fc8eea236e9b7c6b9bbfceaf8d15d362c294f9aab3d72c65768d2",
+      "bytes": 3650
+    },
+    {
+      "file": "Обмен сайта и 1С — инструкция.pdf",
+      "sha256": "2533eea412b8b59ecbdfd425e904ccd0e76c321a1c0c267787f567e918569693",
+      "bytes": 1165266
+    },
+    {
+      "file": "Карты процессов по ролям.pdf",
+      "sha256": "737923beff6ace1469346760fff753b21d3ff6669a1fa250a77f4d5318d01188",
+      "bytes": 821654
+    },
+    {
+      "file": "Статус выполнения ТЗ.pdf",
+      "sha256": "613f205a3b8628085cbb604548fe42ee4e0a03f2b60516645f7fd60c9b952079",
+      "bytes": 363243
+    },
+    {
+      "file": "Фото счётчика — 226.492.jpg",
+      "sha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309",
+      "bytes": 63202
+    },
+    {
+      "file": "Фото счётчика — 880.518.jpg",
+      "sha256": "f23a1a1fc04de2898a8e896bb9dc8029364b0a252b30418db38e995be5ddb20e",
+      "bytes": 129091
+    },
+    {
+      "file": "PHOTO_SOURCES_RU.md",
+      "sha256": "5625aeef8db6fa678d89be68d8d8d208dcca89c9d90f7308a514a2357b6a2cbc",
+      "bytes": 2298
+    }
+  ],
+  "exchangeSteps": 7,
+  "roleProcesses": 17,
+  "technicalRoles": [
+    "admin",
+    "manager",
+    "worker",
+    "tenant"
+  ],
+  "credentialsIncluded": false,
+  "appDeploymentChanged": false
+}

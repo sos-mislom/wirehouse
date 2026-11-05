@@ -1,0 +1,133 @@
+{
+  "date": "2026-11-05",
+  "environment": "production",
+  "origin": "https://sklad-kontur.92.118.115.96.nip.io",
+  "webRevision": "2ad17b8ff3663486f7f64cf48ab5a569fe6fe4c6",
+  "apiRevision": "8060b64491c8dab8d373768e858fcc89233d978a",
+  "dataset": "ТЕСТ WH-DEMO-20261028",
+  "oneCToSite": {
+    "before": "ТЕСТ WH-DEMO-20261025 Арендатор",
+    "after": "ТЕСТ WH-DEMO-20261025 Арендатор — показ 05.11",
+    "restored": "ТЕСТ WH-DEMO-20261025 Арендатор",
+    "siteChangedAt": "2026-11-05T16:44:43.124Z",
+    "siteRestoredAt": "2026-11-05T16:50:31.742Z",
+    "restorationVerified": true
+  },
+  "siteToOneC": {
+    "submissionId": "4f7d9cb1-124e-4917-8cf7-dba1f2178287",
+    "outboxId": "15f94637-85f6-4ea0-95b9-f6b737461339",
+    "messageId": "reading-4f7d9cb1-124e-4917-8cf7-dba1f2178287",
+    "kind": "readings",
+    "status": "applied",
+    "uiStatus": "Обработано",
+    "attempts": 1,
+    "appliedAt": "2026-11-05T16:39:42.066Z",
+    "period": "2026-11",
+    "previous": 110,
+    "value": 120,
+    "consumption": 10,
+    "nativeRegister": "WH_Readings",
+    "nativeRowVisuallyVerified": true,
+    "nativeScreenshot": "screens/onec-reading-record.png",
+    "noFinancialPosting": true
+  },
+  "limits": [
+    "Intermittent HTTPS connection failures CRM_UNAVAILABLE observed; stable unattended operation not accepted.",
+    "Thin client remains open; watcher restored Running. Thick client backend.dll crash cause not established.",
+    "This fresh demonstration verifies counterparty name export and accepted meter reading import, not a new complete matrix of every exchange kind."
+  ],
+  "screenshots": [
+    {
+      "file": "screens/onec-name-before.png",
+      "sha256": "ca9972b3ceef64f1063c25f487f9b19c28bc4579506a129b7c79dce48d7cf57e",
+      "bytes": 55098
+    },
+    {
+      "file": "screens/onec-name-saved.png",
+      "sha256": "6f8c359484d230595b629dc4e394dee30c15f68e58c3989915be32e780f7b2f3",
+      "bytes": 55657
+    },
+    {
+      "file": "screens/onec-name-restored.png",
+      "sha256": "398bbae11029a848d9ef3a0717cf585693f1cc4f62cdc4d8d662342764eeb7aa",
+      "bytes": 55760
+    },
+    {
+      "file": "screens/exchange-site-name-before.png",
+      "sha256": "5e527c136e3ee4d662efde9e9de1196823650bec70930d71d8dad37f3276aa85",
+      "bytes": 77438
+    },
+    {
+      "file": "screens/exchange-site-name-changed.png",
+      "sha256": "3af65a5677a0c1ba61903f0ab0e3032fc118ee13c1fa8a3653dbbe9cb6e7cbe0",
+      "bytes": 78320
+    },
+    {
+      "file": "screens/exchange-site-name-restored.png",
+      "sha256": "5e527c136e3ee4d662efde9e9de1196823650bec70930d71d8dad37f3276aa85",
+      "bytes": 77438
+    },
+    {
+      "file": "screens/exchange-reading-form.png",
+      "sha256": "b5b1420010304eecc11adc1104624aaeb2c4b0f67be3c68f3638ad9944919945",
+      "bytes": 87966
+    },
+    {
+      "file": "screens/exchange-reading-accepted.png",
+      "sha256": "4437b0c20ff830b40071b7e7eab791999975bb78b0b4db5a9ccae9422c67bb04",
+      "bytes": 103187
+    },
+    {
+      "file": "screens/exchange-journal.png",
+      "sha256": "add1251626ce5f370cf0845bf23ed841cf679a64b7ae021db6887598ee5638fd",
+      "bytes": 78885
+    },
+    {
+      "file": "screens/onec-reading-record.png",
+      "sha256": "7895b69b30a8e665a99fbc8bd4f3db492c1afa4cb645d3dc13d7cd78a052ac91",
+      "bytes": 52920
+    },
+    {
+      "file": "screens/role-admin-accounts-1440.png",
+      "sha256": "ed3d09078d70b915ae9b554444b5ee2cdd8f793d3e24759aa5ae6a99fe32723a",
+      "bytes": 86423
+    },
+    {
+      "file": "screens/role-manager-dashboard-1440.png",
+      "sha256": "13d104279c41cdd5d6b4e5b85a3b52e10b461677701c09b5d95cf274e61b71f8",
+      "bytes": 152951
+    },
+    {
+      "file": "screens/role-worker-queue-390.png",
+      "sha256": "88e683740a1927b241faab20e16693f30a3f7a50be5fdb4b5ee9a3bb36375c90",
+      "bytes": 55447
+    },
+    {
+      "file": "screens/role-tenant-leases-390.png",
+      "sha256": "d20dd0ed081d6ba4747088c43b55385c9d21c81b248d8641404d3efc077d3208",
+      "bytes": 25832
+    },
+    {
+      "file": "screens/role-combined-leases-1440.png",
+      "sha256": "c0c6c70f30a1b2f63a5bd393f98297d0f11a947e01a66f9199252965a9a1aa00",
+      "bytes": 47713
+    }
+  ],
+  "preparedFutureExample": {
+    "formCheckedAt": "2026-11-05T17:09:56.285Z",
+    "role": "tenant",
+    "meterId": "1666a37a-abe8-461d-a6eb-c44da05c64c1",
+    "periodId": "b6671b77-b81e-4d5c-9590-f5d92dafc10c",
+    "accountId": "791d98bd-4eb2-46b2-ab47-bfc6db7eafc1",
+    "formSelectionVerified": true,
+    "previous": 120,
+    "typedValue": 226.492,
+    "expectedConsumption": 106.492,
+    "expectedAnomaly": true,
+    "reviewReasonRequired": true,
+    "actualSubmissionPerformed": false,
+    "photoUploaded": false,
+    "samplePhoto": "Фото счётчика — 226.492.jpg",
+    "photoAttribution": "PHOTO_SOURCES_RU.md"
+  }
+}
