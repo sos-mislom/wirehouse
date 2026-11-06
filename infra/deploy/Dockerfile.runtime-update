@@ -1,0 +1,7 @@
+# Use only after verifying every dependency manifest against this local image.
+# The deployment receipt must record its immutable image ID and manifest hashes.
+ARG WIREHOUSE_RUNTIME_IMAGE
+FROM ${WIREHOUSE_RUNTIME_IMAGE}
+COPY apps/api/src apps/api/src
+COPY apps/api/assets apps/api/assets
+COPY packages/contracts/src packages/contracts/src

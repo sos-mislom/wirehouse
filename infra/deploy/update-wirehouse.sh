@@ -7,7 +7,7 @@ exec 9>/opt/wirehouse/.deploy.lock
 flock -n 9 || { echo 'Another Wirehouse deployment is running'; exit 2; }
 compose_args=(-p wirehouse -f compose.yml)
 if [[ -f compose.network.yml ]]; then compose_args+=(-f compose.network.yml); fi
-release_tag=${1:?Usage: update-wirehouse.sh RELEASE_TAG [ARCHIVE] [migrate|status]}
+release_tag=${1:?Usage: update-wirehouse.sh RELEASE_TAG [ARCHIVE] [migrate|status] [PREBUILT_IMAGE_ID]}
 [[ "$release_tag" =~ ^[A-Za-z0-9_.-]+$ ]] || exit 2
 archive=$(realpath -- "${2:-release.tar.gz}")
 [[ "$archive" == /opt/wirehouse/*.tar.gz && -f "$archive" ]] || exit 2
@@ -26,7 +26,12 @@ if [[ -f compose.network.yml ]]; then cp compose.network.yml "$release/previous-
 readlink -f /var/www/wirehouse/current > "$release/previous-deployment/web-release.txt"
 if [[ -f deployed-web-revision.txt ]]; then cp deployed-web-revision.txt "$release/previous-deployment/"; fi
 cp /etc/nginx/sites-available/wirehouse.conf "$release/previous-deployment/nginx.conf"
-docker build -f "$release/infra/deploy/Dockerfile" -t "wirehouse-api:$release_tag" "$release" </dev/null
+if [[ -n "${4:-}" ]]; then
+  [[ "$4" =~ ^sha256:[0-9a-f]{64}$ ]]
+  [[ "$(docker image inspect --format '{{.Id}}' "wirehouse-api:$release_tag")" == "$4" ]]
+else
+  docker build -f "$release/infra/deploy/Dockerfile" -t "wirehouse-api:$release_tag" "$release" </dev/null
+fi
 # Quiesce writes before the final consistent backup and schema transition.
 docker compose "${compose_args[@]}" stop -t 30 api </dev/null
 bash "$release/infra/deploy/backup-wirehouse.sh" > "$release/predeploy-backup.txt"
