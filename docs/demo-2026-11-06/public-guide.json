@@ -1,0 +1,61 @@
+{
+  "status": "published",
+  "at": "2026-11-06T10:12:05.819967+00:00",
+  "url": "https://sklad-kontur.92.118.115.96.nip.io/downloads/demo-20261106/index.html",
+  "revision": "97a3d10b0edaf75901be6c28bd8d58314546114d",
+  "archiveSha256": "1a0a3a4dca54c54194e677b0cea2a55aeb9475d86e7d8eed7341bc83a6b0e3f8",
+  "files": {
+    "exchange-demo.pdf": {
+      "size": 2261475,
+      "sha256": "0c656a008869b339464fab72e2fc36902dce9a1abafa83ba19787022157d543d"
+    },
+    "guide.css": {
+      "size": 27135,
+      "sha256": "6ff5f773ca5d6e752bbb4f741cde65ae8db73eaca6bab515937ea60fe0b4e90e"
+    },
+    "guide.js": {
+      "size": 6661,
+      "sha256": "c939d8495fffbe2259624193d41e2fae32143f76a3b9af37dabfb8a07fa0c04e"
+    },
+    "index.html": {
+      "size": 3530420,
+      "sha256": "99fcb5a52db01d391558cb8af984dce5c61f1cb7ea80658bde38ef38bedd814c"
+    },
+    "kamstrup-880.518.jpg": {
+      "size": 129091,
+      "sha256": "f23a1a1fc04de2898a8e896bb9dc8029364b0a252b30418db38e995be5ddb20e"
+    },
+    "manifest.json": {
+      "size": 3810,
+      "sha256": "1d205d845836e88e50312c0f0a18689321a9059ec21642bb237793305e767b56"
+    },
+    "minol-226.492.jpg": {
+      "size": 63202,
+      "sha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309"
+    },
+    "onest-cyrillic-wght-normal.woff2": {
+      "size": 15860,
+      "sha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27"
+    },
+    "onest-latin-wght-normal.woff2": {
+      "size": 33760,
+      "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828"
+    },
+    "photo-credits.txt": {
+      "size": 5495,
+      "sha256": "49c9910f34db4ac02543d9c27c36d8431e640fa4a16e55d0c08bae599aa4ca9d"
+    },
+    "roles-20261105.pdf": {
+      "size": 825242,
+      "sha256": "c59f45c619aa99690077eef459af3d1b7192a082ce166f93ed237ac770f9ead5"
+    },
+    "spec-review-20261105-20261106.pdf": {
+      "size": 376501,
+      "sha256": "19678a6dc487ca0bb42289fe8afacfb60de645a4e87692fe574c20b4529c2325"
+    }
+  },
+  "originalDownloadsUnchanged": true,
+  "applicationIndexUnchanged": true,
+  "apiContainerUnchanged": true,
+  "configurationUnchanged": true
+}

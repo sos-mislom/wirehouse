@@ -1,0 +1,232 @@
+{
+  "date": "2026-11-06",
+  "environment": "production",
+  "origin": "https://sklad-kontur.92.118.115.96.nip.io",
+  "webRevision": "97a3d10b0edaf75901be6c28bd8d58314546114d",
+  "apiRevision": "97a3d10b0edaf75901be6c28bd8d58314546114d",
+  "dataset": "WH-DEMO",
+  "oneCToSite": {
+    "before": "ТЕСТ WH-DEMO-20261025 Арендатор",
+    "after": "ТЕСТ WH-DEMO-20261025 Арендатор — показ 06.11",
+    "siteChangedAt": "2026-11-06T09:22:25.655Z",
+    "restored": true,
+    "siteRestoredAt": "2026-11-06T09:26:18.759Z"
+  },
+  "newMeter": {
+    "id": "3e55bdda-afd4-45bc-bb11-aa65b37aeb62",
+    "externalId": "e357aec4-e5ba-4993-8edd-6d45088c2da6",
+    "name": "ТЕСТ WH-DEMO-20261106 Вода — показ 091904",
+    "serialNumber": "WH-DEMO-20261106-20261106091904",
+    "createdAt": "2026-11-06T09:19:08.723Z",
+    "initialValue": 216.492,
+    "registrationId": "4855f788-bae3-4c2f-8ee5-fc95194772c4"
+  },
+  "registration": {
+    "id": "4855f788-bae3-4c2f-8ee5-fc95194772c4",
+    "messageId": "meter-registration-3e55bdda-afd4-45bc-bb11-aa65b37aeb62",
+    "kind": "meter_registrations",
+    "status": "applied",
+    "appliedAt": "2026-11-06T09:19:47.213Z"
+  },
+  "reading": {
+    "submissionId": "33613cc9-1678-4e5d-a5cc-a84c2bccf9e4",
+    "outboxId": "cf78ad3c-f455-44b4-a92b-1cdf8f00b5d1",
+    "messageId": "reading-33613cc9-1678-4e5d-a5cc-a84c2bccf9e4",
+    "previous": 216.492,
+    "value": 226.492,
+    "consumption": 10,
+    "status": "accepted",
+    "acceptedAt": "2026-11-06T09:23:05.610Z",
+    "appliedAt": "2026-11-06T09:26:19.790Z",
+    "outboxStatus": "applied",
+    "photoSha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309"
+  },
+  "nativeReading": {
+    "visuallyVerified": true,
+    "submissionId": "33613cc9-1678-4e5d-a5cc-a84c2bccf9e4",
+    "meterExternalId": "e357aec4-e5ba-4993-8edd-6d45088c2da6",
+    "billingPeriod": "2026-11",
+    "previous": 216.492,
+    "value": 226.492,
+    "receivedAt": "2026-11-06T09:26:19Z"
+  },
+  "roundtrip": {
+    "mappingVersion": 1,
+    "responsiblePreserved": true
+  },
+  "latency": {
+    "agentApproximatePollingSeconds": 60,
+    "registrationCreateToAppliedSeconds": 38.474,
+    "acceptedReadingToAppliedSeconds": 194.18,
+    "observedTransientError": "CRM_UNAVAILABLE",
+    "fixedDeliveryDeadlinePromised": false
+  },
+  "documents": {
+    "catalogCount": 14,
+    "catalogVersion": "2026-11-06",
+    "pdfOpened": true,
+    "docxDownloaded": true,
+    "docxValidated": true,
+    "officeOpened": true,
+    "attachedFileId": "2035ed21-74ab-48ea-a7a4-7bd094ffb3d4",
+    "ticketId": "bfe402dd-9b36-4a0b-b35e-d27b6fcfc25a",
+    "ticketNumber": "SD-2026-0012",
+    "attachedFileDownloaded": true
+  },
+  "assetMaintenance": {
+    "referencePhotoCorrections": 3,
+    "blankAttachments": 44,
+    "forms": 14,
+    "original13Retained": true,
+    "historicalReadingFieldsUnchanged": true,
+    "temporaryOwnDuplicatesCreated": 8,
+    "temporaryOwnDuplicatesDeleted": 8,
+    "finalIdempotentApiWrites": 0
+  },
+  "invariants": {
+    "createdNewMeterThisRun": true,
+    "oldMeterIdsReused": false,
+    "oldReadingValuesUnchanged": true,
+    "monthlyRulePreserved": true,
+    "noFinancialPosting": true
+  },
+  "historicalRoleAndFullSpecAuditDate": "2026-11-05",
+  "freshFullSpecAuditPerformed": false,
+  "screenshots": [
+    {
+      "key": "site-name-before",
+      "group": "exchange",
+      "file": "screens/site-name-before.png",
+      "capturedAt": "2026-11-06T09:17:59.563Z",
+      "reviewed": true,
+      "sha256": "5e527c136e3ee4d662efde9e9de1196823650bec70930d71d8dad37f3276aa85",
+      "bytes": 77438
+    },
+    {
+      "key": "site-name-after",
+      "group": "exchange",
+      "file": "screens/site-name-after.png",
+      "capturedAt": "2026-11-06T09:23:27.548Z",
+      "reviewed": true,
+      "sha256": "5aa18f58d3afdba7cdd60ac03465ffaf2ed7d4e86a40b79286ae95a7e22c4919",
+      "bytes": 78951
+    },
+    {
+      "key": "onec-name-before",
+      "group": "exchange",
+      "file": "screens/onec-name-before.png",
+      "capturedAt": "2026-11-06T08:59:24.648897+00:00",
+      "reviewed": true,
+      "sha256": "c8cca9354947d32c5e07185562adb467276fc907260828af786c35a80d86ca7f",
+      "bytes": 53339
+    },
+    {
+      "key": "onec-name-saved",
+      "group": "exchange",
+      "file": "screens/onec-name-saved.png",
+      "capturedAt": "2026-11-06T09:21:42.279320+00:00",
+      "reviewed": true,
+      "sha256": "4e8680a726465b22f54dc73875176c37068a4ce49f428ab28322e7e30ecd69d0",
+      "bytes": 55606
+    },
+    {
+      "key": "new-meter-form",
+      "group": "exchange",
+      "file": "screens/new-meter-form.png",
+      "capturedAt": "2026-11-06T09:19:08.459994+00:00",
+      "reviewed": true,
+      "sha256": "269b512f5b9a0752460b543e1531d03bf164b529a745ba9842efd2313c62242d",
+      "bytes": 144794
+    },
+    {
+      "key": "new-reading-form",
+      "group": "exchange",
+      "file": "screens/new-reading-form.png",
+      "capturedAt": "2026-11-06T09:21:12.128042+00:00",
+      "reviewed": true,
+      "sha256": "95b7352cfece8157399a1457aabe456bdc315ba9face5c86b88b43341a959c06",
+      "bytes": 233106
+    },
+    {
+      "key": "new-reading-accepted",
+      "group": "exchange",
+      "file": "screens/new-reading-accepted.png",
+      "capturedAt": "2026-11-06T09:23:06.856306+00:00",
+      "reviewed": true,
+      "sha256": "e4714d04b0458c050ab2ee56fd2c256f5f5d235912562d999d402c5275a69f27",
+      "bytes": 277313
+    },
+    {
+      "key": "new-reading-journal",
+      "group": "exchange",
+      "file": "screens/new-reading-journal.png",
+      "capturedAt": "2026-11-06T09:44:19.270183+00:00",
+      "reviewed": true,
+      "sha256": "f4d1f529d924820868830f9344fc824e8d27bd9ab9cda5f1417e368345b92bad",
+      "bytes": 152777
+    },
+    {
+      "key": "new-reading-native",
+      "group": "exchange",
+      "file": "screens/new-reading-native.png",
+      "capturedAt": "2026-11-06T09:31:27.227322+00:00",
+      "reviewed": true,
+      "sha256": "40bc771539d9aeb1ec92f4c11a5f628a5287605d9c729b8f709d2df167321228",
+      "bytes": 54967
+    },
+    {
+      "key": "documents-catalog",
+      "group": "documents",
+      "file": "screens/documents-catalog.png",
+      "capturedAt": "2026-11-06T09:35:10.597Z",
+      "reviewed": true,
+      "sha256": "141a378604f2e7066c85297dcad51c14aca1ff2b18ff3d4a1bfcfce42d4478c1",
+      "bytes": 128663
+    },
+    {
+      "key": "documents-meter-act",
+      "group": "documents",
+      "file": "screens/documents-meter-act.png",
+      "capturedAt": "2026-11-06T09:35:10.688Z",
+      "reviewed": true,
+      "sha256": "fe802fa9e2d65be858c997c701a1b9fa4916f1884e6d284372b8128befb7e80d",
+      "bytes": 84599
+    },
+    {
+      "key": "documents-pdf-open",
+      "group": "documents",
+      "file": "screens/documents-pdf-open.png",
+      "capturedAt": "2026-11-06T09:35:12.564Z",
+      "reviewed": true,
+      "sha256": "4b75ccebb17d62acd27327222ace3737d57590c5c81dd6dcd714ed447c60e082",
+      "bytes": 68828
+    },
+    {
+      "key": "documents-docx-download",
+      "group": "documents",
+      "file": "screens/documents-docx-download-readable.png",
+      "capturedAt": "2026-11-06T09:40:29.619Z",
+      "reviewed": true,
+      "sha256": "cab09ea8b75dca44352991444f283e704958a7019e1cf88e586b20a3ca81b6c9",
+      "bytes": 23725
+    },
+    {
+      "key": "documents-context-attach",
+      "group": "documents",
+      "file": "screens/documents-context-attach.png",
+      "capturedAt": "2026-11-06T09:35:16.639Z",
+      "reviewed": true,
+      "sha256": "069c29bfb2d219fba89c6bf93972554aeaaf62d159b2cf197fb6fd6399112a35",
+      "bytes": 99565
+    },
+    {
+      "key": "documents-attached-file",
+      "group": "documents",
+      "file": "screens/documents-attached-file.png",
+      "capturedAt": "2026-11-06T09:35:17.627Z",
+      "reviewed": true,
+      "sha256": "7ac3dd91c70de00ed86ceb33172ec26b53cb3f3239ede263f3a6fb3a622515fd",
+      "bytes": 132076
+    }
+  ]
+}

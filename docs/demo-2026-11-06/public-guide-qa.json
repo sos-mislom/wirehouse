@@ -1,0 +1,155 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-11-06T10:23:10.681164+00:00",
+  "url": "https://sklad-kontur.92.118.115.96.nip.io/downloads/demo-20261106/index.html",
+  "applicationRevision": "97a3d10b0edaf75901be6c28bd8d58314546114d",
+  "anonymous": true,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "navigation": {
+    "steps": 14,
+    "scenarios": 3,
+    "allStepLinksPassedInBothViewports": true,
+    "allStepImagesDecoded": true,
+    "zoomAndEscapePassed": true,
+    "localProgressPersistsAfterReload": true,
+    "rolesAndSpecTabsPassed": true,
+    "horizontalOverflow": false
+  },
+  "assets": {
+    "files": 12,
+    "frozenWhitelistShaMatches": 12,
+    "allSizesExact": true,
+    "httpContentTypesVerified": 11,
+    "pdfAndJpegHttpContentTypesCorrect": true,
+    "manifestIsValidJson": true,
+    "pdfs": [
+      {
+        "name": "exchange-demo.pdf",
+        "pages": 18
+      },
+      {
+        "name": "roles-20261105.pdf",
+        "pages": 18
+      },
+      {
+        "name": "spec-review-20261105-20261106.pdf",
+        "pages": 7
+      }
+    ],
+    "photoDownloadShaCheckedInBothViewports": true,
+    "fontFamily": "Onest Variable",
+    "fontFacesLoaded": 2
+  },
+  "photos": [
+    {
+      "name": "kamstrup-880.518.jpg",
+      "sha256": "f23a1a1fc04de2898a8e896bb9dc8029364b0a252b30418db38e995be5ddb20e"
+    },
+    {
+      "name": "minol-226.492.jpg",
+      "sha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309"
+    }
+  ],
+  "csp": {
+    "passed": true,
+    "header": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self'; connect-src 'self' wss://sklad-kontur.92.118.115.96.nip.io; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'",
+    "inlineExecutableScripts": 0,
+    "embeddedDataFonts": false,
+    "sameOriginJavascriptCssAndFonts": true,
+    "violations": 0
+  },
+  "errors": {
+    "javascript": 0,
+    "console": 0,
+    "failedRequests": 0,
+    "http": 0
+  },
+  "productionWrites": 0,
+  "authenticatedRequests": 0,
+  "screenshotsManuallyReviewed": 14,
+  "metadataNote": "The two WOFF2 entries use application/octet-stream in the frozen manifest because of Windows MIME guessing. Nginx correctly serves font/woff2; both fonts load. Published files were not changed.",
+  "earlierAttemptsRetained": true,
+  "files": [
+    {
+      "name": "exchange-demo.pdf",
+      "size": 2261475,
+      "sha256": "0c656a008869b339464fab72e2fc36902dce9a1abafa83ba19787022157d543d",
+      "httpContentType": "application/pdf"
+    },
+    {
+      "name": "guide.css",
+      "size": 27135,
+      "sha256": "6ff5f773ca5d6e752bbb4f741cde65ae8db73eaca6bab515937ea60fe0b4e90e",
+      "httpContentType": "text/css"
+    },
+    {
+      "name": "guide.js",
+      "size": 6661,
+      "sha256": "c939d8495fffbe2259624193d41e2fae32143f76a3b9af37dabfb8a07fa0c04e",
+      "httpContentType": "application/javascript"
+    },
+    {
+      "name": "index.html",
+      "size": 3530420,
+      "sha256": "99fcb5a52db01d391558cb8af984dce5c61f1cb7ea80658bde38ef38bedd814c",
+      "httpContentType": "text/html"
+    },
+    {
+      "name": "kamstrup-880.518.jpg",
+      "size": 129091,
+      "sha256": "f23a1a1fc04de2898a8e896bb9dc8029364b0a252b30418db38e995be5ddb20e",
+      "httpContentType": "image/jpeg"
+    },
+    {
+      "name": "manifest.json",
+      "size": 3810,
+      "sha256": "1d205d845836e88e50312c0f0a18689321a9059ec21642bb237793305e767b56",
+      "detectedFormat": "JSON"
+    },
+    {
+      "name": "minol-226.492.jpg",
+      "size": 63202,
+      "sha256": "02ef7ce8b13d74e67add7d08e7af2240110dead1debb3696c004f928d9193309",
+      "httpContentType": "image/jpeg"
+    },
+    {
+      "name": "onest-cyrillic-wght-normal.woff2",
+      "size": 15860,
+      "sha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27",
+      "httpContentType": "font/woff2"
+    },
+    {
+      "name": "onest-latin-wght-normal.woff2",
+      "size": 33760,
+      "sha256": "052df74533250c2e0ca0c4bdd32de594e107d99c1648e63820ef9c6142067828",
+      "httpContentType": "font/woff2"
+    },
+    {
+      "name": "photo-credits.txt",
+      "size": 5495,
+      "sha256": "49c9910f34db4ac02543d9c27c36d8431e640fa4a16e55d0c08bae599aa4ca9d",
+      "httpContentType": "text/plain"
+    },
+    {
+      "name": "roles-20261105.pdf",
+      "size": 825242,
+      "sha256": "c59f45c619aa99690077eef459af3d1b7192a082ce166f93ed237ac770f9ead5",
+      "httpContentType": "application/pdf"
+    },
+    {
+      "name": "spec-review-20261105-20261106.pdf",
+      "size": 376501,
+      "sha256": "19678a6dc487ca0bb42289fe8afacfb60de645a4e87692fe574c20b4529c2325",
+      "httpContentType": "application/pdf"
+    }
+  ]
+}
