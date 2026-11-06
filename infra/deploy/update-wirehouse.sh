@@ -36,7 +36,7 @@ docker compose "${compose_args[@]}" run --rm --no-deps api node apps/api/src/per
 docker compose "${compose_args[@]}" up -d api </dev/null
 healthy=false
 for attempt in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:18044/health > "$release/health.json"; then healthy=true; break; fi
+  if curl --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1:18044/health > "$release/health.json"; then healthy=true; break; fi
   sleep 2
 done
 [[ "$healthy" == true ]]
@@ -55,7 +55,7 @@ ln -s "$web" "/var/www/wirehouse/next-link-$release_tag"
 mv -Tf "/var/www/wirehouse/next-link-$release_tag" /var/www/wirehouse/current
 # Application updates preserve the existing vhost and certificate configuration.
 nginx -t
-curl -fsS --resolve sklad-kontur.92.118.115.96.nip.io:443:127.0.0.1 \
+curl --connect-timeout 5 --max-time 30 -fsS --resolve sklad-kontur.92.118.115.96.nip.io:443:127.0.0.1 \
   https://sklad-kontur.92.118.115.96.nip.io/health > "$release/public-health.json"
 cp "$release/infra/deploy/backup-wirehouse.sh" backup.sh
 chmod 700 backup.sh
