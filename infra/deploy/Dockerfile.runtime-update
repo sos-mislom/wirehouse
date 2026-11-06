@@ -1,7 +1,11 @@
-# Use only after verifying every dependency manifest against this local image.
-# The deployment receipt must record its immutable image ID and manifest hashes.
+# Use only after verifying the API dependency closure against this local image.
+# Record its immutable ID, both manifest sets and any web-only asset difference.
 ARG WIREHOUSE_RUNTIME_IMAGE
 FROM ${WIREHOUSE_RUNTIME_IMAGE}
+COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
 COPY apps/api/src apps/api/src
 COPY apps/api/assets apps/api/assets
 COPY packages/contracts/src packages/contracts/src
