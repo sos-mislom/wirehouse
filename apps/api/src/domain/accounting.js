@@ -14,6 +14,7 @@ import {
   meterExchangeInput,
 } from "../../../../packages/contracts/src/accounting.ts";
 import { saveOperation } from "../operations.js";
+import { contextCan } from "./context-access.js";
 export const stableJson = (value) => JSON.stringify(stableValue(value));
 function stableValue(value) {
   return Array.isArray(value)
@@ -467,6 +468,29 @@ function applyCatalog(db, source, kind, items) {
           unitExternalId === null ? null : resolve("units", unitExternalId).id,
         responsibleId: null,
       };
+      const existingMeter = mapping
+          ? db.getById("meters", mapping.localId)
+          : null,
+        assigned = existingMeter?.responsibleId
+          ? db.getUserById(existingMeter.responsibleId)
+          : null;
+      if (
+        existingMeter &&
+        existingMeter.propertyId === data.propertyId &&
+        (existingMeter.unitId ?? null) === data.unitId &&
+        assigned?.is_active &&
+        assigned.role !== "tenant" &&
+        contextCan(
+          db,
+          assigned,
+          "workspace.read",
+          "properties",
+          data.propertyId,
+        ) &&
+        (!data.unitId ||
+          contextCan(db, assigned, "workspace.read", "units", data.unitId))
+      )
+        data.responsibleId = assigned.id;
       // A machine source does not acquire user privileges. Domain validation is
       // reused with an internal actor only after source-bound parents resolve.
       record = saveOperation(

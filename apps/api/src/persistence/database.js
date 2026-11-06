@@ -102,7 +102,15 @@ export async function openDatabase({ databaseUrl }) {
           // own SQL repository. Readers never take this lock or wait for writers.
           await client.query("SELECT pg_advisory_xact_lock($1,$2)", WRITE_LOCK);
         }
-        const before = await loadRows(client, { auditLimit: 200, collections });
+        const before = await loadRows(client, {
+          auditLimit: 200,
+          collections,
+          retainReadingPhotoHistory:
+            !collections ||
+            collections.some((name) =>
+              ["reading_submissions", "document_links"].includes(name),
+            ),
+        });
         const domain = new WarehouseDatabase(before);
         if (readOnly && collections) {
           domain.data = new Proxy(domain.data, {

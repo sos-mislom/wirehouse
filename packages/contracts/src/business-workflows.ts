@@ -133,6 +133,11 @@ export const readingReviewInput = z.strictObject({
   accepted: z.boolean(),
   reason: note,
 });
+export const readingPhotoCorrectionInput = z.strictObject({
+  updatedAt: timestamp,
+  photoDocumentId: identity,
+  reason,
+});
 export const maintenanceChangeInput = z.strictObject({
   updatedAt: timestamp,
   toDate: timestamp.nullable(),
@@ -218,6 +223,15 @@ export type ReadingSubmission = z.infer<typeof readingInput> & {
   createdAt: string;
   updatedAt: string;
   reviewedAt: string | null;
+  photoCorrections?: {
+    id: string;
+    previousPhotoDocumentId: string | null;
+    photoDocumentId: string;
+    reason: string;
+    correctedAt: string;
+    correctedBy: string | null;
+    actorName: string | null;
+  }[];
 };
 export const businessWorkflowContracts = [
   {
@@ -255,6 +269,11 @@ export const businessWorkflowContracts = [
     method: "POST",
     path: /^\/api\/readings\/submissions\/[a-zA-Z0-9-]+\/review$/,
     schema: readingReviewInput,
+  },
+  {
+    method: "PUT",
+    path: /^\/api\/readings\/submissions\/[a-zA-Z0-9-]+\/photo$/,
+    schema: readingPhotoCorrectionInput,
   },
   {
     method: "POST",

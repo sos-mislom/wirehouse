@@ -1,0 +1,656 @@
+{
+  "version": "2026-11-06",
+  "formType": "blank",
+  "description": "Незаполненные организационные формы. Реквизиты и условия заполняются и утверждаются организацией перед использованием.",
+  "items": [
+    {
+      "id": "lease-agreement",
+      "title": "Договор аренды нежилого помещения",
+      "description": "Объект, срок, плата, эксплуатационные условия, реквизиты и подписи сторон.",
+      "category": "contract",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "units",
+        "leases"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Договор аренды нежилого помещения — бланк.pdf",
+          "asset": "lease-agreement.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 103815,
+          "sha256": "c10c4722a021b983fd5b35b22997ec78410b05c40e60226d04eb414eb128f314",
+          "pages": 2
+        },
+        {
+          "format": "docx",
+          "filename": "Договор аренды нежилого помещения — бланк.docx",
+          "asset": "lease-agreement.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 39325,
+          "sha256": "2047484e9e3ff2a25686f17f6f3b2529877917823b8eec55d31ef050bfe7dfba"
+        }
+      ]
+    },
+    {
+      "id": "lease-addendum",
+      "title": "Дополнительное соглашение",
+      "description": "Изменения согласованных условий договора и дата их действия.",
+      "category": "contract",
+      "entityTypes": [
+        "units",
+        "leases"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Дополнительное соглашение — бланк.pdf",
+          "asset": "lease-addendum.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 94965,
+          "sha256": "3c7b3d321f359469001a0577a97aa49048c34bdaf63ca7e2958cce6ae560747a",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Дополнительное соглашение — бланк.docx",
+          "asset": "lease-addendum.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38781,
+          "sha256": "a432cd230d4f1da55d89b3fa711691a040e59fe31acc4e63aad79c3aab33f86d"
+        }
+      ]
+    },
+    {
+      "id": "unit-handover",
+      "title": "Акт приёма-передачи помещения",
+      "description": "Состояние помещения, замечания, ключи, документы и показания при передаче.",
+      "category": "act",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "units",
+        "leases"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Акт приёма-передачи помещения — бланк.pdf",
+          "asset": "unit-handover.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 98382,
+          "sha256": "9428b406951573321731cc09d73cc96d4957709bfdeab6f085b8eff913eee86c",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Акт приёма-передачи помещения — бланк.docx",
+          "asset": "unit-handover.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38872,
+          "sha256": "1b5ea0b352277dac82734c7b8fc2e5d8806340f308c6b2049ccffd220e1d8695"
+        }
+      ]
+    },
+    {
+      "id": "defect-report",
+      "title": "Дефектная ведомость",
+      "description": "Дефекты, объём, меры, сроки, ответственные и подтверждающие материалы.",
+      "category": "act",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "units",
+        "equipment",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Дефектная ведомость — бланк.pdf",
+          "asset": "defect-report.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 92824,
+          "sha256": "7ea6ff0edb10efdc30ec2680df28dfc671d7ebb1f7def74245ef71ffb890fe8a",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Дефектная ведомость — бланк.docx",
+          "asset": "defect-report.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38633,
+          "sha256": "da0b4fb7f84cfe79bd7af08f9b16af08beec20287b8beb7d1f1221ea0d552b4c"
+        }
+      ]
+    },
+    {
+      "id": "service-request",
+      "title": "Заявка на обслуживание",
+      "description": "Заявитель, контакты, объект, описание неисправности и условия доступа.",
+      "category": "other",
+      "entityTypes": [
+        "properties",
+        "units",
+        "leases",
+        "tickets",
+        "equipment"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Заявка на обслуживание — бланк.pdf",
+          "asset": "service-request.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 89530,
+          "sha256": "872308f2eac957ce1eedb142ed9321b15c3e71d31e7a88976952a546516693cb",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Заявка на обслуживание — бланк.docx",
+          "asset": "service-request.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38337,
+          "sha256": "7d0f1d2a9e62a8de058e028727afa19fcab137987fe256cecde680a1cf3ea52a"
+        }
+      ]
+    },
+    {
+      "id": "work-order",
+      "title": "Наряд-задание",
+      "description": "Перечень работ, исполнители, сроки и отметки выполнения; без подмены наряда-допуска.",
+      "category": "instruction",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "units",
+        "equipment",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Наряд-задание — бланк.pdf",
+          "asset": "work-order.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 94847,
+          "sha256": "a0f9de09efebdd93a3ab208b510f1f742704266293bf30531a2c57569d4d8804",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Наряд-задание — бланк.docx",
+          "asset": "work-order.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38671,
+          "sha256": "1df3506b488093c84d09c11d0a4049a1440d0a495620de0598a289eacda50f87"
+        }
+      ]
+    },
+    {
+      "id": "work-estimate",
+      "title": "Смета работ и услуг",
+      "description": "Работы, материалы, объёмы, стоимость, НДС и согласование сторон.",
+      "category": "other",
+      "entityTypes": [
+        "properties",
+        "units",
+        "leases",
+        "tickets",
+        "equipment"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        },
+        {
+          "title": "ФНС: обязательные реквизиты первичного документа, статья 9 Закона № 402-ФЗ",
+          "url": "https://www.nalog.gov.ru/rn57/news/tax_doc_news/5341377/"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Смета работ и услуг — бланк.pdf",
+          "asset": "work-estimate.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 96882,
+          "sha256": "6c2c88a068c0290c4116d76cf67ff0e06590cd3c98b2fea3f0b72994b20bac48",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Смета работ и услуг — бланк.docx",
+          "asset": "work-estimate.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38782,
+          "sha256": "2dd4339f1b0e0838b34a96a19fd244b21a74b6d9202b29550fa1ea96df0e1938"
+        }
+      ]
+    },
+    {
+      "id": "service-act",
+      "title": "Акт выполненных работ / услуг",
+      "description": "Содержание и период работ, натуральное и денежное измерение, приёмка и подписи.",
+      "category": "act",
+      "entityTypes": [
+        "leases",
+        "personal_accounts",
+        "tickets",
+        "equipment"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        },
+        {
+          "title": "ФНС: обязательные реквизиты первичного документа, статья 9 Закона № 402-ФЗ",
+          "url": "https://www.nalog.gov.ru/rn57/news/tax_doc_news/5341377/"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Акт выполненных работ и услуг — бланк.pdf",
+          "asset": "service-act.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 99731,
+          "sha256": "1cc55b69862463d96b5a54bd789c88bfe5c07cb0eac9a10a6463b514df298bdc",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Акт выполненных работ и услуг — бланк.docx",
+          "asset": "service-act.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38837,
+          "sha256": "38650e908aa7f613846f9d9cc234a6c9e9aabbe3d62543b9427cb9dc627d3af4"
+        }
+      ]
+    },
+    {
+      "id": "meter-commissioning",
+      "title": "Акт ввода / замены прибора",
+      "description": "Старый и новый приборы, номера, показания, поверка, пломбы и приёмка.",
+      "category": "act",
+      "entityTypes": [
+        "properties",
+        "units",
+        "meters",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Акт ввода и замены прибора — бланк.pdf",
+          "asset": "meter-commissioning.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 93215,
+          "sha256": "88e6cb6d850833c6c4b5c2d920e5a6b7dcb3d6c500e74b08172dfb54e631613a",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Акт ввода и замены прибора — бланк.docx",
+          "asset": "meter-commissioning.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38682,
+          "sha256": "b3f071785eb0bcd832fcb008858036ba83b98a63af5a0b708da7867eef666402"
+        }
+      ]
+    },
+    {
+      "id": "meter-readings",
+      "title": "Акт снятия показаний",
+      "description": "Период, прибор, прежнее и новое значения, разность, фото и подтверждение.",
+      "category": "act",
+      "entityTypes": [
+        "units",
+        "meters",
+        "personal_accounts",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        },
+        {
+          "title": "ФНС: обязательные реквизиты первичного документа, статья 9 Закона № 402-ФЗ",
+          "url": "https://www.nalog.gov.ru/rn57/news/tax_doc_news/5341377/"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Акт снятия показаний — бланк.pdf",
+          "asset": "meter-readings.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 92366,
+          "sha256": "bbb10c7d35513f0870a6c313dd18eb7f1c5682f844eab3bc518ffb41e8baf6b2",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Акт снятия показаний — бланк.docx",
+          "asset": "meter-readings.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38598,
+          "sha256": "708ae553a8a4cf0aa8c01a3159141a8d218389a0cf419d00554abaef2c8f7307"
+        }
+      ]
+    },
+    {
+      "id": "reconciliation-act",
+      "title": "Акт сверки взаимных расчётов",
+      "description": "Операции обеих сторон, начальное и конечное сальдо, разногласия и подписи.",
+      "category": "act",
+      "entityTypes": [
+        "leases",
+        "personal_accounts"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        },
+        {
+          "title": "ФНС: обязательные реквизиты первичного документа, статья 9 Закона № 402-ФЗ",
+          "url": "https://www.nalog.gov.ru/rn57/news/tax_doc_news/5341377/"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Акт сверки взаимных расчётов — бланк.pdf",
+          "asset": "reconciliation-act.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 97922,
+          "sha256": "2b4a39a5592be9abd4cbe18c825fac8e73de8b452820337133456a4d966f8987",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Акт сверки взаимных расчётов — бланк.docx",
+          "asset": "reconciliation-act.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38764,
+          "sha256": "a206445627bf53b85075acd5ac78bd681be1e5816a7dad1f81fc8deff4e43503"
+        }
+      ]
+    },
+    {
+      "id": "payment-invoice",
+      "title": "Счёт на оплату",
+      "description": "Поставщик, покупатель, банковские реквизиты, позиции и сумма к оплате.",
+      "category": "other",
+      "entityTypes": [
+        "leases",
+        "personal_accounts",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        },
+        {
+          "title": "ФНС: обязательные реквизиты первичного документа, статья 9 Закона № 402-ФЗ",
+          "url": "https://www.nalog.gov.ru/rn57/news/tax_doc_news/5341377/"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Счёт на оплату — бланк.pdf",
+          "asset": "payment-invoice.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 95570,
+          "sha256": "626c0758f69afde85ecf4803d3ae92204cc607aab92fe5b4eb3820145a6d01db",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Счёт на оплату — бланк.docx",
+          "asset": "payment-invoice.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38722,
+          "sha256": "b1e759011129ad4f2b32d5ab5b2094b08e4a6d325731429fec2b7fcfdb85cef0"
+        }
+      ]
+    },
+    {
+      "id": "equipment-card",
+      "title": "Карточка оборудования",
+      "description": "Паспортные сведения, ответственное лицо, ссылки на документацию и обслуживание.",
+      "category": "other",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "units",
+        "equipment"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "Карточка оборудования — бланк.pdf",
+          "asset": "equipment-card.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 95160,
+          "sha256": "00a4c4e04f1925f7fe928f059fe88177f22b7548c933762b94e960d5087a022f",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "Карточка оборудования — бланк.docx",
+          "asset": "equipment-card.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38655,
+          "sha256": "3d1f3bcd43c91a45003e6755488f8d8a0700c78b74b75616ea6b026def8a11a8"
+        }
+      ]
+    },
+    {
+      "id": "maintenance-schedule",
+      "title": "График ППР",
+      "description": "Оборудование, работы, периодичность, плановые даты, исполнитель и результат.",
+      "category": "instruction",
+      "entityTypes": [
+        "properties",
+        "buildings",
+        "equipment",
+        "tickets"
+      ],
+      "formType": "blank",
+      "legalStatus": "recommended",
+      "version": "2026-11-06",
+      "formattingBasis": "ГОСТ Р 7.0.97-2025",
+      "legalBasis": [
+        {
+          "title": "ГОСТ Р 7.0.97-2025: оформление организационно-распорядительных документов",
+          "url": "https://protect.gost.ru/gost/details/360994e3-9a70-47b9-ab3a-cf21809e26ed"
+        },
+        {
+          "title": "Росархив: рекомендации по применению ГОСТ Р 7.0.97-2025, 2026",
+          "url": "https://archives.gov.ru/documents/methodics/met-rek-gost-7-0-97-2025.shtml"
+        }
+      ],
+      "files": [
+        {
+          "format": "pdf",
+          "filename": "График ППР — бланк.pdf",
+          "asset": "maintenance-schedule.pdf",
+          "mimeType": "application/pdf",
+          "sizeBytes": 90913,
+          "sha256": "23f3645b6ab6bcb3f52dbac4d2633ce8df53c1e75d22d9cca6bfee15b96422a8",
+          "pages": 1
+        },
+        {
+          "format": "docx",
+          "filename": "График ППР — бланк.docx",
+          "asset": "maintenance-schedule.docx",
+          "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "sizeBytes": 38636,
+          "sha256": "d616ad35abe22d813ad7151e945050fa7bf546253927d9590e9f0c43063079cf"
+        }
+      ]
+    }
+  ]
+}

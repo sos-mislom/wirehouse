@@ -1,8 +1,13 @@
 import crypto from "node:crypto";
-import { contextCan } from "../domain/context-access.js";
+import { contextCan, requireContext } from "../domain/context-access.js";
 import path from "node:path";
 import { parseJsonBody } from "../http/body.js";
 import { businessError, requiredRecord } from "../domain/accounting.js";
+import { hasPermission } from "../../../../packages/contracts/src/permissions.ts";
+import {
+  listDocumentTemplates,
+  readDocumentTemplate,
+} from "../services/document-templates.js";
 import {
   canReadDocument,
   listDocuments,
@@ -23,6 +28,43 @@ export function createDocumentsRegistryRoutes({
     const actor = requireAuth(request, response);
     if (!actor) return true;
     try {
+      if (
+        request.method === "GET" &&
+        url.pathname === "/api/documents/templates"
+      ) {
+        if (!hasPermission(actor, "documents.read"))
+          throw businessError("Нет доступа к документам", 403);
+        const entityType = url.searchParams.get("entityType") || undefined;
+        const entityId = url.searchParams.get("entityId") || undefined;
+        if (entityId) {
+          if (!entityType) throw businessError("Укажите тип записи");
+          requireContext(db, actor, "documents.read", entityType, entityId);
+        }
+        ok(response, { items: listDocumentTemplates({ entityType }) });
+        return true;
+      }
+      const templateFile = url.pathname.match(
+        /^\/api\/documents\/templates\/([a-z0-9-]+)\/(pdf|docx)$/,
+      );
+      if (request.method === "GET" && templateFile) {
+        if (!hasPermission(actor, "documents.read"))
+          throw businessError("Нет доступа к документам", 403);
+        const file = await readDocumentTemplate(
+          templateFile[1],
+          templateFile[2],
+        );
+        if (!file) throw businessError("Шаблон не найден", 404);
+        response.writeHead(200, {
+          "Content-Type": file.mimeType,
+          "Content-Length": file.content.length,
+          "Content-Disposition": `${templateFile[2] === "pdf" ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "private, max-age=300",
+          ETag: `"${file.sha256}"`,
+        });
+        response.end(file.content);
+        return true;
+      }
       if (
         request.method === "GET" &&
         url.pathname === "/api/documents/contexts"

@@ -66,6 +66,7 @@ export function createAccountingRoutes({
               "work_results",
               "work_reopened",
               "service_acts",
+              "meter_registrations",
             ],
           });
           return true;
@@ -98,7 +99,9 @@ export function createAccountingRoutes({
             .filter(
               (r) =>
                 r.sourceId === source.id &&
-                (!input.kinds || input.kinds.includes(r.kind)) &&
+                (input.kinds
+                  ? input.kinds.includes(r.kind)
+                  : r.kind !== "meter_registrations") &&
                 r.status !== "applied" &&
                 (r.status !== "failed" || r.attempts < 8) &&
                 (!r.nextAttemptAt || r.nextAttemptAt <= now),

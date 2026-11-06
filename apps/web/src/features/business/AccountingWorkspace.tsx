@@ -9,6 +9,8 @@ import { useWorkspace } from "../../app/WorkspaceContext";
 import { apiRequest } from "../../api/client";
 import { Badge, Button, IconButton, Input, Select } from "../../ui";
 import { SidePanel } from "../../ui/SidePanel";
+import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
+import { DocumentRegistry } from "./DocumentRegistry";
 import { formatBillingMoney } from "../billing/format";
 import { ActionIcon, Feedback, Register, date, useResource } from "./shared";
 
@@ -44,6 +46,7 @@ export function AccountingWorkspace({
   const [status, setStatus] = useState("");
   const [secret, setSecret] = useState("");
   const [panel, setPanel] = useState<Panel>(null);
+  const [accountView, setAccountView] = useState("details");
   const [dirty, setDirty] = useState(false);
   const [keySource, setKeySource] = useState("");
   const formId = useId();
@@ -412,70 +415,88 @@ export function AccountingWorkspace({
       )}
       {panel === "account" && account && (
         <SidePanel title={`ЛС ${account.number}`} onClose={closePanel}>
-          <dl className="billing-invoice-summary">
-            <div>
-              <dt>Источник</dt>
-              <dd>{sourceName(account.sourceId)}</dd>
-            </div>
-            <div>
-              <dt>Договор</dt>
-              <dd>
-                {overview.leases.find((l) => l.id === account.leaseId)
-                  ?.contractNumber ?? account.leaseId}
-              </dd>
-            </div>
-            <div>
-              <dt>Внешний ID</dt>
-              <dd>{account.externalId}</dd>
-            </div>
-            <div>
-              <dt>Период</dt>
-              <dd>
-                {date(account.validFrom)} —{" "}
-                {account.validTo ? date(account.validTo) : "бессрочно"}
-              </dd>
-            </div>
-          </dl>
-          <Register
-            title="Начисления и оплаты"
-            rows={data.statements.filter((s) => s.accountId === account.id)}
-            searchText={(statement) => statement.period}
-            columns={[
-              { key: "period", label: "Месяц", render: (s) => s.period },
-              {
-                key: "opening",
-                label: "Входящий остаток",
-                align: "end",
-                render: (s) => formatBillingMoney(s.opening, locale),
-                optional: true,
-              },
-              {
-                key: "charged",
-                label: "Начислено",
-                align: "end",
-                render: (s) => formatBillingMoney(s.charged, locale),
-              },
-              {
-                key: "paid",
-                label: "Оплачено",
-                align: "end",
-                render: (s) => formatBillingMoney(s.paid, locale),
-              },
-              {
-                key: "closing",
-                label: "Исходящий остаток",
-                align: "end",
-                render: (s) => formatBillingMoney(s.closing, locale),
-              },
-              {
-                key: "date",
-                label: "По состоянию на",
-                render: (s) => date(s.asOf),
-                optional: true,
-              },
+          <WorkspaceTabs
+            label="Карточка лицевого счёта"
+            items={[
+              { id: "details", label: "Сведения" },
+              { id: "documents", label: "Документы" },
             ]}
-            empty="Источник ещё не передал начисления по этому ЛС."
+            value={accountView}
+            onChange={setAccountView}
           />
+          {accountView === "documents" ? (
+            <DocumentRegistry
+              entityType="personal_accounts"
+              entityId={account.id}
+            />
+          ) : (
+            <>
+              <dl className="billing-invoice-summary">
+                <div>
+                  <dt>Источник</dt>
+                  <dd>{sourceName(account.sourceId)}</dd>
+                </div>
+                <div>
+                  <dt>Договор</dt>
+                  <dd>
+                    {overview.leases.find((l) => l.id === account.leaseId)
+                      ?.contractNumber ?? account.leaseId}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Внешний ID</dt>
+                  <dd>{account.externalId}</dd>
+                </div>
+                <div>
+                  <dt>Период</dt>
+                  <dd>
+                    {date(account.validFrom)} —{" "}
+                    {account.validTo ? date(account.validTo) : "бессрочно"}
+                  </dd>
+                </div>
+              </dl>
+              <Register
+                title="Начисления и оплаты"
+                rows={data.statements.filter((s) => s.accountId === account.id)}
+                searchText={(statement) => statement.period}
+                columns={[
+                  { key: "period", label: "Месяц", render: (s) => s.period },
+                  {
+                    key: "opening",
+                    label: "Входящий остаток",
+                    align: "end",
+                    render: (s) => formatBillingMoney(s.opening, locale),
+                    optional: true,
+                  },
+                  {
+                    key: "charged",
+                    label: "Начислено",
+                    align: "end",
+                    render: (s) => formatBillingMoney(s.charged, locale),
+                  },
+                  {
+                    key: "paid",
+                    label: "Оплачено",
+                    align: "end",
+                    render: (s) => formatBillingMoney(s.paid, locale),
+                  },
+                  {
+                    key: "closing",
+                    label: "Исходящий остаток",
+                    align: "end",
+                    render: (s) => formatBillingMoney(s.closing, locale),
+                  },
+                  {
+                    key: "date",
+                    label: "По состоянию на",
+                    render: (s) => date(s.asOf),
+                    optional: true,
+                  },
+                ]}
+                empty="Источник ещё не передал начисления по этому ЛС."
+              />
+            </>
+          )}
         </SidePanel>
       )}
       {panel === "account-create" && hasPermission(user, "leases.write") && (

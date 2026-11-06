@@ -16,6 +16,8 @@ const workspace = Object.keys(tables).filter(
     !["exchange_inbox", "exchange_outbox", "auth_challenges"].includes(name),
 );
 export function readCollectionsFor(pathname) {
+  if (/^\/api\/documents\/templates\/[a-z0-9-]+\/(pdf|docx)$/.test(pathname))
+    return ["users"];
   if (pathname === "/api/auth/tenant/onboarding") return [];
   if (
     [
@@ -30,6 +32,8 @@ export function readCollectionsFor(pathname) {
     return [...access, "buildings", "entrances", "floors"];
   if (pathname === "/api/accounting")
     return [...access, "account_statements", "external_links"];
+  if (pathname === "/api/operations" || pathname === "/api/readings")
+    return [...workspace, "exchange_outbox"];
   if (pathname === "/api/maintenance")
     return [
       ...access,

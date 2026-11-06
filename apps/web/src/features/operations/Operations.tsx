@@ -261,7 +261,14 @@ export function Operations(props: Props) {
           <AccessWorkspace />
         ) : tab === "meters" &&
           (meterView === "readings" || Boolean(readingMeter)) ? (
-          <ReadingsWorkspace initialMeterId={readingMeter} />
+          <ReadingsWorkspace
+            initialMeterId={readingMeter}
+            onCreateMeter={() => {
+              setReadingMeter("");
+              setMeterView("meters");
+              create();
+            }}
+          />
         ) : tab === "audit" ? (
           <AuditLog token={token} />
         ) : tab === "estimates" ? (

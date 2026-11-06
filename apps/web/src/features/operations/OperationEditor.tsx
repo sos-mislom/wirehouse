@@ -7,6 +7,7 @@ import {
   hasPermission,
 } from "../../../../../packages/contracts/src/permissions";
 import { TemplateSelect } from "../platform/TemplateSelect";
+import { MeterAccountField } from "./MeterAccountField";
 import { SidePanel } from "../../ui/SidePanel";
 import { useId, useState } from "react";
 export function OperationEditor({ model }: { model: OperationsModel }) {
@@ -46,7 +47,11 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
             type="submit"
             disabled={busy}
           >
-            {busy ? "Сохраняем…" : "Сохранить"}
+            {busy
+              ? "Сохраняем…"
+              : tab === "meters" && !draft.id && draft.takeReading
+                ? "Добавить и передать"
+                : "Сохранить"}
           </Button>
           <Button
             variant="secondary"
@@ -300,10 +305,21 @@ export function OperationEditor({ model }: { model: OperationsModel }) {
                 {input("tariff", "Тариф за единицу, ₽", "number", true)}
                 {input("initialValue", "Начальное показание", "number", true)}
                 {check("active", "Принимать показания")}
+                {!draft.id && draft.scope === "individual" && (
+                  <MeterAccountField
+                    token={model.token}
+                    unitId={draft.unitId || ""}
+                    value={draft.accountId || ""}
+                    onChange={(value) => change("accountId", value)}
+                  />
+                )}
+                {!draft.id && check("takeReading", "Передать первое показание")}
                 <p className="field-hint">
-                  Общедомовой расход распределяется по площади и дням аренды.
-                  История хранит тариф и доли на момент ввода; изменение тарифа
-                  действует на новые показания.
+                  {draft.accountId
+                    ? "Начисления и оплаты ведутся в 1С. Сайт передаёт принятое показание и сохраняет историю проверки."
+                    : draft.scope === "common"
+                      ? "Общедомовой расход распределяется по площади и дням аренды. Изменение тарифа действует на новые показания."
+                      : "Укажите значение, от которого начнётся история этого прибора. После принятия показаний начальное значение изменить нельзя."}
                 </p>
               </>
             )}

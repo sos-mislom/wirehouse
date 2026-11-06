@@ -21,6 +21,7 @@ const allowed = (file) =>
   ].includes(file) ||
   [
     "apps/api/src/",
+    "apps/api/assets/",
     "packages/contracts/",
     "infra/deploy/",
     "docs/",

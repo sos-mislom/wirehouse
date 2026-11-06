@@ -6,11 +6,14 @@ import { hasPermission } from "../../../../../packages/contracts/src/permissions
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { Button, IconButton, Input, Select } from "../../ui";
 import { SidePanel } from "../../ui/SidePanel";
+import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
+import { DocumentTemplateLibrary } from "./DocumentTemplateLibrary";
 import {
   Feedback,
   Register,
   date,
   downloadDocument,
+  openDocument,
   uploadDocument,
   useResource,
 } from "./shared";
@@ -65,6 +68,7 @@ export function DocumentRegistry({
     [selected, setSelected] = useState("");
   const [adding, setAdding] = useState(false),
     [dirty, setDirty] = useState(false);
+  const [view, setView] = useState("files");
   const closeAdding = () => {
     setAdding(false);
     setDirty(false);
@@ -125,68 +129,91 @@ export function DocumentRegistry({
   return (
     <div className="business-stack">
       <Feedback {...resource} />
-      <Register
-        title="Документы"
-        action={
-          hasPermission(user, "documents.write") && (
-            <IconButton
-              label="Добавить документ"
-              variant="primary"
-              onClick={() => setAdding(true)}
-            >
-              <ActionIcon name="plus" />
-            </IconButton>
-          )
-        }
-        rows={resource.data.items.filter(
-          (d) => !category || d.category === category,
-        )}
-        searchText={(d) => `${d.name} ${d.links.map(linkLabel).join(" ")}`}
-        selectedId={selected}
-        onSelect={(d) => setSelected(d.id)}
-        columns={[
-          {
-            key: "name",
-            label: "Название",
-            render: (d) => <strong>{d.name}</strong>,
-          },
-          {
-            key: "category",
-            label: "Категория",
-            render: (d) =>
-              categories[d.category as keyof typeof categories] ?? d.category,
-            optional: true,
-          },
-          {
-            key: "links",
-            label: "Связи",
-            render: (d) =>
-              d.links.map((l) => <small key={l.id}>{linkLabel(l)}</small>),
-          },
-          {
-            key: "date",
-            label: "Добавлен",
-            render: (d) => date(d.createdAt),
-            optional: true,
-          },
+      <WorkspaceTabs
+        label="Документы и шаблоны"
+        items={[
+          { id: "files", label: "Файлы", count: resource.data.items.length },
+          { id: "templates", label: "Шаблоны" },
         ]}
-        filters={
-          <label>
-            Категория
-            <Select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">Все</option>
-              {Object.entries(categories).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </Select>
-          </label>
-        }
+        value={view}
+        onChange={setView}
       />
+      {view === "templates" ? (
+        <DocumentTemplateLibrary
+          entityType={entityType}
+          entityId={entityId}
+          onAttached={() => {
+            void resource.load();
+            setView("files");
+          }}
+        />
+      ) : (
+        <>
+          <Register
+            title="Документы"
+            action={
+              hasPermission(user, "documents.write") && (
+                <IconButton
+                  label="Добавить документ"
+                  variant="primary"
+                  onClick={() => setAdding(true)}
+                >
+                  <ActionIcon name="plus" />
+                </IconButton>
+              )
+            }
+            rows={resource.data.items.filter(
+              (d) => !category || d.category === category,
+            )}
+            searchText={(d) => `${d.name} ${d.links.map(linkLabel).join(" ")}`}
+            selectedId={selected}
+            onSelect={(d) => setSelected(d.id)}
+            columns={[
+              {
+                key: "name",
+                label: "Название",
+                render: (d) => <strong>{d.name}</strong>,
+              },
+              {
+                key: "category",
+                label: "Категория",
+                render: (d) =>
+                  categories[d.category as keyof typeof categories] ??
+                  d.category,
+                optional: true,
+              },
+              {
+                key: "links",
+                label: "Связи",
+                render: (d) =>
+                  d.links.map((l) => <small key={l.id}>{linkLabel(l)}</small>),
+              },
+              {
+                key: "date",
+                label: "Добавлен",
+                render: (d) => date(d.createdAt),
+                optional: true,
+              },
+            ]}
+            filters={
+              <label>
+                Категория
+                <Select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="">Все</option>
+                  {Object.entries(categories).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+            }
+          />
+        </>
+      )}
       {doc && (
         <SidePanel title={doc.name} onClose={() => setSelected("")}>
           <p>{doc.links.map(linkLabel).join("; ")}</p>
@@ -194,18 +221,33 @@ export function DocumentRegistry({
             {doc.sizeBytes ? `${(doc.sizeBytes / 1024).toFixed(1)} КБ · ` : ""}
             {date(doc.createdAt)}
           </p>
-          <IconButton
-            label="Скачать файл"
-            busy={resource.busy}
-            onClick={() =>
-              void resource.run(
-                () => downloadDocument(token, doc.id, doc.name),
-                "Файл скачан",
-              )
-            }
-          >
-            <ActionIcon name="download" />
-          </IconButton>
+          <div className="mvp-actions">
+            {/^(application\/pdf|image\/(jpeg|png|webp))$/.test(
+              doc.mimeType,
+            ) && (
+              <IconButton
+                label="Открыть файл"
+                busy={resource.busy}
+                onClick={() =>
+                  void resource.run(() => openDocument(token, doc.id), "")
+                }
+              >
+                <ActionIcon name="document" />
+              </IconButton>
+            )}
+            <IconButton
+              label="Скачать файл"
+              busy={resource.busy}
+              onClick={() =>
+                void resource.run(
+                  () => downloadDocument(token, doc.id, doc.name),
+                  "Файл скачан",
+                )
+              }
+            >
+              <ActionIcon name="download" />
+            </IconButton>
+          </div>
         </SidePanel>
       )}
       {hasPermission(user, "documents.write") && adding && (

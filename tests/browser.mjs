@@ -947,9 +947,7 @@ try {
   await workerPage
     .getByRole("combobox", { name: "Прибор", exact: true })
     .selectOption({ label: "Счётчик исполнителя · 101" });
-  await workerPage
-    .getByRole("combobox", { name: "Период ввода", exact: true })
-    .selectOption({ index: 1 });
+  await workerPage.getByLabel("Месяц показания", { exact: true }).fill(period);
   await workerPage.getByLabel("Новое показание", { exact: true }).fill("12");
   await workerPage
     .getByRole("button", { name: "Отправить на проверку", exact: true })

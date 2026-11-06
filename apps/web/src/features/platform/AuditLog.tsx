@@ -9,6 +9,7 @@ const entities: Record<string, string> = {
   user: "Пользователь",
   ticket: "Заявка",
   meter: "Прибор учета",
+  meters: "Прибор учёта",
   equipment: "Оборудование",
   users: "Пользователь",
   tickets: "Заявка",
@@ -29,6 +30,8 @@ const entities: Record<string, string> = {
 const actions: Record<string, string> = {
   user_updated: "Пользователь изменён",
   reading_added: "Добавлено показание",
+  reading_photo_corrected: "Уточнена фотография показания",
+  meter_registration_queued: "Прибор отправлен в 1С",
   work_logged: "Учтены работы",
   created: "Создано",
   updated: "Изменено",

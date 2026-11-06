@@ -7,6 +7,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/contracts/package.json packages/contracts/package.json
 RUN npm ci --omit=dev --ignore-scripts --workspace apps/api --include-workspace-root && npm cache clean --force
 COPY apps/api/src apps/api/src
+COPY apps/api/assets apps/api/assets
 COPY packages/contracts/src packages/contracts/src
 COPY scripts/create-initial-admin.mjs scripts/create-initial-admin.mjs
 RUN mkdir -p /data && chown node:node /data

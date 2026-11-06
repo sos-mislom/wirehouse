@@ -106,6 +106,7 @@ export function useOperationsModel({
       published: true,
       date: new Date().toISOString().slice(0, 10),
       amount: "",
+      takeReading: tab === "meters",
     });
   };
   const save = async (event: FormEvent) => {
@@ -120,7 +121,7 @@ export function useOperationsModel({
         (!hasPermission(user, "permissions.manage") || draft.id === user.id)
       )
         delete dto.permissions;
-      await request(
+      const result = await request<{ item: { id: string } }>(
         tab === "users"
           ? `/api/users/${draft.id}`
           : `/api/operations/${tab}${draft.id ? `/${draft.id}` : ""}`,
@@ -131,6 +132,8 @@ export function useOperationsModel({
       await load();
       await onRefresh();
       setDraft((current) => (current === draft ? null : current));
+      if (tab === "meters" && !draft.id && draft.takeReading)
+        setReadingMeter(result.item.id);
       setNotice("Изменения сохранены");
     } catch (error) {
       setError((error as Error).message);

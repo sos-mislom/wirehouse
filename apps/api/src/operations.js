@@ -20,6 +20,11 @@ import {
   ensureDefaultSitePlan,
   ensureDefaultBuildingPlan,
 } from "./domain/default-floor-plans.js";
+import {
+  meterIntegration,
+  meterRegistration,
+  registerCreatedMeter,
+} from "./domain/meter-registration.js";
 
 const id = () => crypto.randomUUID();
 const today = () => new Date().toISOString().slice(0, 10);
@@ -591,6 +596,10 @@ export function saveOperation(db, user, kind, recordId, body) {
     });
   }
   if (kind === "meters") {
+    if (existing && input.accountId)
+      throw new Error(
+        "Лицевой счёт для регистрации задаётся при добавлении прибора",
+      );
     const scope = input.scope ?? "individual";
     if (!["individual", "common"].includes(scope))
       throw new Error("Некорректный тип счётчика");
@@ -626,6 +635,17 @@ export function saveOperation(db, user, kind, recordId, body) {
       record.initialValue !== existing.initialValue
     )
       throw new Error("Начальное показание уже использовано");
+    if (
+      existing &&
+      meterRegistration(db, record.id) &&
+      (record.unitId !== existing.unitId ||
+        record.resource !== existing.resource ||
+        record.scope !== existing.scope ||
+        record.initialValue !== existing.initialValue)
+    )
+      throw new Error(
+        "Для зарегистрированного прибора начальное показание, ресурс и помещение неизменяемы",
+      );
   }
   if (kind === "news") {
     Object.assign(record, {
@@ -652,6 +672,8 @@ export function saveOperation(db, user, kind, recordId, body) {
   return db.transaction(() => {
     if (existing) Object.assign(db.getById(collection, record.id), record);
     else db.data[collection].push(record);
+    if (kind === "meters" && !existing && input.accountId)
+      registerCreatedMeter(db, user, record, input.accountId);
     if (kind === "floorplans" && existing) {
       const oldKind = existing.floorId
         ? "floor"
@@ -674,7 +696,7 @@ export function saveOperation(db, user, kind, recordId, body) {
       before: existing,
       after: record,
     });
-    return record;
+    return kind === "meters" ? meterIntegration(db, record) : record;
   });
 }
 export function postAcceptedReading(db, user, submissionId) {
@@ -852,6 +874,8 @@ export function getOperations(db, user) {
               r.audience === (staff ? "staff" : "tenants"))),
       );
     if (key === "services" && !manager) rows = rows.filter((r) => r.active);
+    if (key === "meters")
+      rows = rows.map((meter) => meterIntegration(db, meter));
     if (key === "floorplans")
       rows = rows.map((plan) => {
         const floor = plan.floorId ? db.getById("floors", plan.floorId) : null;

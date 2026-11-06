@@ -2,7 +2,14 @@ import { ActionIcon } from "./ActionIcon";
 import { SidePanel } from "../../ui/SidePanel";
 import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
 import { useSurfaceView } from "../operations/useSurfaceView";
-import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import "./readings-photo.css";
 import type {
   ReadingPeriod,
@@ -10,7 +17,7 @@ import type {
 } from "../../../../../packages/contracts/src/business-workflows";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { apiRequest } from "../../api/client";
+import { apiRequest, runtimeApiBase } from "../../api/client";
 import {
   Button,
   IconButton,
@@ -35,6 +42,9 @@ type Meter = {
   initialValue: number;
   active: boolean;
   responsibleId: string | null;
+  integrationStatus?: "local" | "linked" | "pending" | "failed" | "applied";
+  registrationId?: string | null;
+  sourceId?: string | null;
 };
 type Data = {
   meters: Meter[];
@@ -52,14 +62,63 @@ type Data = {
     number: string;
     unitId: string;
     sourceName: string;
+    sourceId?: string;
   }[];
+};
+const readingMonthLabel = (value: string) => {
+  if (!/^\d{4}-\d{2}/.test(value)) return "Месяц не выбран";
+  const label = new Intl.DateTimeFormat("ru-RU", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+    .format(new Date(`${value.slice(0, 7)}-01T00:00:00Z`))
+    .replace(/\s*г\.$/, "");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+};
+const monthBounds = (month: string) => {
+  if (!/^\d{4}-\d{2}$/.test(month)) return { startsOn: "", endsOn: "" };
+  const [year, number] = month.split("-").map(Number);
+  return {
+    startsOn: `${month}-01`,
+    endsOn: new Date(Date.UTC(year, number, 0)).toISOString().slice(0, 10),
+  };
 };
 function ReadingPhotoField({ required }: { required: boolean }) {
   const input = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState("");
+  const descriptionId = useId();
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
+  const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const choose = (next: File | null) => {
+    const failure = next
+      ? !["image/jpeg", "image/png", "image/webp"].includes(next.type)
+        ? "Выберите фотографию JPG, PNG или WebP."
+        : next.size > 12 * 1024 * 1024
+          ? "Фотография больше 12 МБ. Выберите файл поменьше."
+          : ""
+      : "";
+    setError(failure);
+    input.current?.setCustomValidity(failure);
+    setFile(failure ? null : next);
+  };
+  useEffect(() => {
+    if (!file) {
+      setPreview("");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
   useEffect(() => {
     const form = input.current?.form;
-    const reset = () => setName("");
+    const reset = () => {
+      setFile(null);
+      setError("");
+      input.current?.setCustomValidity("");
+    };
     form?.addEventListener("reset", reset);
     return () => form?.removeEventListener("reset", reset);
   }, []);
@@ -67,51 +126,211 @@ function ReadingPhotoField({ required }: { required: boolean }) {
     <div className="reading-photo-picker">
       <span>Фотография прибора {required && <small>Обязательно</small>}</span>
       <div className="reading-photo-picker__control">
-        <label className="reading-photo-trigger">
-          <span className="reading-photo-trigger__icon" aria-hidden="true">
-            <ActionIcon name="upload" />
-          </span>
-          <span>{name || "Прикрепить фотографию"}</span>
+        <label
+          className={`reading-photo-trigger${dragging ? " reading-photo-trigger--dragging" : ""}${error ? " reading-photo-trigger--error" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (
+              !(event.relatedTarget instanceof Node) ||
+              !event.currentTarget.contains(event.relatedTarget)
+            )
+              setDragging(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+            const next = event.dataTransfer.files[0];
+            if (!next || !input.current) return;
+            const transfer = new DataTransfer();
+            transfer.items.add(next);
+            input.current.files = transfer.files;
+            choose(next);
+            input.current.dispatchEvent(new Event("change", { bubbles: true }));
+          }}
+        >
+          {preview ? (
+            <img
+              className="reading-photo-preview"
+              src={preview}
+              alt={`Фотография прибора: ${file?.name ?? ""}`}
+            />
+          ) : (
+            <span className="reading-photo-empty">
+              <span className="reading-photo-trigger__icon" aria-hidden="true">
+                <ActionIcon name="upload" />
+              </span>
+              <strong>Загрузить фотографию</strong>
+              <span>Выберите файл или перетащите его сюда</span>
+            </span>
+          )}
           <Input
             ref={input}
             className="reading-photo-native"
             aria-label="Фотография прибора"
+            aria-describedby={descriptionId}
+            aria-invalid={error ? true : undefined}
             name="photo"
             type="file"
             required={required}
             accept="image/jpeg,image/png,image/webp"
-            capture="environment"
-            onChange={(event) =>
-              setName(event.currentTarget.files?.[0]?.name ?? "")
-            }
+            onChange={(event) => choose(event.currentTarget.files?.[0] ?? null)}
           />
         </label>
-        {name && (
-          <IconButton
-            label="Убрать фотографию прибора"
-            onClick={() => {
-              if (input.current) {
-                input.current.value = "";
-                input.current.dispatchEvent(
-                  new Event("change", { bubbles: true }),
-                );
-              }
-              setName("");
-            }}
-          >
-            <ActionIcon name="close" />
-          </IconButton>
+        {file && (
+          <div className="reading-photo-meta">
+            <span>{file.name}</span>
+            <div className="reading-photo-actions">
+              <IconButton
+                label="Скачать выбранную фотографию"
+                onClick={() => {
+                  if (!preview) return;
+                  const link = document.createElement("a");
+                  link.href = preview;
+                  link.download = file.name;
+                  link.click();
+                }}
+              >
+                <ActionIcon name="download" />
+              </IconButton>
+              <IconButton
+                label="Убрать фотографию прибора"
+                onClick={() => {
+                  if (input.current) {
+                    input.current.value = "";
+                    input.current.dispatchEvent(
+                      new Event("change", { bubbles: true }),
+                    );
+                  }
+                  choose(null);
+                }}
+              >
+                <ActionIcon name="close" />
+              </IconButton>
+            </div>
+          </div>
         )}
       </div>
+      <small
+        id={descriptionId}
+        className={error ? "reading-photo-error" : "field-hint"}
+        role={error ? "alert" : undefined}
+      >
+        {error || "JPG, PNG или WebP · до 12 МБ"}
+      </small>
+    </div>
+  );
+}
+function StoredReadingPhoto({
+  token,
+  documentId,
+}: {
+  token: string;
+  documentId: string;
+}) {
+  const [preview, setPreview] = useState("");
+  const [error, setError] = useState("");
+  const [extension, setExtension] = useState("jpg");
+  const [attempt, retry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true,
+      objectUrl = "";
+    setPreview("");
+    setError("");
+    void fetch(`${runtimeApiBase}/api/documents/${documentId}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30000)]),
+    })
+      .then(async (response) => {
+        if (
+          !response.ok ||
+          !response.headers.get("content-type")?.startsWith("image/")
+        )
+          throw new Error("Не удалось открыть фотографию. Попробуйте ещё раз.");
+        const blob = await response.blob();
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreview(objectUrl);
+        setExtension(
+          blob.type === "image/png"
+            ? "png"
+            : blob.type === "image/webp"
+              ? "webp"
+              : "jpg",
+        );
+      })
+      .catch((failure) => {
+        if (active && !controller.signal.aborted)
+          setError(
+            failure instanceof Error && failure.message.startsWith("Не удалось")
+              ? failure.message
+              : "Не удалось открыть фотографию. Попробуйте ещё раз.",
+          );
+      });
+    return () => {
+      active = false;
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [documentId, token, attempt]);
+  return (
+    <div className="reading-stored-photo">
+      {preview ? (
+        <>
+          <a
+            className="reading-stored-photo__open"
+            href={preview}
+            target="_blank"
+            rel="noopener"
+            aria-label="Открыть фотографию прибора в новом окне"
+          >
+            <img
+              src={preview}
+              alt="Фотография прибора, прикреплённая к показанию"
+            />
+            <span>
+              <ActionIcon name="zoomIn" />
+              Открыть
+            </span>
+          </a>
+          <div className="reading-stored-photo__actions">
+            <IconButton
+              label="Скачать фотографию прибора"
+              onClick={() => {
+                const link = document.createElement("a");
+                link.href = preview;
+                link.download = `Показание.${extension}`;
+                link.click();
+              }}
+            >
+              <ActionIcon name="download" />
+            </IconButton>
+          </div>
+        </>
+      ) : error ? (
+        <div className="reading-stored-photo__status">
+          <p role="alert">{error}</p>
+          <Button onClick={() => retry((value) => value + 1)}>Повторить</Button>
+        </div>
+      ) : (
+        <p className="reading-stored-photo__status field-hint" role="status">
+          Открываем фотографию…
+        </p>
+      )}
     </div>
   );
 }
 export function ReadingsWorkspace({
   workerId,
   initialMeterId = "",
+  onCreateMeter,
 }: {
   workerId?: string;
   initialMeterId?: string;
+  onCreateMeter?: () => void;
 }) {
   const { session, overview, refreshWorkspace } = useWorkspace(),
     { token, user } = session;
@@ -125,6 +344,15 @@ export function ReadingsWorkspace({
   const [selected, setSelected] = useState(""),
     [meterId, setMeterId] = useState(initialMeterId),
     [periodId, setPeriodId] = useState(""),
+    [readingMonth, setReadingMonth] = useState(() =>
+      new Date().toISOString().slice(0, 7),
+    ),
+    [periodMonth, setPeriodMonth] = useState(() =>
+      new Date().toISOString().slice(0, 7),
+    ),
+    [periodDates, setPeriodDates] = useState(() =>
+      monthBounds(new Date().toISOString().slice(0, 7)),
+    ),
     [reviewAccepted, setReviewAccepted] = useState(true),
     [status, setStatus] = useState("");
   const canSubmit = hasPermission(user, "readings.submit");
@@ -143,22 +371,32 @@ export function ReadingsWorkspace({
     initialMeterId && canSubmit ? "send" : null,
   );
   const [dirty, setDirty] = useState(false),
-    [reviewDirty, setReviewDirty] = useState(false);
+    [reviewDirty, setReviewDirty] = useState(false),
+    [photoEditing, setPhotoEditing] = useState(false),
+    [photoDirty, setPhotoDirty] = useState(false);
   useEffect(() => {
     setReviewAccepted(true);
     setReviewDirty(false);
+    setPhotoEditing(false);
+    setPhotoDirty(false);
   }, [selected]);
   useEffect(() => {
     if (initialMeterId) {
       setMeterId(initialMeterId);
       setPeriodId("");
+      setReadingMonth(new Date().toISOString().slice(0, 7));
       setDirty(false);
       if (canSubmit) setPanel("send");
     }
   }, [initialMeterId]);
   const { data } = resource,
     meter = data.meters.find((m) => m.id === meterId),
-    period = data.periods.find((p) => p.id === periodId),
+    period = data.periods.find(
+      (p) =>
+        p.id === periodId &&
+        p.startsOn.slice(0, 7) === readingMonth &&
+        p.propertyId === meter?.propertyId,
+    ),
     current = data.submissions.find((s) => s.id === selected),
     today = new Date().toISOString().slice(0, 10);
   const meters = data.meters.filter(
@@ -169,8 +407,61 @@ export function ReadingsWorkspace({
         .filter((r) => r.meterId === meter.id)
         .sort((a, b) => b.period.localeCompare(a.period))[0]
     : null;
+  const availablePeriods = data.periods.filter(
+    (p) =>
+      p.propertyId === meter?.propertyId &&
+      p.startsOn.slice(0, 7) === readingMonth &&
+      p.startsOn <= today &&
+      p.endsOn >= today,
+  );
+  useEffect(() => {
+    setPeriodId((currentId) =>
+      availablePeriods.some((p) => p.id === currentId)
+        ? currentId
+        : availablePeriods.length === 1
+          ? availablePeriods[0].id
+          : "",
+    );
+  }, [meterId, readingMonth, data.periods, today]);
+  const existingSubmission = meter
+    ? data.submissions.find(
+        (row) =>
+          row.meterId === meter.id &&
+          row.status !== "rejected" &&
+          (row.periodId === periodId ||
+            (row.status === "accepted" &&
+              data.periods
+                .find((p) => p.id === row.periodId)
+                ?.startsOn.slice(0, 7) === readingMonth)),
+      )
+    : undefined;
+  const monthAlreadyAccepted = Boolean(
+    readingMonth && latest && latest.period >= readingMonth,
+  );
+  const sendBlocked = Boolean(existingSubmission || monthAlreadyAccepted);
+  const accountRequired = user.role === "tenant" || Boolean(meter?.sourceId);
+  const availableAccounts = data.accounts.filter(
+    (account) =>
+      account.unitId === meter?.unitId &&
+      (!meter?.sourceId || account.sourceId === meter.sourceId),
+  );
+  const corrections = [...(current?.photoCorrections ?? [])].sort((a, b) =>
+    a.correctedAt.localeCompare(b.correctedAt),
+  );
+  const lastCorrection = corrections.at(-1);
+  const canCorrectPhoto =
+    ["admin", "manager"].includes(user.role) &&
+    hasPermission(user, "readings.review");
   const send = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!meter || !period || sendBlocked) {
+      resource.setError(
+        sendBlocked
+          ? "За этот месяц показание уже передано. Откройте его в списке."
+          : "Выберите прибор и открытый месяц ввода.",
+      );
+      return;
+    }
     const form = e.currentTarget,
       v = new FormData(form);
     void resource
@@ -207,7 +498,7 @@ export function ReadingsWorkspace({
       });
   };
   return (
-    <section className="business-stack">
+    <section className="business-stack readings-workspace">
       <Feedback {...resource} />
       {showPeriods && (
         <WorkspaceTabs
@@ -232,18 +523,30 @@ export function ReadingsWorkspace({
             <Register
               title="Показания"
               action={
-                canSubmit ? (
-                  <IconButton
-                    label="Передать показание"
-                    variant="primary"
-                    onClick={() => {
-                      resource.setError("");
-                      setDirty(false);
-                      setPanel("send");
-                    }}
-                  >
-                    <ActionIcon name="plus" />
-                  </IconButton>
+                canSubmit || (onCreateMeter && canManagePeriods) ? (
+                  <div className="readings-actions">
+                    {onCreateMeter && canManagePeriods && (
+                      <IconButton
+                        label="Добавить прибор"
+                        onClick={onCreateMeter}
+                      >
+                        <ActionIcon name="plus" />
+                      </IconButton>
+                    )}
+                    {canSubmit && (
+                      <IconButton
+                        label="Передать показание"
+                        variant="primary"
+                        onClick={() => {
+                          resource.setError("");
+                          setDirty(false);
+                          setPanel("send");
+                        }}
+                      >
+                        <ActionIcon name="upload" />
+                      </IconButton>
+                    )}
+                  </div>
                 ) : undefined
               }
               rows={data.submissions.filter(
@@ -254,7 +557,7 @@ export function ReadingsWorkspace({
               selectedId={selected}
               onSelect={(s) => setSelected(s.id)}
               searchText={(s) =>
-                `${data.meters.find((m) => m.id === s.meterId)?.name} ${data.periods.find((p) => p.id === s.periodId)?.name}`
+                `${data.meters.find((m) => m.id === s.meterId)?.name} ${data.periods.find((p) => p.id === s.periodId)?.name} ${readingMonthLabel(data.periods.find((p) => p.id === s.periodId)?.startsOn ?? "")}`
               }
               columns={[
                 {
@@ -264,7 +567,10 @@ export function ReadingsWorkspace({
                     <>
                       {data.meters.find((m) => m.id === s.meterId)?.name}
                       <small>
-                        {data.periods.find((p) => p.id === s.periodId)?.name}
+                        {readingMonthLabel(
+                          data.periods.find((p) => p.id === s.periodId)
+                            ?.startsOn ?? "",
+                        )}
                       </small>
                     </>
                   ),
@@ -327,7 +633,7 @@ export function ReadingsWorkspace({
             title="Периоды ввода"
             rows={data.periods}
             searchText={(p) =>
-              `${p.name} ${overview.properties.find((v) => v.id === p.propertyId)?.name ?? ""}`
+              `${readingMonthLabel(p.startsOn)} ${p.name} ${overview.properties.find((v) => v.id === p.propertyId)?.name ?? ""}`
             }
             action={
               canManagePeriods ? (
@@ -347,8 +653,8 @@ export function ReadingsWorkspace({
             columns={[
               {
                 key: "name",
-                label: "Название",
-                render: (p) => <strong>{p.name}</strong>,
+                label: "Месяц",
+                render: (p) => <strong>{readingMonthLabel(p.startsOn)}</strong>,
               },
               {
                 key: "property",
@@ -383,12 +689,12 @@ export function ReadingsWorkspace({
             data.meters.find((m) => m.id === current.meterId)?.name ??
             "Показание"
           }
-          description={
-            data.periods.find((p) => p.id === current.periodId)?.name
-          }
+          description={readingMonthLabel(
+            data.periods.find((p) => p.id === current.periodId)?.startsOn ?? "",
+          )}
           onClose={() => setSelected("")}
           busy={resource.busy}
-          dirty={reviewDirty}
+          dirty={reviewDirty || photoDirty}
         >
           <Feedback error={resource.error} notice={resource.notice} />
           <dl className="business-stats">
@@ -411,26 +717,166 @@ export function ReadingsWorkspace({
               порога. Решение требует обоснования инженера.
             </p>
           )}
-          {current.photoDocumentId && (
-            <IconButton
-              label="Скачать фотографию прибора"
-              onClick={() =>
-                void resource.run(
-                  () =>
-                    downloadDocument(
-                      token,
-                      current.photoDocumentId!,
-                      "Показание.jpg",
-                    ),
-                  "Фото скачано",
-                )
-              }
-            >
-              <ActionIcon name="download" />
-            </IconButton>
-          )}
+          <section
+            className="reading-photo-record"
+            aria-label="Фотография показания"
+          >
+            <div className="reading-photo-record__head">
+              <h3>Фотография прибора</h3>
+              {canCorrectPhoto && !photoEditing && (
+                <IconButton
+                  disabled={resource.busy}
+                  label={
+                    current.photoDocumentId
+                      ? "Уточнить фотографию"
+                      : "Добавить фотографию"
+                  }
+                  onClick={() => {
+                    setPhotoEditing(true);
+                    setPhotoDirty(false);
+                    resource.setError("");
+                  }}
+                >
+                  <ActionIcon name="upload" />
+                </IconButton>
+              )}
+            </div>
+            {lastCorrection && (
+              <div className="reading-photo-correction-note">
+                <strong>Фотография уточнена</strong>
+                <p>{lastCorrection.reason}</p>
+                <small>
+                  {new Date(lastCorrection.correctedAt).toLocaleString(
+                    "ru-RU",
+                    { dateStyle: "medium", timeStyle: "short" },
+                  )}{" "}
+                  · {lastCorrection.actorName || "Сотрудник"}
+                </small>
+              </div>
+            )}
+            {photoEditing ? (
+              <form
+                className="form-grid"
+                onChange={() => setPhotoDirty(true)}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = event.currentTarget,
+                    values = new FormData(form),
+                    file = values.get("photo");
+                  if (!(file instanceof File) || !file.size) return;
+                  void resource
+                    .run(async () => {
+                      const uploaded = await uploadDocument(
+                        token,
+                        file,
+                        [{ entityType: "meters", entityId: current.meterId }],
+                        "photo",
+                      );
+                      await apiRequest(
+                        `/api/readings/submissions/${current.id}/photo`,
+                        {
+                          token,
+                          method: "PUT",
+                          body: {
+                            updatedAt: current.updatedAt,
+                            photoDocumentId: uploaded.item.id,
+                            reason: values.get("reason"),
+                          },
+                        },
+                      );
+                      form.reset();
+                    }, "Фотография уточнена")
+                    .then((saved) => {
+                      if (saved) {
+                        setPhotoEditing(false);
+                        setPhotoDirty(false);
+                      }
+                    });
+                }}
+              >
+                <ReadingPhotoField required />
+                <label className="reading-photo-reason">
+                  Причина замены
+                  <Textarea
+                    name="reason"
+                    required
+                    maxLength={10000}
+                    placeholder="Чем новая фотография уточняет показание"
+                  />
+                </label>
+                <div className="reading-submit-actions reading-photo-save-actions">
+                  <Button variant="primary" type="submit" busy={resource.busy}>
+                    Сохранить фотографию
+                  </Button>
+                  <Button
+                    disabled={resource.busy}
+                    onClick={() => {
+                      setPhotoEditing(false);
+                      setPhotoDirty(false);
+                    }}
+                  >
+                    Отмена
+                  </Button>
+                </div>
+              </form>
+            ) : current.photoDocumentId ? (
+              <StoredReadingPhoto
+                token={token}
+                documentId={current.photoDocumentId}
+              />
+            ) : (
+              <p className="field-hint">Фотография не прикреплена.</p>
+            )}
+            {corrections.length > 0 && (
+              <div className="reading-photo-history">
+                <h4>История фотографий</h4>
+                <ul>
+                  {corrections.map((correction) => (
+                    <li key={correction.id}>
+                      <div>
+                        <strong>
+                          {new Date(correction.correctedAt).toLocaleString(
+                            "ru-RU",
+                            { dateStyle: "medium", timeStyle: "short" },
+                          )}{" "}
+                          · {correction.actorName || "Сотрудник"}
+                        </strong>
+                        {correction.id !== lastCorrection?.id && (
+                          <p>{correction.reason}</p>
+                        )}
+                        <small>
+                          {correction.previousPhotoDocumentId
+                            ? "Предыдущая фотография сохранена"
+                            : "Фотография добавлена"}
+                        </small>
+                      </div>
+                      {correction.previousPhotoDocumentId && (
+                        <IconButton
+                          label={`Скачать фотографию до уточнения от ${date(correction.correctedAt)}`}
+                          onClick={() =>
+                            void resource.run(
+                              () =>
+                                downloadDocument(
+                                  token,
+                                  correction.previousPhotoDocumentId!,
+                                  "Предыдущее показание.jpg",
+                                ),
+                              "Предыдущая фотография скачана",
+                            )
+                          }
+                        >
+                          <ActionIcon name="download" />
+                        </IconButton>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
           {current.reason && <p>Решение: {current.reason}</p>}
           {current.status === "pending" &&
+            !photoEditing &&
             hasPermission(user, "readings.review") && (
               <form
                 key={current.id}
@@ -542,21 +988,56 @@ export function ReadingsWorkspace({
               </Select>
             </label>
             <label>
-              Название
-              <Input name="name" required placeholder="Показания за месяц" />
+              Месяц
+              <Input
+                aria-label="Месяц периода"
+                type="month"
+                required
+                value={periodMonth}
+                onChange={(event) => {
+                  setPeriodMonth(event.target.value);
+                  setPeriodDates(monthBounds(event.target.value));
+                }}
+              />
+              <Input
+                name="name"
+                type="hidden"
+                value={readingMonthLabel(periodMonth)}
+              />
             </label>
             <label>
-              Начало
+              Начало приёма
               <Input
                 name="startsOn"
                 type="date"
                 required
-                defaultValue={today.slice(0, 7) + "-01"}
+                min={monthBounds(periodMonth).startsOn}
+                max={monthBounds(periodMonth).endsOn}
+                value={periodDates.startsOn}
+                onChange={(event) =>
+                  setPeriodDates((dates) => ({
+                    ...dates,
+                    startsOn: event.target.value,
+                  }))
+                }
               />
             </label>
             <label>
-              Окончание
-              <Input name="endsOn" type="date" required defaultValue={today} />
+              Окончание приёма
+              <Input
+                name="endsOn"
+                type="date"
+                required
+                min={periodDates.startsOn || monthBounds(periodMonth).startsOn}
+                max={monthBounds(periodMonth).endsOn}
+                value={periodDates.endsOn}
+                onChange={(event) =>
+                  setPeriodDates((dates) => ({
+                    ...dates,
+                    endsOn: event.target.value,
+                  }))
+                }
+              />
             </label>
             <label>
               Порог изменения расхода, %
@@ -587,7 +1068,7 @@ export function ReadingsWorkspace({
         >
           <Feedback error={resource.error} loading={resource.loading} />
           <form
-            className="form-grid"
+            className="form-grid reading-submit-form"
             onSubmit={send}
             onChange={() => setDirty(true)}
           >
@@ -613,30 +1094,91 @@ export function ReadingsWorkspace({
               </Select>
             </label>
             <label>
-              Период ввода
-              <Select
-                aria-label="Период ввода"
+              Месяц показания
+              <Input
+                aria-label="Месяц показания"
+                name="readingMonth"
+                type="month"
                 required
-                value={periodId}
-                onChange={(e) => setPeriodId(e.target.value)}
-              >
-                <option value="">Выберите период</option>
-                {data.periods
-                  .filter(
-                    (p) =>
-                      p.propertyId === meter?.propertyId &&
-                      p.startsOn <= today &&
-                      p.endsOn >= today,
-                  )
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · до {date(p.endsOn)}
+                value={readingMonth}
+                disabled={!meter}
+                onChange={(event) => setReadingMonth(event.target.value)}
+              />
+              {period && (
+                <small className="field-hint">
+                  Приём до {date(period.endsOn)}
+                </small>
+              )}
+            </label>
+            <Input name="periodId" type="hidden" value={periodId} />
+            {availablePeriods.length > 1 && (
+              <label>
+                Даты приёма
+                <Select
+                  aria-label="Даты приёма"
+                  required
+                  value={periodId}
+                  onChange={(event) => setPeriodId(event.target.value)}
+                >
+                  <option value="">Выберите даты</option>
+                  {availablePeriods.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {date(candidate.startsOn)} — {date(candidate.endsOn)}
                     </option>
                   ))}
-              </Select>
-            </label>
-            {meter && (
+                </Select>
+              </label>
+            )}
+            {meter && availablePeriods.length === 0 && (
+              <p className="field-hint">
+                {readingMonth
+                  ? `На ${readingMonthLabel(readingMonth).toLocaleLowerCase("ru-RU")} нет открытого периода ввода. Его открывает управляющий.`
+                  : "Выберите месяц показания."}
+              </p>
+            )}
+            {meter && sendBlocked && (
+              <div className="reading-existing" role="status">
+                <div>
+                  <strong>
+                    {existingSubmission?.status === "pending"
+                      ? "Показание уже на проверке"
+                      : "Показание за этот месяц уже принято"}
+                  </strong>
+                  <p>
+                    {existingSubmission
+                      ? `${existingSubmission.previous} → ${existingSubmission.value}. Повторно отправлять его не нужно.`
+                      : "Выберите другой прибор или следующий открытый месяц."}
+                  </p>
+                </div>
+                {existingSubmission && (
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      setSelected(existingSubmission.id);
+                      setDirty(false);
+                      setPanel(null);
+                    }}
+                  >
+                    Открыть показание
+                  </Button>
+                )}
+              </div>
+            )}
+            {meter && !sendBlocked && (
               <Fragment key={meter.id}>
+                {meter.integrationStatus === "pending" && (
+                  <p className="field-hint">
+                    Прибор регистрируется в 1С. Показание можно отправить
+                    сейчас; инженер сможет принять его после подтверждения
+                    регистрации.
+                  </p>
+                )}
+                {meter.integrationStatus === "failed" && (
+                  <p className="notice notice--error reading-submit-alert">
+                    Регистрацию прибора в 1С нужно проверить. Обратитесь к
+                    администратору.
+                  </p>
+                )}
                 <p className="field-hint">
                   Предыдущее показание: {latest?.value ?? meter.initialValue}.{" "}
                   {period?.photoRequired ? "Фотография обязательна." : ""}
@@ -646,21 +1188,30 @@ export function ReadingsWorkspace({
                   <Select
                     name="accountId"
                     aria-label="Лицевой счет"
-                    required={user.role === "tenant"}
+                    required={accountRequired}
+                    defaultValue={
+                      accountRequired && availableAccounts.length === 1
+                        ? availableAccounts[0].id
+                        : ""
+                    }
                   >
                     <option value="">
-                      {user.role === "tenant"
+                      {accountRequired
                         ? "Выберите ЛС"
                         : "Без ЛС: внутренний учет"}
                     </option>
-                    {data.accounts
-                      .filter((a) => a.unitId === meter.unitId)
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.number} · {a.sourceName}
-                        </option>
-                      ))}
+                    {availableAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.number} · {a.sourceName}
+                      </option>
+                    ))}
                   </Select>
+                  {accountRequired && !availableAccounts.length && (
+                    <small className="field-hint">
+                      Для этого прибора нет доступного лицевого счёта.
+                      Обратитесь к управляющему.
+                    </small>
+                  )}
                 </label>
                 <label>
                   Новое показание
@@ -675,26 +1226,23 @@ export function ReadingsWorkspace({
                 <ReadingPhotoField required={Boolean(period?.photoRequired)} />
               </Fragment>
             )}
-            <Button
-              variant="primary"
-              type="submit"
-              busy={resource.busy}
-              disabled={!meter || !period}
-            >
-              Отправить на проверку
-            </Button>
-          </form>
-          {meter &&
-            !data.periods.some(
-              (p) =>
-                p.propertyId === meter.propertyId &&
-                p.startsOn <= today &&
-                p.endsOn >= today,
-            ) && (
-              <p className="field-hint">
-                Сейчас нет открытого периода ввода. Его открывает управляющий.
-              </p>
+            {!sendBlocked && (
+              <div className="reading-submit-actions">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  busy={resource.busy}
+                  disabled={
+                    !meter ||
+                    !period ||
+                    (accountRequired && !availableAccounts.length)
+                  }
+                >
+                  Отправить на проверку
+                </Button>
+              </div>
             )}
+          </form>
         </SidePanel>
       )}
     </section>

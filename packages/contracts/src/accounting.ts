@@ -270,10 +270,16 @@ export const accountingContracts = [
       limit: z.number().int().min(1).max(100),
       kinds: z
         .array(
-          z.enum(["readings", "work_results", "work_reopened", "service_acts"]),
+          z.enum([
+            "readings",
+            "work_results",
+            "work_reopened",
+            "service_acts",
+            "meter_registrations",
+          ]),
         )
         .min(1)
-        .max(4)
+        .max(5)
         .optional(),
     }),
   },

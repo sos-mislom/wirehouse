@@ -5,6 +5,7 @@ import { formatArea, formatDate } from "../../shared/format";
 import { Button, IconButton, Input } from "../../ui";
 import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
 import { useWorkspaceViewState } from "../../ui/useWorkspaceViewState";
+import { DocumentRegistry } from "../business/DocumentRegistry";
 export function ManagerUnitDetail() {
   const {
     setManagerScreen,
@@ -33,6 +34,7 @@ export function ManagerUnitDetail() {
     { id: "overview", label: "Помещение" },
     { id: "leases", label: "Договоры", count: selectedUnitLeases.length },
     { id: "tickets", label: "Заявки", count: selectedUnitTickets.length },
+    { id: "documents", label: "Документы" },
     ...(canManagePortfolio ? [{ id: "split", label: "Разделение" }] : []),
   ];
   const [view, setView] = useWorkspaceViewState(
@@ -100,6 +102,15 @@ export function ManagerUnitDetail() {
             onChange={setView}
             items={views}
           />
+          {view === "documents" && (
+            <section
+              role="tabpanel"
+              id="unit-record-panel-documents"
+              aria-labelledby="unit-record-tab-documents"
+            >
+              <DocumentRegistry entityType="units" entityId={selectedUnit.id} />
+            </section>
+          )}
           <article
             className="mvp-card"
             hidden={view !== "overview"}

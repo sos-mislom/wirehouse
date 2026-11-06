@@ -13,6 +13,7 @@ import {
   saveReadingPeriod,
   submitReading,
   reviewReading,
+  correctReadingPhoto,
 } from "../domain/readings.js";
 import {
   maintenanceProgress,
@@ -27,6 +28,9 @@ export function createBusinessWorkflowRoutes({ db, requireAuth, ok, json }) {
       ),
       review = path.match(
         /^\/api\/readings\/submissions\/([a-zA-Z0-9-]+)\/review$/,
+      ),
+      correctPhoto = path.match(
+        /^\/api\/readings\/submissions\/([a-zA-Z0-9-]+)\/photo$/,
       ),
       change = path.match(
         /^\/api\/maintenance\/tickets\/([a-zA-Z0-9-]+)\/change$/,
@@ -79,6 +83,15 @@ export function createBusinessWorkflowRoutes({ db, requireAuth, ok, json }) {
       }
       if (path === "/api/readings" && method === "GET") {
         ok(response, readingsWorkspace(db, actor));
+        return true;
+      }
+      if (correctPhoto && method === "PUT") {
+        const body = await parseJsonBody(request);
+        ok(response, {
+          item: db.transaction(() =>
+            correctReadingPhoto(db, actor, correctPhoto[1], body),
+          ),
+        });
         return true;
       }
       if (path === "/api/maintenance/progress" && method === "GET") {

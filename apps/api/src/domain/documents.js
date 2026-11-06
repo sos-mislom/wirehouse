@@ -190,6 +190,13 @@ export function registerExistingDocument(db, type, record) {
 export function removeExistingDocument(db, id) {
   if (
     db.data.reading_submissions.some((r) => r.photoDocumentId === id) ||
+    db.data.audit_log.some(
+      (event) =>
+        event.action === "reading_photo_corrected" &&
+        event.entityType === "reading_submissions" &&
+        (event.changes.previousPhotoDocumentId === id ||
+          event.changes.photoDocumentId === id),
+    ) ||
     db.data.document_links.some(
       (l) => l.documentId === id && l.phase !== "general",
     )

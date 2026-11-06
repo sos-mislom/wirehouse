@@ -1,4 +1,7 @@
 import { Disclosure } from "../../ui/Disclosure";
+import { useState } from "react";
+import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
+import { DocumentRegistry } from "../business/DocumentRegistry";
 import { BotLinkPanel } from "../../MessengerButtons";
 import { Button, IconButton } from "../../ui";
 import { ActionIcon } from "../business/ActionIcon";
@@ -35,6 +38,15 @@ export function OperationCard({
     token,
     busy,
   } = model;
+  const [view, setView] = useState("details");
+  const documentContext =
+    tab === "equipment"
+      ? { entityType: "equipment" as const, entityId: row.id }
+      : tab === "meters"
+        ? { entityType: "meters" as const, entityId: row.id }
+        : tab === "plans"
+          ? { entityType: "properties" as const, entityId: row.propertyId }
+          : null;
   return (
     <article className="operation-card" key={row.id}>
       <div className="mvp-card-head">
@@ -60,21 +72,104 @@ export function OperationCard({
             </IconButton>
           )}
       </div>
-      {tab === "equipment" && (
+      {documentContext && (
+        <WorkspaceTabs
+          label="Карточка записи"
+          items={[
+            { id: "details", label: "Сведения" },
+            { id: "documents", label: "Документы" },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+      )}
+      {documentContext && view === "documents" ? (
+        <DocumentRegistry {...documentContext} />
+      ) : (
         <>
-          <div className="operation-meta">
-            {row.photoUrl && (
-              <img
-                src={row.photoUrl}
-                alt={row.name}
-                className="equipment-photo"
-                loading="lazy"
-              />
-            )}
-            <div>
+          {tab === "equipment" && (
+            <>
+              <div className="operation-meta">
+                {row.photoUrl && (
+                  <img
+                    src={row.photoUrl}
+                    alt={row.name}
+                    className="equipment-photo"
+                    loading="lazy"
+                  />
+                )}
+                <div>
+                  <p>
+                    {row.type} · {row.serialNumber || "Без номера"} ·{" "}
+                    {statusNames[row.status]}
+                  </p>
+                  <Button
+                    variant="text"
+                    type="button"
+                    className="text-button"
+                    onClick={() => onUnit(row.unitId)}
+                  >
+                    Помещение {unitName(row.unitId)}
+                  </Button>
+                  <p>
+                    Гарантия до {date(row.warrantyUntil)} · {currency(row.cost)}
+                  </p>
+                  <p>
+                    Ответственный:{" "}
+                    {data.users.find((u) => u.id === row.responsibleId)
+                      ?.fullName || "Не назначен"}
+                  </p>
+                  <p className="preserve-lines">{row.specifications}</p>
+                </div>
+              </div>
+              <Disclosure
+                title={
+                  <>
+                    {" "}
+                    История ремонтов и ППР (
+                    {tickets.filter((t) => t.equipmentId === row.id).length}
+                    ){" "}
+                  </>
+                }
+              >
+                {tickets
+                  .filter((t) => t.equipmentId === row.id)
+                  .map((t) => (
+                    <Button
+                      variant="plain"
+                      type="button"
+                      key={t.id}
+                      className="mvp-list-button"
+                      onClick={() => onTicket(t.id)}
+                    >
+                      {t.number} · {t.title} · {statusNames[t.status]}
+                    </Button>
+                  ))}
+                {data.plans
+                  .filter((p) => p.equipmentId === row.id)
+                  .map((p) => (
+                    <p key={p.id}>
+                      ППР: {p.name} · {date(p.nextDate)}
+                    </p>
+                  ))}
+              </Disclosure>
+            </>
+          )}
+          {tab === "plans" && (
+            <>
               <p>
-                {row.type} · {row.serialNumber || "Без номера"} ·{" "}
-                {statusNames[row.status]}
+                <span
+                  className={`status-pill status-pill--${row.active ? "info" : "warning"}`}
+                >
+                  {row.active ? "По расписанию" : "Приостановлено"}
+                </span>{" "}
+                · Следующая дата: {date(row.nextDate)} · каждые{" "}
+                {row.intervalCount}{" "}
+                {
+                  { days: "дн.", weeks: "нед.", months: "мес.", years: "г." }[
+                    row.recurrence as string
+                  ]
+                }
               </p>
               <Button
                 variant="text"
@@ -85,232 +180,173 @@ export function OperationCard({
                 Помещение {unitName(row.unitId)}
               </Button>
               <p>
-                Гарантия до {date(row.warrantyUntil)} · {currency(row.cost)}
-              </p>
-              <p>
                 Ответственный:{" "}
                 {data.users.find((u) => u.id === row.responsibleId)?.fullName ||
                   "Не назначен"}
               </p>
-              <p className="preserve-lines">{row.specifications}</p>
-            </div>
-          </div>
-          <Disclosure
-            title={
-              <>
-                {" "}
-                История ремонтов и ППР (
-                {tickets.filter((t) => t.equipmentId === row.id).length}){" "}
-              </>
-            }
-          >
-            {tickets
-              .filter((t) => t.equipmentId === row.id)
-              .map((t) => (
-                <Button
-                  variant="plain"
-                  type="button"
-                  key={t.id}
-                  className="mvp-list-button"
-                  onClick={() => onTicket(t.id)}
-                >
-                  {t.number} · {t.title} · {statusNames[t.status]}
-                </Button>
-              ))}
-            {data.plans
-              .filter((p) => p.equipmentId === row.id)
-              .map((p) => (
-                <p key={p.id}>
-                  ППР: {p.name} · {date(p.nextDate)}
-                </p>
-              ))}
-          </Disclosure>
-        </>
-      )}
-      {tab === "plans" && (
-        <>
-          <p>
-            <span
-              className={`status-pill status-pill--${row.active ? "info" : "warning"}`}
-            >
-              {row.active ? "По расписанию" : "Приостановлено"}
-            </span>{" "}
-            · Следующая дата: {date(row.nextDate)} · каждые {row.intervalCount}{" "}
-            {
-              { days: "дн.", weeks: "нед.", months: "мес.", years: "г." }[
-                row.recurrence as string
-              ]
-            }
-          </p>
-          <Button
-            variant="text"
-            type="button"
-            className="text-button"
-            onClick={() => onUnit(row.unitId)}
-          >
-            Помещение {unitName(row.unitId)}
-          </Button>
-          <p>
-            Ответственный:{" "}
-            {data.users.find((u) => u.id === row.responsibleId)?.fullName ||
-              "Не назначен"}
-          </p>
-          <ol>
-            {row.checklist?.map((line: string, i: number) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ol>
-          <Disclosure
-            title={
-              <>
-                {" "}
-                Задания и история выполнения (
-                {tickets.filter((t) => t.maintenancePlanId === row.id).length}
-                ){" "}
-              </>
-            }
-          >
-            {tickets
-              .filter((t) => t.maintenancePlanId === row.id)
-              .map((t) => (
-                <Button
-                  variant="plain"
-                  type="button"
-                  className="mvp-list-button"
-                  key={t.id}
-                  onClick={() => onTicket(t.id)}
-                >
-                  {t.title} · {statusNames[t.status]}
-                </Button>
-              ))}
-          </Disclosure>
-        </>
-      )}
-      {tab === "services" && (
-        <>
-          <span className="status-pill">
-            {row.paid ? "Платная" : "Бесплатная"} ·{" "}
-            {row.active ? "Доступна" : "Архив"}
-          </span>
-          <p>
-            {row.paid ? `Базовая цена ${currency(row.basePrice)} · ` : ""}
-            Тариф работ: {currency(row.hourlyRate)} / ч
-          </p>
-          <p>{specialtyNames[row.specialty]}</p>
-          <p className="preserve-lines">{row.description}</p>
-        </>
-      )}
-      {tab === "meters" && (
-        <>
-          <p>
-            {resourceNames[row.resource]} ·{" "}
-            {row.scope === "common"
-              ? "Общедомовой / МОП"
-              : `Помещение ${unitName(row.unitId)}`}{" "}
-            · № {row.serialNumber || "—"}
-          </p>
-          <p>
-            Тариф {currency(row.tariff)} · Ответственный:{" "}
-            {data.users.find((u) => u.id === row.responsibleId)?.fullName ||
-              "Не назначен"}
-          </p>
-          <Button
-            variant="secondary"
-            type="button"
-            className="secondary-button"
-            disabled={!row.active}
-            onClick={() => {
-              setReadingMeter(row.id);
-            }}
-          >
-            Внести показания
-          </Button>
-          <Disclosure title="История и распределение">
-            {data.readings
-              .filter((r) => r.meterId === row.id)
-              .sort((a, b) => b.period.localeCompare(a.period))
-              .map((r) => (
-                <div className="reading-row" key={r.id}>
-                  <strong>
-                    {r.period}: {r.previous} → {r.value} · расход{" "}
-                    {r.consumption} · {currency(r.amount)}
-                  </strong>
-                  <p>Тариф на момент ввода: {currency(r.tariff)}</p>
-                  {r.allocations.map((a: Row, i: number) => (
-                    <p key={i}>
-                      {overview.tenants?.find((t) => t.id === a.tenantId)
-                        ?.name || "Арендатор"}{" "}
-                      · {unitName(a.unitId)} · {currency(a.amount)} (
-                      {(a.share * 100).toFixed(1)}%)
-                    </p>
+              <ol>
+                {row.checklist?.map((line: string, i: number) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ol>
+              <Disclosure
+                title={
+                  <>
+                    {" "}
+                    Задания и история выполнения (
+                    {
+                      tickets.filter((t) => t.maintenancePlanId === row.id)
+                        .length
+                    }
+                    ){" "}
+                  </>
+                }
+              >
+                {tickets
+                  .filter((t) => t.maintenancePlanId === row.id)
+                  .map((t) => (
+                    <Button
+                      variant="plain"
+                      type="button"
+                      className="mvp-list-button"
+                      key={t.id}
+                      onClick={() => onTicket(t.id)}
+                    >
+                      {t.title} · {statusNames[t.status]}
+                    </Button>
                   ))}
-                  {r.unallocated > 0 && (
-                    <p>
-                      Не распределено: {currency(r.unallocated)} — нет
-                      действующих договоров.
-                    </p>
-                  )}
-                </div>
-              ))}
-          </Disclosure>
-          <small className="field-hint">
-            Распределение для проверки. Начисления в счета переносятся
-            менеджером после сверки.
-          </small>
-        </>
-      )}
-      {tab === "news" && (
-        <>
-          <span className={`status-pill status-pill--${row.tone}`}>
-            {row.published ? "Опубликовано" : "Черновик"} ·{" "}
-            {row.audience === "all"
-              ? "Всем"
-              : row.audience === "staff"
-                ? "Сотрудникам"
-                : "Арендаторам"}
-          </span>
-          <p className="preserve-lines">{row.content}</p>
-          <small>
-            {date(row.createdAt)}
-            {row.expiresAt ? ` · до ${date(row.expiresAt)}` : ""}
-          </small>
-        </>
-      )}
-      {tab === "expenses" && (
-        <p>
-          {date(row.date)} · {row.category} ·{" "}
-          <strong>{currency(row.amount)}</strong>
-        </p>
-      )}
-      {tab === "users" && (
-        <>
-          <p>
-            {row.email || "Без email"} · {row.phone || "Без телефона"}
-          </p>
-          <p>
-            {roleNames[row.role]}
-            {row.specialty ? ` · ${specialtyNames[row.specialty]}` : ""} ·{" "}
-            {row.isActive ? "Активен" : "Заблокирован"}
-          </p>
-          <small>Последний вход: {date(row.lastLoginAt)}</small>
-          {row.phone && row.isActive && (
-            <BotLinkPanel token={token} userId={row.id} />
+              </Disclosure>
+            </>
           )}
-        </>
-      )}
-      {tab === "audit" && (
-        <>
-          <p>
-            {row.actorName} · {new Date(row.createdAt).toLocaleString("ru-RU")}
-          </p>
-          <small>
-            {row.entityType} · {row.entityId}
-          </small>
-          <Disclosure title="Изменения">
-            <pre className="audit-values">
-              {JSON.stringify(row.changes, null, 2)}
-            </pre>
-          </Disclosure>
+          {tab === "services" && (
+            <>
+              <span className="status-pill">
+                {row.paid ? "Платная" : "Бесплатная"} ·{" "}
+                {row.active ? "Доступна" : "Архив"}
+              </span>
+              <p>
+                {row.paid ? `Базовая цена ${currency(row.basePrice)} · ` : ""}
+                Тариф работ: {currency(row.hourlyRate)} / ч
+              </p>
+              <p>{specialtyNames[row.specialty]}</p>
+              <p className="preserve-lines">{row.description}</p>
+            </>
+          )}
+          {tab === "meters" && (
+            <>
+              <p>
+                {resourceNames[row.resource]} ·{" "}
+                {row.scope === "common"
+                  ? "Общедомовой / МОП"
+                  : `Помещение ${unitName(row.unitId)}`}{" "}
+                · № {row.serialNumber || "—"}
+              </p>
+              <p>
+                Тариф {currency(row.tariff)} · Ответственный:{" "}
+                {data.users.find((u) => u.id === row.responsibleId)?.fullName ||
+                  "Не назначен"}
+              </p>
+              <Button
+                variant="secondary"
+                type="button"
+                className="secondary-button"
+                disabled={!row.active}
+                onClick={() => {
+                  setReadingMeter(row.id);
+                }}
+              >
+                Внести показания
+              </Button>
+              <Disclosure title="История и распределение">
+                {data.readings
+                  .filter((r) => r.meterId === row.id)
+                  .sort((a, b) => b.period.localeCompare(a.period))
+                  .map((r) => (
+                    <div className="reading-row" key={r.id}>
+                      <strong>
+                        {r.period}: {r.previous} → {r.value} · расход{" "}
+                        {r.consumption} · {currency(r.amount)}
+                      </strong>
+                      <p>Тариф на момент ввода: {currency(r.tariff)}</p>
+                      {r.allocations.map((a: Row, i: number) => (
+                        <p key={i}>
+                          {overview.tenants?.find((t) => t.id === a.tenantId)
+                            ?.name || "Арендатор"}{" "}
+                          · {unitName(a.unitId)} · {currency(a.amount)} (
+                          {(a.share * 100).toFixed(1)}%)
+                        </p>
+                      ))}
+                      {r.unallocated > 0 && (
+                        <p>
+                          Не распределено: {currency(r.unallocated)} — нет
+                          действующих договоров.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+              </Disclosure>
+              <small className="field-hint">
+                Распределение для проверки. Начисления в счета переносятся
+                менеджером после сверки.
+              </small>
+            </>
+          )}
+          {tab === "news" && (
+            <>
+              <span className={`status-pill status-pill--${row.tone}`}>
+                {row.published ? "Опубликовано" : "Черновик"} ·{" "}
+                {row.audience === "all"
+                  ? "Всем"
+                  : row.audience === "staff"
+                    ? "Сотрудникам"
+                    : "Арендаторам"}
+              </span>
+              <p className="preserve-lines">{row.content}</p>
+              <small>
+                {date(row.createdAt)}
+                {row.expiresAt ? ` · до ${date(row.expiresAt)}` : ""}
+              </small>
+            </>
+          )}
+          {tab === "expenses" && (
+            <p>
+              {date(row.date)} · {row.category} ·{" "}
+              <strong>{currency(row.amount)}</strong>
+            </p>
+          )}
+          {tab === "users" && (
+            <>
+              <p>
+                {row.email || "Без email"} · {row.phone || "Без телефона"}
+              </p>
+              <p>
+                {roleNames[row.role]}
+                {row.specialty
+                  ? ` · ${specialtyNames[row.specialty]}`
+                  : ""} · {row.isActive ? "Активен" : "Заблокирован"}
+              </p>
+              <small>Последний вход: {date(row.lastLoginAt)}</small>
+              {row.phone && row.isActive && (
+                <BotLinkPanel token={token} userId={row.id} />
+              )}
+            </>
+          )}
+          {tab === "audit" && (
+            <>
+              <p>
+                {row.actorName} ·{" "}
+                {new Date(row.createdAt).toLocaleString("ru-RU")}
+              </p>
+              <small>
+                {row.entityType} · {row.entityId}
+              </small>
+              <Disclosure title="Изменения">
+                <pre className="audit-values">
+                  {JSON.stringify(row.changes, null, 2)}
+                </pre>
+              </Disclosure>
+            </>
+          )}
         </>
       )}
     </article>

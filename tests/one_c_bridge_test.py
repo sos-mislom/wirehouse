@@ -1,6 +1,7 @@
 import json
 import importlib.util
 import io
+import copy
 import os
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -56,7 +57,145 @@ class FakeTransport:
         return {}
 
 
+def meter_registration_payload():
+    external = "1493ffcd-3a87-48cc-8190-9f03582859df"
+    return {
+        "schemaVersion": 1,
+        "catalog": {"externalId": external, "version": 1, "propertyExternalId": "property-1",
+                    "unitExternalId": "unit-1", "name": "Новый водосчётчик", "resource": "water",
+                    "scope": "individual", "serialNumber": "DEMO-NEW", "initialValue": 0,
+                    "tariff": 50, "active": True},
+        "binding": {"externalId": external, "accountExternalId": "account-1", "initialValue": 0, "active": True},
+    }
+
+
+class RegistrationNative(FakeNative):
+    def __init__(self):
+        super().__init__()
+        self.version = "0.3.0"
+        self.auto_export = True
+        self.bindings = {}
+        self.catalogs = {}
+        self.catalog_error = None
+        self.meter_error = None
+
+    def call(self, name, *args):
+        if name == "AdapterInfo":
+            self.calls.append((name, args))
+            return json.dumps({"schemaVersion": 1, "adapterVersion": self.version, "autoExport": self.auto_export,
+                               "outgoingKinds": ["accounts"], "incomingKinds": ["readings", "work_results", "work_reopened", "service_acts"]})
+        if name == "PutMeter":
+            self.calls.append((name, args))
+            if self.meter_error:
+                raise BridgeError(self.meter_error)
+            value = json.loads(args[2])
+            old = self.bindings.get(value["externalId"])
+            if old and (old["accountExternalId"] != value["accountExternalId"] or old["initialValue"] != value["initialValue"]):
+                raise BridgeError("METER_IDENTITY_IMMUTABLE")
+            self.bindings[value["externalId"]] = value
+            return None
+        if name == "PutCatalog":
+            self.calls.append((name, args))
+            if self.catalog_error:
+                raise BridgeError(self.catalog_error)
+            self.catalogs[json.loads(args[3])["externalId"]] = json.loads(args[3])
+            return None
+        return super().call(name, *args)
+
+
 class BridgeTests(unittest.TestCase):
+    def registration_worker(self):
+        native = RegistrationNative()
+        transport = FakeTransport()
+        transport.outgoing_kinds = ["readings", "work_results", "work_reopened", "service_acts", "meter_registrations"]
+        transport.items = [{"id": "meter-row-1", "sourceId": "source-1", "messageId": "meter-registration-1", "kind": "meter_registrations", "payload": meter_registration_payload()}]
+        return Worker(self.config, native, transport), native, transport
+
+    def test_new_meter_registration_uses_two_exported_calls_and_acknowledges_only_after_both(self):
+        worker, native, transport = self.registration_worker()
+        result = worker.run_once()
+        writes = [(name, args) for name, args in native.calls if name in ["PutMeter", "PutCatalog", "ApplyMessage"]]
+        self.assertEqual([name for name, _ in writes], ["PutMeter", "PutCatalog"])
+        self.assertEqual(writes[0][1][:2], ("source-1", "test"))
+        self.assertEqual(writes[1][1][:3], ("source-1", "test", "meters"))
+        self.assertEqual(json.loads(writes[0][1][2]), meter_registration_payload()["binding"])
+        self.assertEqual(json.loads(writes[1][1][3]), meter_registration_payload()["catalog"])
+        self.assertEqual(result["received"], 1)
+        self.assertEqual(transport.calls[-1], ("/outbox/meter-row-1/ack", {"accepted": True}))
+        self.assertIn("meter_registrations", next(data["kinds"] for suffix, data in transport.calls if suffix == "/outbox/claim"))
+
+    def test_meter_registration_claims_are_gated_by_native_version_autoexport_and_remote_capability(self):
+        for version, auto, remote in [("0.2.9", True, True), ("0.3.0", False, True), (None, True, True), ("0.3.0", True, False)]:
+            with self.subTest(version=version, auto=auto, remote=remote):
+                worker, native, transport = self.registration_worker()
+                native.version, native.auto_export = version, auto
+                transport.items = []
+                if not remote:
+                    transport.outgoing_kinds.remove("meter_registrations")
+                worker.run_once()
+                selected = next(data["kinds"] for suffix, data in transport.calls if suffix == "/outbox/claim")
+                self.assertNotIn("meter_registrations", selected)
+                self.assertFalse(any(name in ["PutMeter", "PutCatalog"] for name, _ in native.calls))
+
+    def test_meter_registration_replays_after_partial_native_failure_without_creating_another_meter(self):
+        worker, native, transport = self.registration_worker()
+        native.catalog_error = "ONE_C_OPERATION_UNCERTAIN"
+        with self.assertRaisesRegex(BridgeError, "ONE_C_OPERATION_UNCERTAIN"):
+            worker.run_once()
+        self.assertEqual(len(native.bindings), 1)
+        self.assertEqual(len(native.catalogs), 0)
+        self.assertFalse(any(suffix.endswith("/ack") for suffix, _ in transport.calls))
+        original = copy.deepcopy(native.bindings)
+        native.catalog_error = None
+        self.assertEqual(worker.run_once()["received"], 1)
+        self.assertEqual(native.bindings, original)
+        self.assertEqual(len(native.catalogs), 1)
+        self.assertEqual([name for name, _ in native.calls].count("PutMeter"), 2)
+
+    def test_lost_meter_registration_ack_is_safe_to_replay(self):
+        worker, native, transport = self.registration_worker()
+        original_call = transport.call
+        def lost_ack(suffix, data=None):
+            if suffix.endswith("/ack"):
+                raise BridgeError("CRM_UNAVAILABLE")
+            return original_call(suffix, data)
+        transport.call = lost_ack
+        with self.assertRaisesRegex(BridgeError, "CRM_UNAVAILABLE"):
+            worker.run_once()
+        before = copy.deepcopy((native.bindings, native.catalogs))
+        transport.call = original_call
+        self.assertEqual(worker.run_once()["received"], 1)
+        self.assertEqual((native.bindings, native.catalogs), before)
+
+    def test_meter_registration_rejects_malformed_catalogs_and_mismatched_binding_without_native_writes(self):
+        changes = [
+            lambda p: p.update({"sourceId": "another-source"}),
+            lambda p: p.update({"schemaVersion": True}),
+            lambda p: p["catalog"].update({"unknown": 1}),
+            lambda p: p["catalog"].update({"version": 2}),
+            lambda p: p["catalog"].update({"resource": "gas"}),
+            lambda p: p["binding"].update({"externalId": "other-meter"}),
+            lambda p: p["binding"].update({"initialValue": 99}),
+            lambda p: p["binding"].update({"active": False}),
+            lambda p: p["binding"].update({"initialValue": float("nan")}),
+            lambda p: p["catalog"].update({"tariff": -1}),
+        ]
+        for change in changes:
+            with self.subTest(change=change):
+                worker, native, transport = self.registration_worker()
+                change(transport.items[0]["payload"])
+                self.assertEqual(worker.run_once()["rejected"], 1)
+                self.assertFalse(any(name in ["PutMeter", "PutCatalog", "ApplyMessage"] for name, _ in native.calls))
+                self.assertEqual(transport.calls[-1], ("/outbox/meter-row-1/ack", {"accepted": False, "error": "INVALID_METER_REGISTRATION"}))
+
+    def test_meter_registration_deterministic_identity_conflicts_are_visible_failures(self):
+        for error, target in [("METER_IDENTITY_IMMUTABLE", "meter_error"), ("ACCOUNT_NOT_FOUND", "meter_error"), ("VERSION_CONFLICT", "catalog_error")]:
+            with self.subTest(error=error):
+                worker, native, transport = self.registration_worker()
+                setattr(native, target, error)
+                self.assertEqual(worker.run_once()["rejected"], 1)
+                self.assertEqual(transport.calls[-1], ("/outbox/meter-row-1/ack", {"accepted": False, "error": error}))
+
     def test_cli_does_not_report_success_when_a_business_message_was_rejected(self):
         from types import SimpleNamespace
         for count in [0,1]:

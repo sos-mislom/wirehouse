@@ -108,6 +108,32 @@ export async function downloadDocument(
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+export async function openDocument(token: string, id: string) {
+  const preview = window.open("about:blank", "_blank");
+  if (preview) preview.opener = null;
+  try {
+    const response = await fetch(`${runtimeApiBase}/api/documents/${id}/file`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Не удалось открыть документ");
+    const blob = await response.blob();
+    if (!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(blob.type))
+      throw new Error("Этот формат нужно скачать и открыть в приложении");
+    const url = URL.createObjectURL(blob);
+    if (preview) preview.location.href = url;
+    else {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+  } catch (error) {
+    preview?.close();
+    throw error;
+  }
+}
 export const date = (v: string | null) =>
   v ? new Date(v).toLocaleDateString("ru-RU") : "—";
 export const money = (v: number) =>

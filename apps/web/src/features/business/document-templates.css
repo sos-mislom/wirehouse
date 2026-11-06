@@ -1,0 +1,42 @@
+.document-template-library {
+  display: grid;
+  gap: 12px;
+}
+.document-template-name {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.document-template-name small {
+  color: var(--text-secondary, #596578);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.document-template-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.document-template-format {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+@media (max-width: 600px) {
+  .document-template-library
+    .data-register
+    .register-table
+    td:has(.document-template-actions) {
+    display: block;
+  }
+  .document-template-library
+    .register-table
+    td:has(.document-template-actions)::before {
+    display: none;
+  }
+  .document-template-actions {
+    gap: 4px;
+    justify-content: flex-end;
+  }
+}

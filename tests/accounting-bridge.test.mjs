@@ -186,3 +186,57 @@ test("Invalid capability selections and claim methods cannot mutate delivery att
     f.cleanup();
   }
 });
+
+test("Meter registration is advertised but delivered only to an explicitly capable claimant", async () => {
+  const f = setup();
+  try {
+    assert.ok(
+      (await f.call("/capabilities")).body.outgoingKinds.includes(
+        "meter_registrations",
+      ),
+    );
+    const registration = enqueueExchange(
+        f.db,
+        f.source.id,
+        "meter_registrations",
+        "meter-registration-1",
+        { schemaVersion: 1 },
+      ),
+      reading = enqueueExchange(
+        f.db,
+        f.source.id,
+        "readings",
+        "reading-modern",
+        { value: 120 },
+      );
+    const legacy = await f.call("/outbox/claim", "POST", { limit: 50 });
+    assert.deepEqual(
+      legacy.body.items.map((row) => row.id),
+      [reading.id],
+    );
+    assert.equal(registration.attempts, 0);
+    const fourKind = await f.call("/outbox/claim", "POST", {
+      limit: 50,
+      kinds: ["readings", "work_results", "work_reopened", "service_acts"],
+    });
+    assert.deepEqual(fourKind.body.items, []);
+    assert.equal(registration.attempts, 0);
+    const modern = await f.call("/outbox/claim", "POST", {
+      limit: 50,
+      kinds: [
+        "readings",
+        "work_results",
+        "work_reopened",
+        "service_acts",
+        "meter_registrations",
+      ],
+    });
+    assert.deepEqual(
+      modern.body.items.map((row) => row.id),
+      [registration.id],
+    );
+    assert.equal(registration.attempts, 1);
+  } finally {
+    f.cleanup();
+  }
+});

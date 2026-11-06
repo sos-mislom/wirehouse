@@ -222,6 +222,7 @@ export const operationSchemas = {
   meters: z.strictObject({
     ...base,
     unitId: optionalId,
+    accountId: optionalId,
     scope: z.enum(["individual", "common"]).optional(),
     resource,
     serialNumber: text.optional(),

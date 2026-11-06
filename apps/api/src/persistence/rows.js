@@ -12,7 +12,11 @@ import {
 
 export async function loadRows(
   client,
-  { auditLimit = null, collections = Object.keys(tables) } = {},
+  {
+    auditLimit = null,
+    collections = Object.keys(tables),
+    retainReadingPhotoHistory = false,
+  } = {},
 ) {
   const names = [...new Set(collections)];
   for (const name of names)
@@ -24,7 +28,9 @@ export async function loadRows(
     names
       .map((name) =>
         name === "audit_log" && auditLimit !== null
-          ? `SELECT * FROM (SELECT * FROM ${relation(name)} ORDER BY _sequence DESC LIMIT ${Number(auditLimit)}) recent ORDER BY _sequence`
+          ? retainReadingPhotoHistory
+            ? `SELECT * FROM (SELECT * FROM (SELECT * FROM ${relation(name)} ORDER BY _sequence DESC LIMIT ${Number(auditLimit)}) recent UNION SELECT * FROM ${relation(name)} WHERE action='reading_photo_corrected' AND entity_type='reading_submissions') retained ORDER BY _sequence`
+            : `SELECT * FROM (SELECT * FROM ${relation(name)} ORDER BY _sequence DESC LIMIT ${Number(auditLimit)}) recent ORDER BY _sequence`
           : `SELECT * FROM ${relation(name)} ORDER BY _sequence`,
       )
       .join(";"),

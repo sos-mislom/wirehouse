@@ -7,7 +7,68 @@ import {
   enqueueExchange,
 } from "./accounting.js";
 import { postAcceptedReading } from "../operations.js";
+import { meterIntegration, meterRegistration } from "./meter-registration.js";
 const now = () => new Date().toISOString();
+function photoCorrectionHistory(db, submissionId) {
+  return db.data.audit_log
+    .filter(
+      (event) =>
+        event.action === "reading_photo_corrected" &&
+        event.entityType === "reading_submissions" &&
+        event.entityId === submissionId,
+    )
+    .map((event) => ({
+      id: event.id,
+      previousPhotoDocumentId: event.changes.previousPhotoDocumentId ?? null,
+      photoDocumentId: event.changes.photoDocumentId,
+      reason: event.changes.reason,
+      correctedAt: event.createdAt,
+      correctedBy: event.actorId ?? null,
+      actorName: event.actorName ?? null,
+    }));
+}
+function publicSubmission(db, row) {
+  const corrections = photoCorrectionHistory(db, row.id);
+  return corrections.length ? { ...row, photoCorrections: corrections } : row;
+}
+
+export function correctReadingPhoto(db, actor, id, body) {
+  if (!["admin", "manager"].includes(actor.role))
+    throw businessError("Фотографию уточняет инженер или администратор", 403);
+  const row = requiredRecord(db, "reading_submissions", id);
+  requireContext(db, actor, "readings.review", "meters", row.meterId);
+  currentRecord(db, "reading_submissions", id, body.updatedAt);
+  const reason = body.reason.trim();
+  if (!reason) throw businessError("Укажите причину уточнения фотографии");
+  if (row.photoDocumentId === body.photoDocumentId)
+    throw businessError("Эта фотография уже прикреплена", 409);
+  const doc = requiredRecord(db, "entity_documents", body.photoDocumentId);
+  if (
+    doc.category !== "photo" ||
+    !doc.mimeType?.startsWith("image/") ||
+    doc.uploadedBy !== actor.id ||
+    doc.propertyId !== row.propertyId ||
+    !db.data.document_links.some(
+      (link) =>
+        link.documentId === doc.id &&
+        link.entityType === "meters" &&
+        link.entityId === row.meterId &&
+        link.phase === "general",
+    )
+  )
+    throw businessError("Нужна загруженная вами фотография этого прибора");
+  const previousPhotoDocumentId = row.photoDocumentId ?? null;
+  row.photoDocumentId = doc.id;
+  row.updatedAt = new Date(
+    Math.max(Date.now(), Date.parse(row.updatedAt) + 1),
+  ).toISOString();
+  db.audit(actor, "reading_photo_corrected", "reading_submissions", row.id, {
+    previousPhotoDocumentId,
+    photoDocumentId: doc.id,
+    reason,
+  });
+  return publicSubmission(db, row);
+}
 export function saveReadingPeriod(db, actor, body) {
   requireContext(db, actor, "meters.write", "properties", body.propertyId);
   if (
@@ -153,6 +214,13 @@ export function reviewReading(db, actor, id, body) {
           "Сначала сопоставьте прибор с источником учета",
           422,
         );
+      const registration = meterRegistration(db, meter.id, source.id);
+      if (registration && registration.status !== "applied")
+        throw businessError(
+          "Прибор ещё регистрируется в 1С. Дождитесь подтверждения обмена.",
+          422,
+          "METER_REGISTRATION_PENDING",
+        );
       account = requiredRecord(db, "personal_accounts", row.accountId);
     }
     row.status = "accepted";
@@ -188,7 +256,7 @@ export function readingsWorkspace(db, actor) {
   );
   const ids = new Set(meters.map((m) => m.id));
   return {
-    meters,
+    meters: meters.map((meter) => meterIntegration(db, meter)),
     accounts: db.data.personal_accounts
       .filter(
         (a) =>
@@ -198,37 +266,40 @@ export function readingsWorkspace(db, actor) {
       .map((a) => ({
         id: a.id,
         number: a.number,
+        sourceId: a.sourceId,
         unitId: db.getById("leases", a.leaseId).unit_id,
         sourceName: db.getById("accounting_sources", a.sourceId).name,
       })),
     periods: db.data.reading_periods.filter((p) =>
       meters.some((m) => m.propertyId === p.propertyId),
     ),
-    submissions: db.data.reading_submissions.filter(
-      (s) =>
-        ids.has(s.meterId) &&
-        contextCan(
-          db,
-          actor,
-          "workspace.read",
-          "meters",
-          s.meterId,
-          undefined,
-          s.createdAt.slice(0, 10),
-        ) &&
-        (actor.role !== "tenant" ||
-          s.submittedBy === actor.id ||
-          (s.accountId &&
-            contextCan(
-              db,
-              actor,
-              "workspace.read",
-              "personal_accounts",
-              s.accountId,
-              undefined,
-              s.createdAt.slice(0, 10),
-            ))),
-    ),
+    submissions: db.data.reading_submissions
+      .filter(
+        (s) =>
+          ids.has(s.meterId) &&
+          contextCan(
+            db,
+            actor,
+            "workspace.read",
+            "meters",
+            s.meterId,
+            undefined,
+            s.createdAt.slice(0, 10),
+          ) &&
+          (actor.role !== "tenant" ||
+            s.submittedBy === actor.id ||
+            (s.accountId &&
+              contextCan(
+                db,
+                actor,
+                "workspace.read",
+                "personal_accounts",
+                s.accountId,
+                undefined,
+                s.createdAt.slice(0, 10),
+              ))),
+      )
+      .map((row) => publicSubmission(db, row)),
     readings: db.data.resource_readings
       .filter(
         (r) =>

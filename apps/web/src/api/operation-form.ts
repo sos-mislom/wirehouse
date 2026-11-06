@@ -44,6 +44,7 @@ const fields: Record<OperationKind | "users", readonly string[]> = {
     "active",
   ],
   meters: [
+    "accountId",
     "propertyId",
     "name",
     "updatedAt",
@@ -107,6 +108,11 @@ export function operationFormDto(kind: string, draft: Record<string, unknown>) {
   const dto: Record<string, unknown> = {};
   for (const key of keys) {
     let value = draft[key];
+    if (
+      key === "accountId" &&
+      (draft.id || draft.scope !== "individual" || !value)
+    )
+      continue;
     if (value === undefined || (key === "password" && value === "")) continue;
     if (numericFields.has(key))
       value = value === "" ? undefined : Number(value);

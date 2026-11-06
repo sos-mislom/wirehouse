@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import argparse
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -127,6 +128,7 @@ SEMANTIC_ERRORS = {
     "BP_CONTRACT_NOT_FOUND", "BP_CONTRACT_DELETED", "BP_CONTRACT_CLOSED",
     "INVALID_MONEY", "INVALID_VERSION", "INVALID_RESULT_VERSION", "INVALID_ACT_LINES",
     "ACT_TOTAL_MISMATCH", "WORK_EVENT_CONFLICT",
+    "INVALID_METER_REGISTRATION",
 }
 CONFIG_ERRORS = {"INVALID_VERSION", "INVALID_ACCOUNT_STATUS", "INVALID_ACTIVE_FLAG", "STALE_VERSION", "VERSION_CONFLICT", "ACCOUNT_CONTRACT_IMMUTABLE", "METER_IDENTITY_IMMUTABLE", "ENVIRONMENT_IMMUTABLE", "ACCOUNT_BATCH_SIZE", "OUTGOING_NOT_FOUND", "ALREADY_CONFIRMED", "OUTGOING_NOT_RETRYABLE"}
 CONFIG_ERRORS |= {"CATALOG_BATCH_SIZE", "BP_COUNTERPARTY_NOT_FOUND", "BP_ORGANIZATION_NOT_FOUND", "ACCOUNTING_ACCOUNT_NOT_FOUND", "ACCOUNT_ORGANIZATION_MISMATCH", "FINANCE_NOT_CONFIGURED", "UNMAPPED_ACCOUNTING_MOVEMENT", "ACCOUNTING_BALANCE_MISMATCH", "DEMO_CONFIRMATION_REQUIRED"}
@@ -190,7 +192,57 @@ class Worker:
             raise BridgeError("ADAPTER_VERSION_MISMATCH")
         self.incoming_kinds = [kind for kind in ["readings", "work_results", "work_reopened", "service_acts"]
                                if kind in supported and kind in remote.get("outgoingKinds", [])]
+        version = info.get("adapterVersion", "")
+        match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version) if isinstance(version, str) else None
+        if (self.auto_export and match and tuple(map(int, match.groups())) >= (0, 3, 0)
+                and "meter_registrations" in remote.get("outgoingKinds", [])):
+            self.incoming_kinds.append("meter_registrations")
         return {"environment": environment, "schemaVersion": 1}
+
+    def register_meter(self, payload):
+        def exact(value, fields):
+            return isinstance(value, dict) and set(value) == set(fields.split(","))
+
+        def label(value, maximum=300):
+            return isinstance(value, str) and 0 < len(value) <= maximum and value.strip() == value
+
+        def number(value):
+            return type(value) in (int, float) and 0 <= value <= 1e12 and math.isfinite(value)
+
+        if not exact(payload, "schemaVersion,catalog,binding") or type(payload.get("schemaVersion")) is not int or payload["schemaVersion"] != 1:
+            raise BridgeError("INVALID_METER_REGISTRATION")
+        catalog, binding = payload["catalog"], payload["binding"]
+        if (not exact(catalog, "externalId,version,propertyExternalId,unitExternalId,name,resource,scope,serialNumber,initialValue,tariff,active")
+                or not exact(binding, "externalId,accountExternalId,initialValue,active")):
+            raise BridgeError("INVALID_METER_REGISTRATION")
+        try:
+            external = str(uuid.UUID(catalog["externalId"]))
+        except (TypeError, ValueError, AttributeError):
+            raise BridgeError("INVALID_METER_REGISTRATION") from None
+        if (external != catalog["externalId"] or binding["externalId"] != external
+                or type(catalog["version"]) is not int or catalog["version"] != 1
+                or not label(catalog["propertyExternalId"])
+                or not (catalog["unitExternalId"] is None or label(catalog["unitExternalId"]))
+                or not label(catalog["name"])
+                or not isinstance(catalog["serialNumber"], str) or len(catalog["serialNumber"]) > 300
+                or catalog["serialNumber"].strip() != catalog["serialNumber"]
+                or catalog["resource"] not in ["water", "electricity", "heating"]
+                or catalog["scope"] not in ["individual", "common"]
+                or (catalog["scope"] == "individual" and catalog["unitExternalId"] is None)
+                or not number(catalog["initialValue"]) or not number(binding["initialValue"])
+                or catalog["initialValue"] != binding["initialValue"]
+                or round(binding["initialValue"], 10) != binding["initialValue"]
+                or not number(catalog["tariff"])
+                or type(catalog["active"]) is not bool or type(binding["active"]) is not bool
+                or catalog["active"] != binding["active"]
+                or not label(binding["accountExternalId"], 100)):
+            raise BridgeError("INVALID_METER_REGISTRATION")
+        source, environment = self.config.source_id, self.config.environment
+        # Both exported operations in CFE 0.3 lock their source and are replay-safe.
+        # Never send this bridge-owned kind through ApplyMessage's four-kind ABI.
+        self.native.call("PutMeter", source, environment, json.dumps(binding, ensure_ascii=False, allow_nan=False))
+        self.native.call("PutCatalog", source, environment, "meters", json.dumps(catalog, ensure_ascii=False, allow_nan=False))
+        return {"accepted": True, "duplicate": False}
 
     def run_once(self):
         run_id = str(uuid.uuid4())
@@ -240,9 +292,11 @@ class Worker:
                 raise BridgeError("INVALID_CLAIM_MESSAGE")
             envelope = {key: message[key] for key in ("messageId", "kind", "payload")}
             try:
-                receipt = parse_json(self.native.call("ApplyMessage", source, environment, json.dumps(envelope, ensure_ascii=False, allow_nan=False)))
+                receipt = (self.register_meter(message["payload"]) if message["kind"] == "meter_registrations"
+                           else parse_json(self.native.call("ApplyMessage", source, environment, json.dumps(envelope, ensure_ascii=False, allow_nan=False))))
             except BridgeError as error:
-                if str(error) not in SEMANTIC_ERRORS:
+                registration_errors = {"METER_IDENTITY_IMMUTABLE", "INVALID_ACTIVE_FLAG", "STALE_VERSION", "VERSION_CONFLICT"} if message["kind"] == "meter_registrations" else set()
+                if str(error) not in SEMANTIC_ERRORS | registration_errors:
                     raise
                 self.transport.call("/outbox/" + message["id"] + "/ack", {"accepted": False, "error": str(error)})
                 result["rejected"] += 1
