@@ -1,7 +1,11 @@
 import { LoginPage } from "../features/auth/LoginPage";
-import { mobileProduct } from "../mobile-product";
+import { isRoleAllowedInApp } from "../mobile-product";
+import { usePushNotifications } from "../platform/push";
 import { DocumentPanel } from "../features/leases/DocumentPanel";
 import { ManagerShell } from "../features/shell/ManagerShell";
+import { OfflineBanner } from "../features/shell/OfflineBanner";
+import { OutboxBanner } from "../features/shell/OutboxBanner";
+import { QUEUED_MESSAGE } from "../platform/outbox";
 import { Section } from "../features/shell/Section";
 import { Button, IconButton } from "../ui";
 import { NavigationIcon } from "../features/shell/NavigationIcon";
@@ -29,18 +33,26 @@ export function WorkspaceRouter() {
     error,
     notice,
     locale,
+    openTicketDetail,
+    tickets,
   } = useWorkspaceContext();
+  usePushNotifications(
+    session && overview && isRoleAllowedInApp(session.user.role)
+      ? session.token
+      : undefined,
+    openTicketDetail,
+  );
   if (bootstrapping) {
     return <main className="loading-shell">{t.loading}</main>;
   }
   if (!session || !overview) return <LoginPage />;
-  if (
-    mobileProduct &&
-    session.user.role !== (mobileProduct === "client" ? "tenant" : "worker")
-  )
+  if (!isRoleAllowedInApp(session.user.role))
     return (
       <main className="loading-shell">
-        <p>Эта учетная запись не подходит для выбранного приложения.</p>
+        <p>
+          Эта учетная запись не используется в мобильном приложении. Войдите
+          через веб-версию.
+        </p>
         <Button onClick={handleLogout}>Выйти</Button>
       </main>
     );
@@ -82,15 +94,21 @@ export function WorkspaceRouter() {
     >
       <header className="mobile-app-bar">
         <h1>{sectionTitle}</h1>
+        {/* Sections are in the bottom bar (or there is only one), so the
+            header button opens the profile with sign-out. */}
         <IconButton
-          label={mobileNavOpen ? "Закрыть меню" : "Меню"}
+          label={mobileNavOpen ? "Закрыть профиль" : "Профиль"}
           ref={mobileMenuButton}
-          className="mobile-menu-button"
+          className="mobile-menu-button mobile-account-button"
           aria-controls="workspace-navigation"
           aria-expanded={mobileNavOpen}
           onClick={() => setMobileNavOpen(!mobileNavOpen)}
         >
-          <NavigationIcon name={mobileNavOpen ? "close" : "menu"} />
+          {mobileNavOpen ? (
+            <NavigationIcon name="close" />
+          ) : (
+            <span className="personal-account__avatar">{initials}</span>
+          )}
         </IconButton>
       </header>
       {mobileNavOpen && (
@@ -159,6 +177,10 @@ export function WorkspaceRouter() {
             <NavigationIcon name="logout" />
           </IconButton>
         </div>
+        <Button className="personal-signout" onClick={handleLogout}>
+          <NavigationIcon name="logout" />
+          {locale === "ru" ? "Выйти из аккаунта" : "Sign out"}
+        </Button>
       </aside>
 
       <section className="workspace-main" inert={mobileNavOpen || undefined}>
@@ -168,7 +190,14 @@ export function WorkspaceRouter() {
           </header>
         )}
 
-        {error ? (
+        <OfflineBanner />
+        <OutboxBanner
+          token={session.token}
+          ticketNumber={(id) =>
+            tickets.find((ticket) => ticket.id === id)?.number
+          }
+        />
+        {error && error !== QUEUED_MESSAGE ? (
           <div className="banner banner--error" role="alert">
             {error}
           </div>

@@ -28,3 +28,5 @@
 @import "./ui/workspace.css";
 @import "./ui/navigation.css";
 @import "./ui/theme.css";
+@import "./styles/mobile-app.css";
+@import "./styles/phone.css";

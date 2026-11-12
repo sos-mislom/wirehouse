@@ -15,6 +15,7 @@ import type {
 } from "../../../packages/contracts/src/agenda";
 import "./agenda.css";
 import { apiRequest, runtimeApiBase } from "./api/client";
+import { deliverFile } from "./platform/native";
 import {
   agendaOperationsTarget,
   type OperationsRoute,
@@ -108,12 +109,7 @@ export function Agenda({
         },
       );
       if (!r.ok) throw new Error("Не удалось выгрузить календарь");
-      const url = URL.createObjectURL(await r.blob());
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "wirehouse-agenda.ics";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await deliverFile(await r.blob(), "wirehouse-agenda.ics");
     } catch (e) {
       setError((e as Error).message);
     } finally {

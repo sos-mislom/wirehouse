@@ -1,6 +1,6 @@
 import { contextCan, canSeeProperty } from "../domain/context-access.js";
 import { config } from "../config.js";
-export function createNotificationsService({ db, sendEmail }) {
+export function createNotificationsService({ db, sendEmail, push = null }) {
   const getNotificationRecipientUsers = ({
     propertyId = null,
     tenantId = null,
@@ -80,6 +80,33 @@ export function createNotificationsService({ db, sendEmail }) {
       createdBy,
       deliveries: deliveryRows,
     });
+
+    // Push mirrors the in-app notification on the recipients' phones. It is
+    // sent only after the transaction commits, so a rolled-back change never
+    // produces a notification; delivery problems never fail the request.
+    if (
+      push?.enabled &&
+      channels.includes("in_app") &&
+      uniqueRecipients.length &&
+      typeof db.afterCommit === "function"
+    )
+      // Not awaited: the HTTP answer must not wait for FCM/APNs.
+      db.afterCommit(() => {
+        void push
+          .send({
+            userIds: uniqueRecipients
+              .filter((user) => user.id !== createdBy)
+              .map((user) => user.id),
+            title,
+            body: message,
+            data: { type, entityType, entityId },
+          })
+          .catch((error) =>
+            console.error("Push notification failed", {
+              message: error.message,
+            }),
+          );
+      });
 
     await Promise.all(
       created.deliveries

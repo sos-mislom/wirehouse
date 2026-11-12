@@ -21,6 +21,8 @@ const migrations = [
   "014-executor-refusal.sql",
   "015-dispatch.sql",
   "016-default-building-plans.sql",
+  "017-idempotency-keys.sql",
+  "018-push-devices.sql",
 ];
 
 async function sources() {

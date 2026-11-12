@@ -128,7 +128,16 @@ export function Service() {
               openTicketDetail(ticket.id);
               window.scrollTo({ top: 0, behavior: "instant" });
             }}
-            empty={t.hints.ticketEmpty}
+            empty={
+              locale === "ru"
+                ? isWorker
+                  ? "Назначенных заданий нет."
+                  : "Заявок пока нет."
+                : isWorker
+                  ? "No assigned tasks."
+                  : "No requests yet."
+            }
+            filtersActive={ticketFilter !== "all"}
             filters={
               <Select
                 aria-label="Статус заявки"

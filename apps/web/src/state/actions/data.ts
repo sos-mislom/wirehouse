@@ -1,7 +1,7 @@
 import { startTransition } from "react";
 import { useQueryClient } from "../../realtime/RealtimeContext";
 import { assertProductRole } from "../../mobile-product";
-import { TOKEN_KEY } from "../../shared/navigation";
+import { clearSessionToken, storeSessionToken } from "../../platform/native";
 import { completeActiveRead, isRequestCancelled } from "../../api/read-errors";
 import {
   type BillingInvoice,
@@ -103,7 +103,7 @@ export function useDataActions(
 
     try {
       const { me, nextOverview, nextTickets } = await fetchWorkspaceData(token);
-      window.localStorage.setItem(TOKEN_KEY, token);
+      storeSessionToken(token);
       setSession({
         token,
         user: me.user,
@@ -116,13 +116,13 @@ export function useDataActions(
         [401, 403].includes(failure.status ?? 0) ||
         failure.code === "PRODUCT_ROLE_MISMATCH";
       if (invalid) {
-        window.localStorage.removeItem(TOKEN_KEY);
+        clearSessionToken();
         setSession(null);
         setOverview(null);
         setTickets([]);
         setTicketComments([]);
         setTenantDetail(null);
-      } else window.localStorage.setItem(TOKEN_KEY, token);
+      } else storeSessionToken(token);
       setError(
         options.silentAuthFailure && invalid
           ? ""

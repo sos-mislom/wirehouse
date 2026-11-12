@@ -1,0 +1,54 @@
+/* Installed app only: main.tsx adds .mobile-app and viewport-fit=cover, so the
+   page runs under the iPhone status bar and notch. Bottom bars already pad for
+   env(safe-area-inset-bottom); this keeps top-anchored surfaces below the
+   status bar. In the browser env() is 0 and the class is absent. */
+@media (max-width: 1080px) {
+  .mobile-app .mobile-app-bar {
+    height: calc(60px + env(safe-area-inset-top));
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .mobile-app .mvp-sidebar,
+  .mobile-app .sidebar {
+    inset-block-start: calc(60px + env(safe-area-inset-top));
+    height: calc(100dvh - 60px - env(safe-area-inset-top));
+  }
+  .mobile-app .mobile-nav-scrim {
+    inset-block-start: calc(60px + env(safe-area-inset-top));
+  }
+}
+.mobile-app .ui-side-panel-layer,
+.mobile-app .document-overlay {
+  padding-top: env(safe-area-inset-top);
+}
+.mobile-app .ui-side-panel {
+  height: calc(100dvh - env(safe-area-inset-top));
+}
+.banner--offline {
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+  color: var(--ink);
+}
+.banner--outbox {
+  background: var(--warning-soft);
+  border-color: var(--warning-line);
+  color: var(--ink);
+}
+.banner--outbox ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  max-height: min(25dvh, 220px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+.banner--outbox li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  overflow-wrap: anywhere;
+}
+.banner--outbox li > span {
+  flex: 1;
+  min-width: 0;
+}

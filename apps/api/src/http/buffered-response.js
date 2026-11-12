@@ -12,6 +12,12 @@ export function bufferedResponse(response) {
     get writableEnded() {
       return ended;
     },
+    get headers() {
+      return headers;
+    },
+    get body() {
+      return body;
+    },
     writeHead(code, fields = {}) {
       status = code;
       headers = fields;

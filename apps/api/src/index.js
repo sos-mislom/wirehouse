@@ -11,6 +11,8 @@ import { createAgendaRoutes } from "./routes/agenda.js";
 import { createAuthRoutes } from "./routes/auth.js";
 import { createBillingRoutes } from "./routes/billing.js";
 import { createDashboardRoutes } from "./routes/dashboard.js";
+import { createPushRoutes } from "./routes/push.js";
+import { createPushService, readPushConfig } from "./services/push.js";
 import { createExportsRoutes } from "./routes/exports.js";
 import { createImportsRoutes } from "./routes/imports.js";
 import { createLeasesRoutes } from "./routes/leases.js";
@@ -43,6 +45,11 @@ import { readCollectionsFor } from "./persistence/read-profiles.js";
 import { PostgresTtlStore } from "./infrastructure/postgres-ttl-store.js";
 import { bufferedResponse } from "./http/buffered-response.js";
 import { preloadBody } from "./http/body.js";
+import {
+  authorizeIdempotentReplay,
+  idempotencyFor,
+  idempotencyKeyFor,
+} from "./http/idempotency.js";
 import { createFileStorage } from "./file-storage.js";
 import { RedisTtlStore } from "./infrastructure/ttl-store.js";
 
@@ -237,7 +244,15 @@ const {
   getNotificationEmailForUser,
   dispatchNotification,
   notifyTicketEvent,
-} = createNotificationsService({ db, sendEmail });
+} = createNotificationsService({
+  db,
+  sendEmail,
+  push: createPushService({
+    config: readPushConfig(),
+    listDevices: (userIds) => db.listPushDevices(userIds),
+    deleteDevices: (tokens) => db.deletePushDevices(tokens),
+  }),
+});
 const {
   excelXmlEscape,
   excelSheetName,
@@ -404,6 +419,7 @@ const routes = [
     fileStorage,
     sanitizeFilename,
   }),
+  createPushRoutes({ db, requireAuth, ok }),
   createDashboardRoutes({
     requireAuth,
     ok,
@@ -595,7 +611,8 @@ const server = http.createServer(async (request, response) => {
     if (method === "OPTIONS") {
       response.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, Idempotency-Key",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       });
       response.end();
@@ -617,6 +634,7 @@ const server = http.createServer(async (request, response) => {
     }
     await preloadBody(request);
     const pending = bufferedResponse(response);
+    const idempotencyKey = idempotencyKeyFor(request, method, url);
     await db.requestScope(
       {
         readOnly: method === "GET" || method === "HEAD",
@@ -627,10 +645,57 @@ const server = http.createServer(async (request, response) => {
         source: `${method} ${pathname}`,
       },
       async () => {
-        for (const route of routes) {
-          if (await route(request, pending, url)) return;
+        // Authenticate every attempt against the current user and route
+        // permissions, including cached replies from an earlier session.
+        const actor = idempotencyKey ? requireAuth(request, pending) : null;
+        if (idempotencyKey && !actor) return;
+        const idempotency = actor
+          ? idempotencyFor(request, method, url, actor.id)
+          : null;
+        if (idempotency) {
+          const saved = await db.findIdempotentResponse(
+            idempotency.scope,
+            idempotency.key,
+          );
+          if (saved) {
+            if (saved.request_hash !== idempotency.requestHash)
+              json(pending, 422, {
+                error:
+                  "Ключ повтора уже использован для другого запроса. Обновите страницу и повторите действие.",
+                code: "IDEMPOTENCY_KEY_REUSED",
+              });
+            else {
+              authorizeIdempotentReplay(db, actor, request, url, saved.body);
+              pending.writeHead(saved.status, {
+                ...saved.headers,
+                "Idempotent-Replayed": "true",
+              });
+              pending.end(saved.body);
+            }
+            return;
+          }
         }
-        notFound(pending);
+        let handled = false;
+        for (const route of routes) {
+          if (await route(request, pending, url)) {
+            handled = true;
+            break;
+          }
+        }
+        if (!handled) notFound(pending);
+        // Saved in the same transaction: if the command rolls back, so does this.
+        if (
+          idempotency &&
+          pending.statusCode >= 200 &&
+          pending.statusCode < 300 &&
+          typeof pending.body === "string"
+        )
+          await db.saveIdempotentResponse({
+            ...idempotency,
+            status: pending.statusCode,
+            headers: pending.headers,
+            body: pending.body,
+          });
       },
     );
     pending.flush();
@@ -680,9 +745,10 @@ let maintenanceRunning;
 const performMaintenance = () => {
   if (maintenanceRunning) return maintenanceRunning;
   maintenanceRunning = db
-    .requestScope({ readOnly: false }, () => {
+    .requestScope({ readOnly: false }, async () => {
       runMaintenance(db);
       retryExchange(db, config.exchangeEnvironment);
+      await db.pruneIdempotentResponses();
     })
     .catch((error) =>
       console.error("Maintenance generation failed", {

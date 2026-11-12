@@ -23,7 +23,8 @@ export function Register<T extends { id: string }>({
   onSelect,
   filters,
   action,
-  empty = "Записей пока нет. Измените фильтр или добавьте запись.",
+  empty = "Записей пока нет.",
+  filtersActive,
   pagination,
   loading = false,
   details,
@@ -42,6 +43,8 @@ export function Register<T extends { id: string }>({
   selectedId?: string;
   onSelect?: (row: T) => void;
   filters?: ReactNode;
+  /** Whether the `filters` narrow the rows; unknown keeps the filter bar. */
+  filtersActive?: boolean;
   action?: ReactNode;
   empty?: string;
 } & (
@@ -103,7 +106,16 @@ export function Register<T extends { id: string }>({
       : Math.min(page, pageCount),
     offset = pagination?.offset ?? (currentPage - 1) * size,
     pending = pagination?.loading ?? loading,
-    pageRows = pagination ? visible : visible.slice(offset, offset + size);
+    pageRows = pagination ? visible : visible.slice(offset, offset + size),
+    searching = Boolean(pagination ? pagination.query : query),
+    narrowed = searching || filtersActive === true,
+    // Nothing exists yet: a search field and filters over an empty set only
+    // add noise (a tenant without accounts saw four controls and "0").
+    nothingToFilter =
+      !pending &&
+      total === 0 &&
+      !searching &&
+      (filters ? filtersActive === false : true);
   const changePage = (next: number) => {
     if (pagination) pagination.setOffset((next - 1) * size);
     else setPage(next);
@@ -126,29 +138,31 @@ export function Register<T extends { id: string }>({
         </h3>
         {action}
       </div>
-      <FilterBar
-        actions={
-          <IconButton
-            label={`Вид таблицы: ${title}`}
-            aria-expanded={settingsOpen}
-            aria-controls={id + "-settings"}
-            onClick={() => setSettingsOpen(!settingsOpen)}
-          >
-            <ActionIcon name="settings" />
-          </IconButton>
-        }
-      >
-        <FilterSearch
-          label={`Поиск: ${title}`}
-          value={pagination?.query ?? query}
-          onChange={(value) => {
-            if (pagination) pagination.setQuery(value);
-            else setQuery(value);
-            setPage(1);
-          }}
-        />
-        {filters}
-      </FilterBar>
+      {!nothingToFilter && (
+        <FilterBar
+          actions={
+            <IconButton
+              label={`Вид таблицы: ${title}`}
+              aria-expanded={settingsOpen}
+              aria-controls={id + "-settings"}
+              onClick={() => setSettingsOpen(!settingsOpen)}
+            >
+              <ActionIcon name="settings" />
+            </IconButton>
+          }
+        >
+          <FilterSearch
+            label={`Поиск: ${title}`}
+            value={pagination?.query ?? query}
+            onChange={(value) => {
+              if (pagination) pagination.setQuery(value);
+              else setQuery(value);
+              setPage(1);
+            }}
+          />
+          {filters}
+        </FilterBar>
+      )}
       {settingsOpen && (
         <div className="register-options" id={id + "-settings"}>
           <label>
@@ -278,7 +292,9 @@ export function Register<T extends { id: string }>({
           </ResponsiveTable>
         </div>
       ) : (
-        <p className="empty-state">{empty}</p>
+        <p className="empty-state">
+          {narrowed ? "Ничего не найдено. Измените поиск или фильтры." : empty}
+        </p>
       )}
       {pageCount > 1 && (
         <nav className="register-pagination" aria-label={`Страницы: ${title}`}>

@@ -1,4 +1,5 @@
 import { useWorkspace } from "../../app/WorkspaceContext";
+import type { ChangeEvent } from "react";
 import {
   ticketCategoryOptions,
   ticketPriorityOptions,
@@ -17,15 +18,26 @@ export function TicketCreateFields({
     ticketForm,
     setTicketForm,
     handleFieldChange,
+    setError,
     selectedChecklistTemplate,
   } = useWorkspace();
+  const change = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
+    setError("");
+    handleFieldChange(setTicketForm)(event);
+  };
   return (
     <div className="ticket-create-grid">
       <label className="ticket-create-title">
         <span>{t.fields.title}</span>
         <Input
           name="title"
-          onChange={handleFieldChange(setTicketForm)}
+          required
+          maxLength={300}
+          onChange={change}
           value={ticketForm.title}
         />
       </label>
@@ -34,7 +46,8 @@ export function TicketCreateFields({
           <span>{t.fields.unit}</span>
           <Select
             name="unitId"
-            onChange={handleFieldChange(setTicketForm)}
+            required
+            onChange={change}
             value={ticketForm.unitId}
           >
             {ticketUnits.map((unit) => (
@@ -49,7 +62,8 @@ export function TicketCreateFields({
             <span>{t.fields.category}</span>
             <Select
               name="category"
-              onChange={handleFieldChange(setTicketForm)}
+              required
+              onChange={change}
               value={ticketForm.category}
             >
               {ticketCategoryOptions.map((option) => (
@@ -63,7 +77,8 @@ export function TicketCreateFields({
             <span>{t.fields.priority}</span>
             <Select
               name="priority"
-              onChange={handleFieldChange(setTicketForm)}
+              required
+              onChange={change}
               value={ticketForm.priority}
             >
               {ticketPriorityOptions.map((option) => (
@@ -90,7 +105,9 @@ export function TicketCreateFields({
           <span>{t.fields.description}</span>
           <Textarea
             name="description"
-            onChange={handleFieldChange(setTicketForm)}
+            required
+            maxLength={10000}
+            onChange={change}
             rows={5}
             value={ticketForm.description}
           />

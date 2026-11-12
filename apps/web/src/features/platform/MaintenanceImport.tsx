@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, IconButton, Input } from "../../ui";
 import { ResponsiveTable } from "../../ResponsiveTable";
 import { apiRequest, runtimeApiBase } from "../../api/client";
+import { deliverFile } from "../../platform/native";
 import { normalizeRequestError } from "../../api/read-errors";
 import type {
   MaintenanceImportFile,
@@ -95,14 +96,7 @@ export function MaintenanceImport({
         },
       );
       if (!response.ok) throw new Error("Не удалось скачать шаблон");
-      const url = URL.createObjectURL(await response.blob());
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "maintenance-plans.xlsx";
-      document.body.append(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await deliverFile(await response.blob(), "maintenance-plans.xlsx");
     });
   return (
     <section

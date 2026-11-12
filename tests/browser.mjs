@@ -17,6 +17,8 @@ const { chromium } = await import(
 if (!process.env.TEST_POSTGRES_URL)
   throw new Error("TEST_POSTGRES_URL is required for browser tests");
 fs.mkdirSync(".deploy", { recursive: true });
+const webRoot = path.resolve(process.env.BROWSER_WEB_DIST || "apps/web/dist");
+assert.ok(fs.existsSync(path.join(webRoot, "index.html")), "Build the web app before starting browser checks");
 const f = fixture();
 const secret = "browser-test-secret";
 const journalSource = saveSource(f.db, f.admin, null, {
@@ -115,12 +117,11 @@ child.stdout.on("data", (d) => {
 child.stderr.on("data", (d) => (apiLogs += d));
 const server = http.createServer((req, res) => {
   let file = path.join(
-    process.cwd(),
-    "apps/web/dist",
+    webRoot,
     new URL(req.url, "http://localhost").pathname,
   );
   if (!fs.existsSync(file) || fs.statSync(file).isDirectory())
-    file = path.join(process.cwd(), "apps/web/dist/index.html");
+    file = path.join(webRoot, "index.html");
   res.setHeader(
     "Content-Type",
     file.endsWith(".js")
@@ -928,7 +929,7 @@ try {
     ),
     "Tenant fits 320px",
   );
-  await tenantPage.getByRole("button", { name: "Меню", exact: true }).click();
+  await tenantPage.getByRole("button", { name: "Профиль", exact: true }).click();
   await tenantPage.keyboard.press("Escape");
   const workerPage = await browser.newPage({
     viewport: { width: 320, height: 844 },
@@ -939,7 +940,7 @@ try {
     createToken({ sub: f.worker.id, role: "worker" }, secret),
   );
   await workerPage.goto("http://127.0.0.1:5173");
-  await workerPage.getByRole("button", { name: "Меню", exact: true }).waitFor();
+  await workerPage.getByRole("button", { name: "Профиль", exact: true }).waitFor();
   await workerPage.getByRole("tab", { name: /^Показания(?:\s|$)/ }).click();
   await workerPage
     .getByRole("button", { name: "Передать показание", exact: true })
@@ -1709,9 +1710,8 @@ try {
   }
   await proofDecision("submit");
   await tenantPage.reload();
-  await tenantPage.getByRole("button", { name: "Меню", exact: true }).click();
   await tenantPage
-    .locator("#workspace-navigation")
+    .getByRole("navigation", { name: "Быстрые переходы", exact: true })
     .getByRole("button", { name: /^Заявки(?: |$)/ })
     .click();
   await tenantPage

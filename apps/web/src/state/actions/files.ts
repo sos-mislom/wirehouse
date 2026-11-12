@@ -1,4 +1,5 @@
 import { runtimeApiBase } from "../../api/client";
+import { deliverFile } from "../../platform/native";
 import {
   type BillingInvoice,
   type ImportBatch,
@@ -46,15 +47,7 @@ export function useFilesActions(
       const filename = rawFilename.includes("%")
         ? decodeURIComponent(rawFilename)
         : rawFilename;
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      await deliverFile(await response.blob(), filename);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error ? caughtError.message : "Download failed",
@@ -81,28 +74,18 @@ export function useFilesActions(
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      if (
-        /^(application\/pdf|image\/(png|jpeg|gif|webp)|audio\/[\w.+-]+|video\/[\w.+-]+)$/.test(
-          blob.type,
-        )
-      ) {
-        window.open(url, "_blank", "noopener,noreferrer");
-      } else {
-        const link = document.createElement("a");
-        link.href = url;
-        const encoded = response.headers
-          .get("Content-Disposition")
-          ?.match(/filename="([^"]+)"/)?.[1];
-        try {
-          link.download = encoded ? decodeURIComponent(encoded) : "document";
-        } catch {
-          link.download = "document";
-        }
-        link.click();
+      const encoded = response.headers
+        .get("Content-Disposition")
+        ?.match(/filename="([^"]+)"/)?.[1];
+      let fileName = "document";
+      try {
+        if (encoded) fileName = decodeURIComponent(encoded);
+      } catch {
+        // Keep the generic name for a malformed header.
       }
-      window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+      await deliverFile(await response.blob(), fileName, {
+        preferPreview: true,
+      });
     } catch (caughtError) {
       setError(
         caughtError instanceof Error ? caughtError.message : "File open failed",
@@ -183,14 +166,11 @@ export function useFilesActions(
     const blob = new Blob([bytes], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = result.report.filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    deliverFile(blob, result.report.filename).catch((caughtError) =>
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Download failed",
+      ),
+    );
   };
 
   const downloadImportBatchAudit = (batch: ImportBatch) =>

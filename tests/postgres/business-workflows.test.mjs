@@ -452,7 +452,7 @@ test("Business migration includes existing files and converts account bindings w
   );
   await pg.pool.query("DROP INDEX warehouse.service_act_ticket_unique");
   await pg.pool.query(
-    "DROP TABLE warehouse.realtime_state; DELETE FROM warehouse.schema_migrations WHERE name>='005'",
+    "DROP TABLE warehouse.realtime_state; DROP TABLE warehouse.idempotency_keys; DROP TABLE warehouse.push_devices; DELETE FROM warehouse.schema_migrations WHERE name>='005'",
   );
   await pg.pool.query("COMMIT");
   await migrate(pg.pool);

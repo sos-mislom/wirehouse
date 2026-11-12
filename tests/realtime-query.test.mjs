@@ -7,9 +7,21 @@ import {
   completeActiveRead,
   isRequestCancelled,
   normalizeRequestError,
+  validationMessage,
 } from "../apps/web/src/api/read-errors.ts";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+test("Validation errors use visible field names and keep internal DTO paths out of user messages", () => {
+  assert.equal(
+    validationMessage([
+      { path: "title", message: "Заполните поле" },
+      { path: "description", message: "Заполните поле" },
+      { path: "internalReference.privateId", message: "Проверьте значение" },
+    ]),
+    "Тема: Заполните поле; Описание: Заполните поле; Проверьте значение",
+  );
+  assert.equal(validationMessage(undefined), undefined);
+});
 const until = async (fn) => {
   for (let i = 0; i < 150; i++) {
     if (fn()) return;

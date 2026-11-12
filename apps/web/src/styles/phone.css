@@ -1,0 +1,171 @@
+/* Phone width (the mobile app and the web on a phone). One set of rules for
+   the shared building blocks instead of per-screen patches:
+   - workspace tabs stay on one line and scroll sideways (screens have 4–8
+     tabs; wrapping them into two or three rows looked broken);
+   - the search field takes the full row, with the filter button inside it;
+   - list registers are not wrapped in a second card;
+   - sign-in is a full screen, not a floating card. */
+@media (max-width: 760px) {
+  .ui-workspace-tabs {
+    flex-wrap: nowrap;
+    column-gap: 20px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ui-workspace-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .ui-workspace-tab {
+    flex: none;
+    white-space: nowrap;
+  }
+  /* The scroll container clips anything below its box. */
+  .ui-workspace-tab[aria-selected="true"]::after {
+    inset: auto 0 0;
+  }
+
+  /* The visible "Поиск" label repeated the placeholder next to the icon. */
+  .filter-search > label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .filter-bar-main:has(> .filter-bar-controls > .filter-search:first-child) {
+    position: relative;
+    display: block;
+  }
+  .filter-bar-main:has(> .filter-bar-controls > .filter-search:first-child)
+    > .filter-bar-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .filter-bar-main:has(> .filter-bar-controls > .filter-search:first-child)
+    > .filter-bar-actions {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+  }
+  .filter-bar-main:has(> .filter-bar-actions)
+    > .filter-bar-controls
+    > .filter-search:first-child {
+    padding-inline-end: 52px;
+  }
+  .filter-bar-controls > .filter-search:first-child {
+    grid-column: 1 / -1;
+  }
+  .dashboard-workspace .dash-status__tab,
+  .dashboard-workspace .dash-side__link.ui-button {
+    min-height: 44px;
+  }
+  .dashboard-page.dashboard-workspace .dashboard-ticket-assignee {
+    grid-column: 1 / -1;
+    overflow-wrap: normal;
+  }
+  /* An odd filter left alone on its row takes the whole row. */
+  .filter-bar-controls:has(> .filter-search:first-child)
+    > :nth-child(even):last-child,
+  .filter-bar-controls:not(:has(> .filter-search))
+    > :nth-child(odd):last-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Ticket rows are cards already; the surrounding card only ate width. */
+  .service-workspace .workspace-surface.service-list-panel,
+  .service-workspace .workspace-surface.worker-meters {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  /* Chat dialogs: rows inside the white list card, not grey strips. */
+  .personal-chat-list .stack-list > .list-row {
+    background: transparent;
+  }
+
+  /* The task card header drew its own bottom line right under the tabs'. */
+  .mvp-page.ticket-record .ticket-record-header {
+    border-bottom: 0;
+  }
+
+  .auth-shell--mvp {
+    place-items: start stretch;
+    padding: 0;
+    background: var(--surface);
+  }
+  .auth-shell--mvp .login-card {
+    width: 100%;
+    min-height: 100dvh;
+    padding: calc(32px + env(safe-area-inset-top)) 20px 24px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  /* Text links on sign-in line up with the fields and the text around them. */
+  .auth-shell--mvp .auth-form > .text-button {
+    justify-self: start;
+    padding-inline: 0;
+    font-size: 14px;
+  }
+  .auth-shell--mvp .auth-connect-link .text-button {
+    padding-inline: 0;
+    font-size: 13px;
+  }
+}
+
+/* Client and worker cabinets on a phone or tablet: sections live in the
+   bottom bar (client) or there is only one (worker), so the header button is
+   the profile — initials instead of a menu icon — and the panel shows the
+   account with sign-out instead of repeating the sections. */
+@media (max-width: 1080px) {
+  .personal-shell .mobile-account-button .personal-account__avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+  .personal-shell .mobile-account-button:not([aria-expanded="true"]) {
+    border-color: transparent;
+    background: transparent;
+  }
+  .personal-shell > .sidebar .sidebar-nav {
+    display: none;
+  }
+  .personal-shell > .sidebar .personal-account {
+    margin-top: 0;
+    padding: 0 0 16px;
+    border-top: 0;
+    border-bottom: 1px solid var(--ui-border);
+  }
+}
+
+@media (max-width: 760px) {
+  /* Sending a payment receipt is the client's main action on this tab. */
+  .personal-rental-actions > .ui-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Sign-out is spelled out in the profile panel on small screens; the desktop
+   sidebar keeps the icon next to the name. */
+.personal-shell .personal-signout {
+  display: none;
+}
+@media (max-width: 1080px) {
+  .personal-shell > .sidebar .personal-account > .ui-icon-button {
+    display: none;
+  }
+  .personal-shell > .sidebar .personal-account {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+  .personal-shell .personal-signout {
+    display: inline-flex;
+    justify-content: center;
+    width: 100%;
+  }
+}

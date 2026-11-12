@@ -1,5 +1,10 @@
 import { MessengerButtons } from "../../MessengerButtons";
-import { mobileProduct } from "../../mobile-product";
+import {
+  isMobileApp,
+  mobileAllowsPasswordLogin,
+  mobileAllowsPhoneLogin,
+  mobileAudience,
+} from "../../mobile-product";
 import { useWorkspaceContext } from "../../app/WorkspaceContext";
 import { Button, Input } from "../../ui";
 import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
@@ -50,11 +55,7 @@ export function LoginPage() {
             <div>
               <strong>{productBrand.name}</strong>
               <span>
-                {mobileProduct === "client"
-                  ? "Кабинет собственника и арендатора"
-                  : mobileProduct === "worker"
-                    ? "Задания исполнителя"
-                    : productBrand.subtitle}
+                {isMobileApp ? mobileAudience : productBrand.subtitle}
               </span>
             </div>
           </div>
@@ -70,19 +71,30 @@ export function LoginPage() {
           </p>
         </div>
 
-        {!tenantConnectionOpen && !mobileProduct && (
-          <WorkspaceTabs
-            label="Способ входа"
-            value={authMode}
-            onChange={(value) =>
-              setAuthMode(value === "tenant" ? "tenant" : "staff")
-            }
-            items={[
-              { id: "staff", label: t.auth.staffTab },
-              { id: "tenant", label: t.auth.tenantTab },
-            ]}
-          />
-        )}
+        {!tenantConnectionOpen &&
+          (!isMobileApp ||
+            (mobileAllowsPhoneLogin && mobileAllowsPasswordLogin)) && (
+            <WorkspaceTabs
+              label="Способ входа"
+              value={authMode}
+              onChange={(value) =>
+                setAuthMode(value === "tenant" ? "tenant" : "staff")
+              }
+              // In the app people choose who they are; the browser keeps the
+              // sign-in method labels its users already know.
+              items={
+                isMobileApp
+                  ? [
+                      { id: "tenant", label: "Клиент" },
+                      { id: "staff", label: "Сотрудник" },
+                    ]
+                  : [
+                      { id: "staff", label: t.auth.staffTab },
+                      { id: "tenant", label: t.auth.tenantTab },
+                    ]
+              }
+            />
+          )}
 
         {error ? (
           <div className="banner banner--error" role="alert">

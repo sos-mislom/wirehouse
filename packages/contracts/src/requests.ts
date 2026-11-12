@@ -303,6 +303,19 @@ export const requestContracts: {
   ...businessWorkflowContracts,
   {
     method: "POST",
+    path: /^\/api\/push\/devices$/,
+    schema: z.strictObject({
+      token: z.string().min(16).max(4096),
+      platform: z.enum(["android", "ios"]),
+    }),
+  },
+  {
+    method: "POST",
+    path: /^\/api\/push\/devices\/remove$/,
+    schema: z.strictObject({ token: z.string().min(16).max(4096) }),
+  },
+  {
+    method: "POST",
     path: /^\/api\/auth\/staff\/login$/,
     schema: z.strictObject({ email, password: z.string().min(1).max(256) }),
   },

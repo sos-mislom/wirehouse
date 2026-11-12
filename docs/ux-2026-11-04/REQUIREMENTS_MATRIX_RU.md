@@ -157,7 +157,7 @@
 
 Два appId client/worker, раздельные ресурсы, подготовка Android/iOS и ограничение ролей есть. Нет доказательства четырех release-подписей, физических камер/файлов, background/resume, плохой сети, iOS и push.
 
-Доказательства: [apps/mobile/scripts/prepare.mjs](../../apps/mobile/scripts/prepare.mjs), [apps/mobile/scripts/android-debug.mjs](../../apps/mobile/scripts/android-debug.mjs), [apps/web/src/mobile-product.ts](../../apps/web/src/mobile-product.ts), [apps/mobile/README.md](../../apps/mobile/README.md), [tests/mobile-products.mjs](../../tests/mobile-products.mjs), [tests/realtime-mobile-origin.test.mjs](../../tests/realtime-mobile-origin.test.mjs).
+Доказательства: [apps/mobile/scripts/prepare.mjs](../../apps/mobile/scripts/prepare.mjs), [apps/mobile/scripts/android-debug.mjs](../../apps/mobile/scripts/android-debug.mjs), [apps/web/src/mobile-product.ts](../../apps/web/src/mobile-product.ts), [apps/mobile/README.md](../../apps/mobile/README.md), [tests/mobile-app.mjs](../../tests/mobile-products.mjs), [tests/realtime-mobile-origin.test.mjs](../../tests/realtime-mobile-origin.test.mjs).
 
 <a id="crm"></a>
 

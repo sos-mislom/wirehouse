@@ -156,7 +156,7 @@ export const verifyToken = (token, secret) => {
   }
 
   const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
+  if (decoded.exp && decoded.exp <= Math.floor(Date.now() / 1000)) {
     return null;
   }
 

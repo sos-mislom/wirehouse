@@ -8,6 +8,7 @@ import { Button, IconButton, Input, Select } from "../../ui";
 import { SidePanel } from "../../ui/SidePanel";
 import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
 import { DocumentTemplateLibrary } from "./DocumentTemplateLibrary";
+import "./document-registry.css";
 import {
   Feedback,
   Register,
@@ -33,6 +34,14 @@ const categories = {
   instruction: "Инструкция",
   photo: "Фотография",
   other: "Прочее",
+};
+const categoryLabels = {
+  ...categories,
+  lease: "Договор",
+  appendix: "Приложение",
+  invoice: "Счёт",
+  payment: "Платёжное поручение",
+  receipt: "Чек",
 };
 export function DocumentRegistry({
   entityType,
@@ -178,7 +187,7 @@ export function DocumentRegistry({
                 key: "category",
                 label: "Категория",
                 render: (d) =>
-                  categories[d.category as keyof typeof categories] ??
+                  categoryLabels[d.category as keyof typeof categoryLabels] ??
                   d.category,
                 optional: true,
               },
@@ -191,10 +200,15 @@ export function DocumentRegistry({
               {
                 key: "date",
                 label: "Добавлен",
-                render: (d) => date(d.createdAt),
+                render: (d) => (
+                  <time className="document-record-date" dateTime={d.createdAt}>
+                    {date(d.createdAt)}
+                  </time>
+                ),
                 optional: true,
               },
             ]}
+            filtersActive={Boolean(category)}
             filters={
               <label>
                 Категория
@@ -203,7 +217,7 @@ export function DocumentRegistry({
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   <option value="">Все</option>
-                  {Object.entries(categories).map(([k, v]) => (
+                  {Object.entries(categoryLabels).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
                     </option>

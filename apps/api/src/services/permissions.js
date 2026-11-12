@@ -46,6 +46,8 @@ export function routePermission(method, path) {
   if (/^\/api\/(properties|units|tenants|tenant-notes)/.test(path))
     return "portfolio.write";
   if (/^\/api\/notifications/.test(path)) return "workspace.read";
+  // Registering one's own phone for push needs no permission beyond sign-in.
+  if (/^\/api\/push\/devices(\/remove)?$/.test(path)) return "workspace.read";
   return "permissions.manage";
 }
 export function assertPermission(user, permission) {

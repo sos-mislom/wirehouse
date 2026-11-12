@@ -1,5 +1,8 @@
 import { useRef, useState } from "react";
 import { apiRequest, runtimeApiBase } from "../../api/client";
+import { deliverFile, isNativeApp } from "../../platform/native";
+import { prepareUpload } from "../../platform/photo";
+import { QUEUED_MESSAGE } from "../../platform/outbox";
 import { useLiveQuery } from "../../realtime/RealtimeContext";
 export function useResource<T>(token: string, path: string, initial: T) {
   const mutationPending = useRef(false);
@@ -22,7 +25,10 @@ export function useResource<T>(token: string, path: string, initial: T) {
       setNotice(message);
       return true;
     } catch (e) {
-      setError((e as Error).message);
+      // Saved for sending later: not an error, but the change is not applied yet.
+      if ((e as { code?: string }).code === "QUEUED_OFFLINE")
+        setNotice((e as Error).message);
+      else setError((e as Error).message);
       return false;
     } finally {
       mutationPending.current = false;
@@ -48,7 +54,7 @@ export function Feedback({
           {error}
         </p>
       )}
-      {notice && (
+      {notice && notice !== QUEUED_MESSAGE && (
         <p className="notice" role="status">
           {notice}
         </p>
@@ -66,10 +72,11 @@ export { Register } from "./Register";
 export { Disclosure } from "../../ui/Disclosure";
 export async function uploadDocument(
   token: string,
-  file: File,
+  original: File,
   links: { entityType: string; entityId: string; phase?: string }[],
   category = "other",
 ) {
+  const file = await prepareUpload(original);
   if (file.size > 12 * 1024 * 1024) throw new Error("Файл больше 12 МБ");
   const contentBase64 = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -100,16 +107,10 @@ export async function downloadDocument(
   });
   if (!res.ok)
     throw new Error("Не удалось получить файл. Обновите список документов.");
-  const blob = await res.blob(),
-    url = URL.createObjectURL(blob),
-    a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  await deliverFile(await res.blob(), name);
 }
 export async function openDocument(token: string, id: string) {
-  const preview = window.open("about:blank", "_blank");
+  const preview = isNativeApp ? null : window.open("about:blank", "_blank");
   if (preview) preview.opener = null;
   try {
     const response = await fetch(`${runtimeApiBase}/api/documents/${id}/file`, {
@@ -119,6 +120,12 @@ export async function openDocument(token: string, id: string) {
     const blob = await response.blob();
     if (!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(blob.type))
       throw new Error("Этот формат нужно скачать и открыть в приложении");
+    if (isNativeApp) {
+      const extension =
+        blob.type === "application/pdf" ? "pdf" : blob.type.split("/")[1];
+      await deliverFile(blob, `Документ.${extension}`, { preferPreview: true });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     if (preview) preview.location.href = url;
     else {

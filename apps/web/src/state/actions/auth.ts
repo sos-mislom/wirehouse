@@ -1,6 +1,12 @@
 import { type FormEvent } from "react";
 import { apiRequest } from "../../api/client";
-import { TOKEN_KEY } from "../../shared/navigation";
+import { clearSessionToken } from "../../platform/native";
+import { disablePush } from "../../platform/push";
+import {
+  discardCommands,
+  outboxStatus,
+  tokenOwner,
+} from "../../platform/outbox";
 import { type SessionUser } from "../../shared/types";
 import type { WorkspaceBase } from "../types";
 import type { useDataActions } from "./data";
@@ -347,7 +353,23 @@ export function useAuthActions(
   };
 
   const handleLogout = () => {
-    window.localStorage.removeItem(TOKEN_KEY);
+    if (session) {
+      const owner = tokenOwner(session.token);
+      const unsent = outboxStatus
+        .get()
+        .filter((e) => e.owner === owner && e.status === "pending").length;
+      // Signing out discards actions that are still waiting for a connection.
+      if (
+        unsent &&
+        !window.confirm(
+          `Не отправлено действий: ${unsent}. После выхода они будут удалены с телефона. Выйти?`,
+        )
+      )
+        return;
+      void discardCommands(session.token);
+    }
+    disablePush(session?.token);
+    clearSessionToken();
     setSession(null);
     setOverview(null);
     setTickets([]);

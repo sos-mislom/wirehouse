@@ -1,5 +1,36 @@
 import type { ApiErrorDto } from "../../../../packages/contracts/src/requests.ts";
 
+const fieldLabels: Record<string, string> = {
+  title: "Тема",
+  description: "Описание",
+  name: "Название",
+  unitId: "Помещение",
+  propertyId: "Объект",
+  leaseId: "Договор",
+  accountId: "Лицевой счёт",
+  meterId: "Прибор",
+  periodId: "Период",
+  value: "Показание",
+  email: "Электронная почта",
+  phone: "Телефон",
+  password: "Пароль",
+  code: "Код подтверждения",
+  category: "Категория",
+  priority: "Приоритет",
+  content: "Комментарий",
+  fileName: "Имя файла",
+};
+
+export function validationMessage(fields: ApiErrorDto["fields"]) {
+  return fields
+    ?.map((field) => {
+      const key = field.path?.split(/[.\[]/, 1)[0];
+      const label = key && fieldLabels[key];
+      return label ? `${label}: ${field.message}` : field.message;
+    })
+    .join("; ");
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;

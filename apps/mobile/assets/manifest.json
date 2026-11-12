@@ -1,0 +1,109 @@
+{
+  "glyphs": "СК",
+  "font": "Onest",
+  "weight": 650,
+  "fontSource": "@fontsource-variable/onest 5.3.1; cyrillic wght normal",
+  "fontSha256": "68e5e01d6265bd68967746d4f5a9d18d0e6cbb5d15583c7082d6384ab1229b27",
+  "foreground": "#ffffff",
+  "background": "#15171c",
+  "adaptiveViewport": 108,
+  "adaptiveInkWidth": 56.160000000000004,
+  "files": {
+    "android/res/drawable/ic_launcher_foreground.xml": {
+      "bytes": 1234,
+      "sha256": "ba1cc930e6f3f99d884b6802cf1d9a3b7892e860b624b10f006602332713f786"
+    },
+    "android/res/drawable/splash.xml": {
+      "bytes": 257,
+      "sha256": "37cea6dfc11c55e74dda4b137d149bd1086a82f323c8ed411e90ea50b62fdfa3"
+    },
+    "android/res/drawable/splash_icon.xml": {
+      "bytes": 1234,
+      "sha256": "64ebc20f88f0fb2744348340a61d6fc7e95ed83d2df91eb16a6c8b574366ce83"
+    },
+    "android/res/mipmap-anydpi-v26/ic_launcher.xml": {
+      "bytes": 270,
+      "sha256": "32715ff646f6b9fef7c321138e4a14556c4a1f98a87b06070b56f41643dad718"
+    },
+    "android/res/mipmap-anydpi-v26/ic_launcher_round.xml": {
+      "bytes": 270,
+      "sha256": "32715ff646f6b9fef7c321138e4a14556c4a1f98a87b06070b56f41643dad718"
+    },
+    "android/res/mipmap-hdpi/ic_launcher.png": {
+      "bytes": 2973,
+      "sha256": "40114faaceffccb75123176895313c6556f2028d0dbcf84eea64e6894a831740"
+    },
+    "android/res/mipmap-hdpi/ic_launcher_round.png": {
+      "bytes": 3842,
+      "sha256": "9ab9d3cb5ec27333c41a18cf490bb832ffaed2b92b06732e7d53e811815de1ea"
+    },
+    "android/res/mipmap-mdpi/ic_launcher.png": {
+      "bytes": 1957,
+      "sha256": "90f92d3128fcbd7cf859612a6c5ed7df1f1f72f7c15a89c022e3225ee84fb9a3"
+    },
+    "android/res/mipmap-mdpi/ic_launcher_round.png": {
+      "bytes": 2599,
+      "sha256": "cd3326ac3bd2096d35b5d10de3e0a84756366632b243125e0e4f1601813b53b8"
+    },
+    "android/res/mipmap-xhdpi/ic_launcher.png": {
+      "bytes": 3964,
+      "sha256": "eed6fb1f3354791fe6765be87931c7b70084c88408676c611040347743920445"
+    },
+    "android/res/mipmap-xhdpi/ic_launcher_round.png": {
+      "bytes": 5432,
+      "sha256": "3c992aecd9cce14b8d76a94ff6fc4f621f3c30e0079974456c977e58136158b8"
+    },
+    "android/res/mipmap-xxhdpi/ic_launcher.png": {
+      "bytes": 6092,
+      "sha256": "692de3304f428e5118d9427c80dfa5975a3a8aa2db45adafb50346f396b0a09b"
+    },
+    "android/res/mipmap-xxhdpi/ic_launcher_round.png": {
+      "bytes": 8477,
+      "sha256": "09253c7de8b8eed94a190593ec0cbd20b3b936387d14d8a505845a9c2b545eb8"
+    },
+    "android/res/mipmap-xxxhdpi/ic_launcher.png": {
+      "bytes": 8049,
+      "sha256": "47b843086887ccaa53ad342ff21c5ca1adac34487024fad7ed2244e1d21f3fc6"
+    },
+    "android/res/mipmap-xxxhdpi/ic_launcher_round.png": {
+      "bytes": 11049,
+      "sha256": "ed2ba1b8d45ee981a043fb029c7ef8168b9ba99cdab34200067f64de4d816d51"
+    },
+    "android/res/values/colors.xml": {
+      "bytes": 208,
+      "sha256": "b1c60015fa4549d28a86bdaef56a1ae8846ec8badca1aae5be3466e7e452d488"
+    },
+    "android/res/values/ic_launcher_background.xml": {
+      "bytes": 115,
+      "sha256": "3caedb58d9ddd3c5073c6f3933d9d2d137d0860ae2af682000e02c8db6f38ec5"
+    },
+    "android/res/values/styles.xml": {
+      "bytes": 1457,
+      "sha256": "9d147926e47c63d7436196feece7f5b5009f264762ca6190d3bc5a9d2e72d2d0"
+    },
+    "android/res/values-v31/styles.xml": {
+      "bytes": 561,
+      "sha256": "b99fc137a8f0b2bc182a2fca1e6590cc99586bb8899401737c570cec5f4dfdba"
+    },
+    "app-icon.png": {
+      "bytes": 13740,
+      "sha256": "102613461e1d184fa062e7d7e94d8d279305286df1174bcd9ccdc1448a0a1563"
+    },
+    "app-icon.svg": {
+      "bytes": 1210,
+      "sha256": "31472d6517985a225c7e2313e5ffa36244ff581a095407cd9708949f00aad1ec"
+    },
+    "ios/AppIcon.appiconset/AppIcon-1024.png": {
+      "bytes": 29374,
+      "sha256": "625b89af673d5c31fa8d5a971fc21d34f2562d924cf6774f3f5b02046d5a907a"
+    },
+    "ios/AppIcon.appiconset/Contents.json": {
+      "bytes": 208,
+      "sha256": "3c6addf3f20972a12a0c33e6f6fe9e0857a0bdb512dce5d59f4bd007b236c157"
+    },
+    "ONEST-LICENSE.txt": {
+      "bytes": 4378,
+      "sha256": "a2a09da98a3d0d1ec79fc2d6deeac748b20a8153e26699552e7b59b5a40b63a3"
+    }
+  }
+}

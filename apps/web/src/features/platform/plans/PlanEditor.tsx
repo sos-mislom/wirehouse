@@ -3,7 +3,8 @@ import { Button, Checkbox, IconButton, Input, Select } from "../../../ui";
 import { WorkspaceTabs } from "../../../ui/WorkspaceTabs";
 import { ActionIcon } from "../../business/ActionIcon";
 import { isOpenTicket } from "../../../../../../packages/contracts/src/domain.js";
-import { bounds, download, exportDxf } from "./geometry";
+import { downloadDxf } from "./dxf-download";
+import { bounds, exportDxf } from "./geometry";
 import { PlanCanvas } from "./PlanCanvas";
 import { usePlanEditor, type PlanEditorProps } from "./usePlanEditor";
 import "./plan-editor.css";
@@ -295,7 +296,10 @@ export function PlanEditor(props: PlanEditorProps) {
                 label="Экспорт DXF"
                 disabled={!draft.geometry.length}
                 onClick={() =>
-                  download(`${draft.name}.dxf`, exportDxf(draft.geometry))
+                  void downloadDxf(
+                    `${draft.name}.dxf`,
+                    exportDxf(draft.geometry),
+                  )
                 }
               >
                 <ActionIcon name="download" />

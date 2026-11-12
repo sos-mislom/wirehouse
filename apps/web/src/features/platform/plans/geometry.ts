@@ -61,13 +61,3 @@ export function exportDxf(geometry: PlanGeometry) {
   rows.push("0", "ENDSEC", "0", "EOF");
   return rows.join("\n");
 }
-export function download(name: string, text: string) {
-  const url = URL.createObjectURL(
-    new Blob([text], { type: "application/dxf" }),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}

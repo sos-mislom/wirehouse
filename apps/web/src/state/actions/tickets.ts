@@ -5,6 +5,7 @@ import {
 } from "../../../../../packages/contracts/src/domain";
 import { apiRequest } from "../../api/client";
 import { arrayBufferToBase64, formatDeliveryNotice } from "../../shared/format";
+import { prepareUpload } from "../../platform/photo";
 import {
   type CommentDelivery,
   type Ticket,
@@ -186,13 +187,14 @@ export function useTicketsActions(
       });
 
       if (paymentProofFile) {
-        const buffer = await paymentProofFile.arrayBuffer();
+        const proof = await prepareUpload(paymentProofFile);
+        const buffer = await proof.arrayBuffer();
         await apiRequest(`/api/tickets/${result.item.id}/attachments`, {
           method: "POST",
           token: session.token,
           body: {
-            fileName: paymentProofFile.name,
-            mimeType: paymentProofFile.type || "application/octet-stream",
+            fileName: proof.name,
+            mimeType: proof.type || "application/octet-stream",
             contentBase64: arrayBufferToBase64(buffer),
           },
         });
@@ -376,6 +378,10 @@ export function useTicketsActions(
         setTicketComments(refreshedComments.items);
       });
     } catch (caughtError) {
+      // Queued offline: the text is saved on the phone, so clear the field;
+      // a second tap would otherwise queue or send the same comment again.
+      if ((caughtError as { code?: string }).code === "QUEUED_OFFLINE")
+        setCommentForm({ content: "" });
       setError(
         caughtError instanceof Error
           ? caughtError.message
@@ -402,13 +408,13 @@ export function useTicketsActions(
 
   const handleTicketAttachmentUpload = async (
     ticketId: string,
-    file: File | null,
+    original: File | null,
   ) => {
-    if (!session || !file) {
+    if (!session || !original) {
       return;
     }
 
-    if (file.size > MAX_ATTACHMENT_BYTES) {
+    if (original.size > MAX_ATTACHMENT_BYTES) {
       setError("Максимальный размер файла — 100 МБ");
       return;
     }
@@ -416,6 +422,7 @@ export function useTicketsActions(
     setError("");
 
     try {
+      const file = await prepareUpload(original);
       const buffer = await file.arrayBuffer();
       await apiRequest(`/api/tickets/${ticketId}/attachments`, {
         method: "POST",

@@ -41,6 +41,8 @@ export function parseDto(schema, value) {
   );
 }
 const bodies = new WeakMap();
+// The request body as received, after preloadBody(); empty when there was none.
+export const preloadedBody = (request) => bodies.get(request) ?? "";
 export async function preloadBody(request) {
   if (
     !request.headers["content-length"] &&

@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FloorPlan, Structure } from "../../../../../../../packages/contracts/src/operations-platform";
+import type {
+  FloorPlan,
+  Structure,
+} from "../../../../../../../packages/contracts/src/operations-platform";
 import { useLiveQuery } from "../../../../realtime/RealtimeContext";
 import { Button, IconButton, Select } from "../../../../ui";
 import { SidePanel } from "../../../../ui/SidePanel";
 import { ActionIcon } from "../../../business/ActionIcon";
 import type { Ticket, Unit } from "../../../operations/shared";
 import { isOpenTicket } from "../../../../../../../packages/contracts/src/domain";
-import { bounds, download, exportDxf, type View } from "../geometry";
+import { downloadDxf } from "../dxf-download";
+import { bounds, exportDxf, type View } from "../geometry";
 import { PlanCanvas } from "../PlanCanvas";
 import "./plan-viewer.css";
 import { copy } from "../../../../projectData";
@@ -323,7 +327,9 @@ function PlanViewer({
             </Select>
           </label>
         ) : (
-          <p className="plan-viewer__name">{planContextLabel(plan, structure)}</p>
+          <p className="plan-viewer__name">
+            {planContextLabel(plan, structure)}
+          </p>
         )}
         <div
           className="plan-viewer__toolbar"
@@ -345,7 +351,7 @@ function PlanViewer({
           <IconButton
             label="Скачать DXF"
             onClick={() =>
-              download(
+              void downloadDxf(
                 `${plan.name.replace(/\.dxf$/i, "")}.dxf`,
                 exportDxf(plan.geometry),
               )

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { runtimeApiBase } from "../../api/client";
+import { deliverFile, isNativeApp } from "../../platform/native";
 import { hasPermission } from "../../../../../packages/contracts/src/permissions";
 import { useWorkspace } from "../../app/WorkspaceContext";
 import { IconButton } from "../../ui";
@@ -28,7 +29,8 @@ async function getTemplate(
   format: "pdf" | "docx",
   preview = false,
 ) {
-  const opened = preview ? window.open("about:blank", "_blank") : null;
+  const opened =
+    preview && !isNativeApp ? window.open("about:blank", "_blank") : null;
   if (opened) opened.opener = null;
   try {
     const response = await fetch(
@@ -39,6 +41,12 @@ async function getTemplate(
       throw new Error("Не удалось открыть шаблон. Повторите загрузку.");
     const blob = await response.blob();
     if (!blob.size) throw new Error("Файл шаблона пуст.");
+    if (isNativeApp) {
+      await deliverFile(blob, `${item.title || item.name}.${format}`, {
+        preferPreview: preview,
+      });
+      return;
+    }
     const url = URL.createObjectURL(blob);
     if (opened) opened.location.href = url;
     else {

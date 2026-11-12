@@ -11,6 +11,8 @@ import {
   type FormEvent,
 } from "react";
 import "./readings-photo.css";
+import { cameraAccept } from "../../platform/photo";
+import { deliverFile, isNativeApp } from "../../platform/native";
 import type {
   ReadingPeriod,
   ReadingSubmission,
@@ -175,7 +177,8 @@ function ReadingPhotoField({ required }: { required: boolean }) {
             name="photo"
             type="file"
             required={required}
-            accept="image/jpeg,image/png,image/webp"
+            accept={cameraAccept("image/jpeg,image/png,image/webp")}
+            capture="environment"
             onChange={(event) => choose(event.currentTarget.files?.[0] ?? null)}
           />
         </label>
@@ -186,11 +189,11 @@ function ReadingPhotoField({ required }: { required: boolean }) {
               <IconButton
                 label="Скачать выбранную фотографию"
                 onClick={() => {
-                  if (!preview) return;
-                  const link = document.createElement("a");
-                  link.href = preview;
-                  link.download = file.name;
-                  link.click();
+                  void deliverFile(file, file.name).catch(() =>
+                    setError(
+                      "Не удалось сохранить фотографию. Попробуйте ещё раз.",
+                    ),
+                  );
                 }}
               >
                 <ActionIcon name="download" />
@@ -231,6 +234,8 @@ function StoredReadingPhoto({
   documentId: string;
 }) {
   const [preview, setPreview] = useState("");
+  const [photo, setPhoto] = useState<Blob | null>(null);
+  const [deliveryError, setDeliveryError] = useState("");
   const [error, setError] = useState("");
   const [extension, setExtension] = useState("jpg");
   const [attempt, retry] = useState(0);
@@ -239,6 +244,8 @@ function StoredReadingPhoto({
     let active = true,
       objectUrl = "";
     setPreview("");
+    setPhoto(null);
+    setDeliveryError("");
     setError("");
     void fetch(`${runtimeApiBase}/api/documents/${documentId}/file`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -253,6 +260,7 @@ function StoredReadingPhoto({
         const blob = await response.blob();
         if (!active) return;
         objectUrl = URL.createObjectURL(blob);
+        setPhoto(blob);
         setPreview(objectUrl);
         setExtension(
           blob.type === "image/png"
@@ -286,6 +294,18 @@ function StoredReadingPhoto({
             target="_blank"
             rel="noopener"
             aria-label="Открыть фотографию прибора в новом окне"
+            onClick={(event) => {
+              if (!isNativeApp || !photo) return;
+              event.preventDefault();
+              setDeliveryError("");
+              void deliverFile(photo, `Показание.${extension}`, {
+                preferPreview: true,
+              }).catch(() =>
+                setDeliveryError(
+                  "Не удалось открыть фотографию. Попробуйте ещё раз.",
+                ),
+              );
+            }}
           >
             <img
               src={preview}
@@ -300,15 +320,19 @@ function StoredReadingPhoto({
             <IconButton
               label="Скачать фотографию прибора"
               onClick={() => {
-                const link = document.createElement("a");
-                link.href = preview;
-                link.download = `Показание.${extension}`;
-                link.click();
+                if (!photo) return;
+                setDeliveryError("");
+                void deliverFile(photo, `Показание.${extension}`).catch(() =>
+                  setDeliveryError(
+                    "Не удалось сохранить фотографию. Попробуйте ещё раз.",
+                  ),
+                );
               }}
             >
               <ActionIcon name="download" />
             </IconButton>
           </div>
+          {deliveryError && <p role="alert">{deliveryError}</p>}
         </>
       ) : error ? (
         <div className="reading-stored-photo__status">

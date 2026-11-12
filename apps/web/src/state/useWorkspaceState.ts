@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { mobileProduct } from "../mobile-product";
+import { isMobileApp, mobileAllowsPhoneLogin } from "../mobile-product";
 import { initialRoute } from "../navigation";
 import { parseOperationsRoute } from "../shared/operations-route";
 import { parseAgendaRoute } from "../shared/agenda-route";
@@ -109,7 +109,7 @@ export function useWorkspaceState() {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [tenantConnectionOpen, setTenantConnectionOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"staff" | "tenant">(
-    mobileProduct === "client" ? "tenant" : "staff",
+    isMobileApp && mobileAllowsPhoneLogin ? "tenant" : "staff",
   );
   const [tenantOtpRequested, setTenantOtpRequested] = useState(false);
   const [staffAuthStep, setStaffAuthStep] = useState<

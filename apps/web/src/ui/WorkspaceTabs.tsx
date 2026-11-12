@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import "./workspace.css";
 export type WorkspaceTab = {
   id: string;
@@ -28,8 +28,22 @@ export function WorkspaceTabs({
   const current = enabled.some((item) => item.id === value)
     ? value
     : enabled[0]?.id;
+  const bar = useRef<HTMLDivElement>(null);
+  // On a phone the tabs scroll sideways; keep the current one in view (for
+  // example when a screen opens on its fifth tab).
+  useEffect(() => {
+    const list = bar.current;
+    const tab = current ? buttons.current.get(current) : undefined;
+    if (!list || !tab || list.scrollWidth <= list.clientWidth) return;
+    const box = list.getBoundingClientRect();
+    const own = tab.getBoundingClientRect();
+    if (own.left < box.left) list.scrollLeft -= box.left - own.left + 16;
+    else if (own.right > box.right)
+      list.scrollLeft += own.right - box.right + 16;
+  }, [current]);
   return (
     <div
+      ref={bar}
       className={`ui-workspace-tabs ${className}`}
       role="tablist"
       aria-label={label}

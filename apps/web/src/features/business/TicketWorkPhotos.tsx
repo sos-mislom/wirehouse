@@ -5,6 +5,7 @@ import type {
 import { useRef } from "react";
 import { IconButton, Input } from "../../ui";
 import { ActionIcon } from "./shared";
+import { cameraAccept } from "../../platform/photo";
 export function TicketWorkPhotos({
   workflow: w,
   documents,
@@ -122,7 +123,7 @@ export function TicketWorkPhotos({
                   ref={(element) => {
                     fileInputs.current[phase] = element;
                   }}
-                  accept="image/jpeg,image/png,image/webp"
+                  accept={cameraAccept("image/jpeg,image/png,image/webp")}
                   capture="environment"
                   disabled={busy}
                   onChange={(e) => {
