@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   TicketWorkflow,
   TicketTermsInput,
@@ -7,6 +7,15 @@ import type { AccountingWorkspace } from "../../../../../packages/contracts/src/
 import { MAX_WORK_AMOUNT } from "../../../../../packages/contracts/src/operations-platform";
 import { Button, Checkbox, Input, Select } from "../../ui";
 
+type Workflow = Omit<TicketWorkflow, "amount"> & { amount: number | null };
+const draftFor = (w: Workflow) => ({
+  paid: w.paid,
+  amount: String(w.amount ?? 0),
+  accountId: w.accountId ?? "",
+  before: w.requireBeforePhoto,
+  after: w.requireAfterPhoto,
+});
+
 export function TicketWorkTerms({
   workflow: w,
   leaseId,
@@ -14,15 +23,23 @@ export function TicketWorkTerms({
   busy,
   onSave,
 }: {
-  workflow: Omit<TicketWorkflow, "amount"> & { amount: number | null };
+  workflow: Workflow;
   leaseId?: string | null;
   accounts: AccountingWorkspace;
   busy: boolean;
   onSave: (body: TicketTermsInput) => void;
 }) {
-  const [baseline] = useState(w);
-  const [paid, setPaid] = useState(w.paid),
-    [amount, setAmount] = useState(String(w.amount ?? 0));
+  const [baseline, setBaseline] = useState(w);
+  const [draft, setDraft] = useState(() => draftFor(w));
+  const dirty = JSON.stringify(draft) !== JSON.stringify(draftFor(baseline));
+  const stale = dirty && w.updatedAt !== baseline.updatedAt;
+  const { paid, amount } = draft;
+  useEffect(() => {
+    if (!dirty && w.updatedAt !== baseline.updatedAt) {
+      setBaseline(w);
+      setDraft(draftFor(w));
+    }
+  }, [w, baseline.updatedAt, dirty]);
   const today = new Date().toISOString().slice(0, 10),
     eligible = accounts.accounts.filter(
       (a) =>
@@ -37,23 +54,26 @@ export function TicketWorkTerms({
       className="form-grid ticket-work-terms"
       onSubmit={(e) => {
         e.preventDefault();
-        const values = new FormData(e.currentTarget);
+        if (busy || stale) return;
         onSave({
           updatedAt: baseline.updatedAt,
           paid,
           amount: paid ? Number(amount) : 0,
-          accountId: String(values.get("accountId") || "") || null,
-          requireBeforePhoto: values.get("before") === "on",
-          requireAfterPhoto: values.get("after") === "on",
+          accountId: draft.accountId || null,
+          requireBeforePhoto: draft.before,
+          requireAfterPhoto: draft.after,
         });
       }}
     >
       <Checkbox
         checked={paid}
-        disabled={Boolean(w.estimateId)}
+        disabled={busy || Boolean(w.estimateId)}
         onChange={(e) => {
-          setPaid(e.target.checked);
-          if (!e.target.checked) setAmount("0");
+          setDraft({
+            ...draft,
+            paid: e.target.checked,
+            amount: e.target.checked ? amount : "0",
+          });
         }}
       >
         Платная работа
@@ -63,8 +83,8 @@ export function TicketWorkTerms({
         <Input
           type="number"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          disabled={!paid}
+          onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+          disabled={busy || !paid}
           readOnly={Boolean(w.estimateId)}
           min={paid ? "0.01" : "0"}
           max={MAX_WORK_AMOUNT}
@@ -83,7 +103,9 @@ export function TicketWorkTerms({
         <Select
           name="accountId"
           required={paid}
-          defaultValue={w.accountId ?? ""}
+          value={draft.accountId}
+          disabled={busy}
+          onChange={(e) => setDraft({ ...draft, accountId: e.target.value })}
         >
           <option value="">Без ЛС</option>
           {eligible.map((a) => (
@@ -102,19 +124,45 @@ export function TicketWorkTerms({
       )}
       <fieldset className="work-photo-policy">
         <legend>Обязательные фотографии</legend>
-        <Checkbox name="before" defaultChecked={w.requireBeforePhoto}>
+        <Checkbox
+          name="before"
+          checked={draft.before}
+          disabled={busy}
+          onChange={(e) => setDraft({ ...draft, before: e.target.checked })}
+        >
           До начала работ
         </Checkbox>
-        <Checkbox name="after" defaultChecked={w.requireAfterPhoto}>
+        <Checkbox
+          name="after"
+          checked={draft.after}
+          disabled={busy}
+          onChange={(e) => setDraft({ ...draft, after: e.target.checked })}
+        >
           После выполнения
         </Checkbox>
       </fieldset>
       <div className="mvp-actions work-terms-actions">
+        {stale && (
+          <>
+            <p className="field-hint" role="alert">
+              Условия заявки изменились. Обновите их перед сохранением.
+            </p>
+            <Button
+              type="button"
+              onClick={() => {
+                setBaseline(w);
+                setDraft(draftFor(w));
+              }}
+            >
+              Обновить условия
+            </Button>
+          </>
+        )}
         <Button
           variant="primary"
           type="submit"
           busy={busy}
-          disabled={paid && !eligible.length}
+          disabled={stale || (paid && !eligible.length)}
         >
           Сохранить условия
         </Button>

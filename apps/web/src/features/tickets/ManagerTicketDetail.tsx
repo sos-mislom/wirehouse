@@ -207,14 +207,13 @@ export function TicketRecord({
         />
       </header>
 
-      <TicketPath
-        key={ticket.id}
-        ticket={ticket}
-        history={ticketHistory}
-        locale={locale}
-      />
-
-      <section {...panel("work")}>
+      <section {...panel("work")} className="ticket-work-panel">
+        <TicketPath
+          key={ticket.id}
+          ticket={ticket}
+          history={ticketHistory}
+          locale={locale}
+        />
         <div className="ticket-work-layout">
           <article className="workspace-surface ticket-work-main">
             {ticket.description && (
@@ -286,9 +285,13 @@ export function TicketRecord({
                   onChange={(event) => {
                     const assignedTo = event.target.value;
                     setTicketAssigneeDraft(assignedTo);
-                    void updateSelectedTicket({
-                      assignedTo: assignedTo || null,
-                    });
+                    void model.resource.run(
+                      () =>
+                        updateSelectedTicket({
+                          assignedTo: assignedTo || null,
+                        }),
+                      "",
+                    );
                   }}
                   value={ticketAssigneeDraft}
                 >
@@ -385,16 +388,36 @@ export function TicketRecord({
       >
         <TicketWorkflowView model={model} section="history" />
         <section className="ticket-status-history">
-          <h3>{locale === "ru" ? "Изменения статуса" : "Status changes"}</h3>
+          <h3>{locale === "ru" ? "Изменения заявки" : "Ticket changes"}</h3>
           <div className="comment-list">
             {ticketHistory.length ? (
               ticketHistory.map((event) => (
                 <article className="comment-card" key={event.id}>
                   <div className="comment-meta">
                     <strong>
-                      {event.fromStatus
-                        ? `${getTicketStatusLabel(event.fromStatus, locale)} → ${getTicketStatusLabel(event.toStatus, locale)}`
-                        : getTicketStatusLabel(event.toStatus, locale)}
+                      {(
+                        {
+                          assignment_changed:
+                            locale === "ru"
+                              ? "Назначение исполнителя"
+                              : "Assignee changed",
+                          category_changed:
+                            locale === "ru"
+                              ? "Изменение категории"
+                              : "Category changed",
+                          priority_changed:
+                            locale === "ru"
+                              ? "Изменение приоритета"
+                              : "Priority changed",
+                          sla_changed:
+                            locale === "ru"
+                              ? "Изменение срока"
+                              : "Deadline changed",
+                        } as Record<string, string>
+                      )[event.type] ??
+                        (event.fromStatus
+                          ? `${getTicketStatusLabel(event.fromStatus, locale)} → ${getTicketStatusLabel(event.toStatus, locale)}`
+                          : getTicketStatusLabel(event.toStatus, locale))}
                     </strong>
                     <time dateTime={event.createdAt}>
                       {formatDateTime(event.createdAt, locale)}

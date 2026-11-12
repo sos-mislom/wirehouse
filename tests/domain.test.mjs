@@ -250,6 +250,12 @@ test("Work costs freeze the service tariff; closed tickets and foreign links are
   saveOperation(f.db, f.admin, "services", service.id, { hourlyRate: 999 });
   assert.equal(f.db.getTicket(task.id).work_logs[0].cost, 1050);
   preparePaidWork(f.db, f.admin, task.id, f.lease.id);
+  for (const item of f.db.getTicket(task.id).checklist_items)
+    if (item.required)
+      f.db.updateTicketChecklistItem(task.id, item.id, {
+        completed: true,
+        completedBy: f.worker.id,
+      });
   f.db.updateTicket(task.id, { status: "completed", updatedBy: f.worker.id });
   assert.throws(
     () => addWorkLog(f.db, f.worker, task.id, { description: "Ещё", hours: 1 }),

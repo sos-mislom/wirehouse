@@ -13,6 +13,7 @@ import { WorkspaceTabs } from "../../ui/WorkspaceTabs";
 import { DocumentRegistry } from "./DocumentRegistry";
 import { formatBillingMoney } from "../billing/format";
 import { ActionIcon, Feedback, Register, date, useResource } from "./shared";
+import "../billing/workspace.css";
 
 export type AccountingView = "accounts" | "sources" | "links" | "exchange";
 const initial: Data = { sources: [], accounts: [], statements: [], links: [] };
@@ -56,6 +57,14 @@ export function AccountingWorkspace({
     user.role === "admin" &&
     hasPermission(user, "exchange.manage");
   const account = data.accounts.find((a) => a.id === selected);
+  const contractNumber = (item: Data["accounts"][number]) =>
+    item.contractNumber ??
+    overview.leases.find((lease) => lease.id === item.leaseId)?.contractNumber ??
+    "—";
+  const statementMonth = (period: string) =>
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(
+      new Date(`${period}-01T12:00:00Z`),
+    );
   const sourceName = (id: string) =>
     data.sources.find((s) => s.id === id)?.name ?? "Источник удалён";
   const selectedSource = data.sources.find((s) => s.id === keySource);
@@ -202,7 +211,7 @@ export function AccountingWorkspace({
             openPanel("account");
           }}
           searchText={(a) =>
-            `${a.number} ${a.externalId} ${sourceName(a.sourceId)}`
+            `${a.number} ${a.externalId} ${sourceName(a.sourceId)} ${contractNumber(a)} ${a.unitNumber ?? ""} ${a.propertyName ?? ""}`
           }
           action={
             hasPermission(user, "leases.write") ? (
@@ -218,7 +227,12 @@ export function AccountingWorkspace({
             {
               key: "number",
               label: "ЛС",
-              render: (a) => <strong>{a.number}</strong>,
+              render: (a) => (
+                <div className="account-context-label">
+                  <strong>{a.number}</strong>
+                  {a.unitNumber && <small>Помещение {a.unitNumber}</small>}
+                </div>
+              ),
             },
             {
               key: "source",
@@ -228,9 +242,7 @@ export function AccountingWorkspace({
             {
               key: "lease",
               label: "Договор",
-              render: (a) =>
-                overview.leases.find((l) => l.id === a.leaseId)
-                  ?.contractNumber ?? a.leaseId,
+              render: (a) => contractNumber(a),
               optional: true,
             },
             {
@@ -432,6 +444,13 @@ export function AccountingWorkspace({
             />
           ) : (
             <>
+              {(account.unitNumber || account.propertyName) && (
+                <p className="account-record-context">
+                  {account.unitNumber && `Помещение ${account.unitNumber}`}
+                  {account.unitNumber && account.propertyName && " · "}
+                  {account.propertyName}
+                </p>
+              )}
               <dl className="billing-invoice-summary">
                 <div>
                   <dt>Источник</dt>
@@ -440,14 +459,15 @@ export function AccountingWorkspace({
                 <div>
                   <dt>Договор</dt>
                   <dd>
-                    {overview.leases.find((l) => l.id === account.leaseId)
-                      ?.contractNumber ?? account.leaseId}
+                    {contractNumber(account)}
                   </dd>
                 </div>
-                <div>
-                  <dt>Внешний ID</dt>
-                  <dd>{account.externalId}</dd>
-                </div>
+                {canManage && (
+                  <div>
+                    <dt>Внешний ID</dt>
+                    <dd>{account.externalId}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Период</dt>
                   <dd>
@@ -496,6 +516,25 @@ export function AccountingWorkspace({
                 ]}
                 empty="Источник ещё не передал начисления по этому ЛС."
               />
+              {data.statements
+                .filter((statement) => statement.accountId === account.id && statement.lines.length > 0)
+                .map((statement) => (
+                  <section
+                    className="account-statement-detail"
+                    key={statement.id}
+                    aria-label={`Услуги за ${statementMonth(statement.period)}`}
+                  >
+                    <h3>Услуги · {statementMonth(statement.period)}</h3>
+                    <dl className="account-statement-lines">
+                      {statement.lines.map((line, index) => (
+                        <div key={`${index}-${line.service}`}>
+                          <dt>{line.service}</dt>
+                          <dd>{formatBillingMoney(line.amount, locale)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                ))}
             </>
           )}
         </SidePanel>

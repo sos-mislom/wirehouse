@@ -179,6 +179,10 @@ export type AccountingSource = z.infer<typeof sourceInput> & {
 export type PersonalAccount = z.infer<typeof accountInput> & {
   id: string;
   propertyId: string;
+  /** Labels only; seeing an account does not expose the contract's finances. */
+  contractNumber?: string | null;
+  unitNumber?: string | null;
+  propertyName?: string | null;
   createdAt: string;
   updatedAt: string;
 };

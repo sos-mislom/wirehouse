@@ -7,6 +7,7 @@ import {
   businessError,
   requiredRecord,
   publicSource,
+  publicAccount,
   saveSource,
   rotateSourceToken,
   authenticateSource,
@@ -159,7 +160,7 @@ export function createAccountingRoutes({
           sources: db.data.accounting_sources
             .filter((s) => admin || sourceIds.has(s.id))
             .map(publicSource),
-          accounts,
+          accounts: accounts.map((account) => publicAccount(db, account)),
           statements: db.data.account_statements.filter(
             (s) =>
               ids.has(s.accountId) &&

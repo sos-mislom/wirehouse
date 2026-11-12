@@ -19,6 +19,8 @@ export function createMaintenanceImportRoutes({ db, requireAuth, ok, json }) {
       ) {
         const file = await maintenanceImportTemplate();
         response.writeHead(200, {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "Content-Disposition",
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           "Content-Disposition":

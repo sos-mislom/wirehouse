@@ -55,6 +55,8 @@ export function createDocumentsRegistryRoutes({
         );
         if (!file) throw businessError("Шаблон не найден", 404);
         response.writeHead(200, {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "Content-Disposition",
           "Content-Type": file.mimeType,
           "Content-Length": file.content.length,
           "Content-Disposition": `${templateFile[2] === "pdf" ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.filename)}`,

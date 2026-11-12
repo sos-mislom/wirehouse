@@ -160,6 +160,7 @@ export class TicketsDatabase extends LeasesDatabase {
     }
 
     const previousStatus = current.status;
+    const previous = { ...current };
     const nextStatus = payload.status ?? current.status;
     const nextCategory = payload.category ?? current.category;
     const next = {
@@ -217,11 +218,15 @@ export class TicketsDatabase extends LeasesDatabase {
     };
 
     if (
-      next.maintenance_plan_id &&
+      nextStatus !== previousStatus &&
       ["completed", "resolved", "closed"].includes(next.status) &&
       next.checklist_items.some((item) => item.required && !item.completed)
     )
-      throw new Error("Завершите обязательный чек-лист ППР");
+      throw new Error(
+        next.maintenance_plan_id
+          ? "Завершите обязательный чек-лист ППР"
+          : "Завершите обязательные пункты чек-листа",
+      );
     this.validateTicketPayload(next);
     guardTicketTransition(this, current, next, payload);
     Object.assign(current, next);
@@ -235,6 +240,68 @@ export class TicketsDatabase extends LeasesDatabase {
         reason: payload.reopenReason ?? payload.reason ?? null,
         created_by: payload.updatedBy ?? null,
         created_at: nowIso(),
+      });
+    }
+    const userName = (id) =>
+      id
+        ? (this.getById("users", id)?.full_name ?? "Сотрудник")
+        : "Не назначен";
+    const categories = {
+      gates_ramps: "Ворота, рампы и доки",
+      electrical: "Электрика",
+      plumbing: "Вода и сантехника",
+      heating: "Отопление и температура",
+      security: "Охрана, камеры и доступ",
+      territory: "Территория, дороги и освещение",
+      loading_equipment: "Погрузочное оборудование",
+      ventilation: "Вентиляция и климат",
+      maintenance: "Эксплуатация",
+      billing: "Биллинг",
+      access: "Доступ",
+      damage: "Повреждение",
+      cleaning: "Уборка",
+      other: "Прочее",
+    };
+    const priorities = {
+      low: "Низкий",
+      medium: "Средний",
+      high: "Высокий",
+      urgent: "Критичный",
+    };
+    const changes = [
+      [
+        "assignment_changed",
+        previous.assigned_to !== current.assigned_to,
+        `${userName(previous.assigned_to)} → ${userName(current.assigned_to)}`,
+      ],
+      [
+        "category_changed",
+        previous.category !== current.category,
+        `${categories[previous.category]} → ${categories[current.category]}`,
+      ],
+      [
+        "priority_changed",
+        previous.priority !== current.priority,
+        `${priorities[previous.priority]} → ${priorities[current.priority]}`,
+      ],
+      [
+        "sla_changed",
+        previous.sla_hours !== current.sla_hours ||
+          previous.sla_due_at !== current.sla_due_at,
+        `${previous.sla_hours} ч, ${previous.sla_due_at} → ${current.sla_hours} ч, ${current.sla_due_at}`,
+      ],
+    ];
+    for (const [type, changed, reason] of changes) {
+      if (!changed) continue;
+      this.data.ticket_history.push({
+        id: createId(),
+        ticket_id: current.id,
+        type,
+        from_status: null,
+        to_status: null,
+        reason,
+        created_by: payload.updatedBy ?? null,
+        created_at: current.updated_at,
       });
     }
     return clone(current);

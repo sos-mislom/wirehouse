@@ -140,6 +140,36 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
   );
   const account = (await call("/api/accounting")).body.accounts[0],
     portal = f.db.getTenantPortalUser(f.tenant.id);
+  const accountReader = await call("/api/access/participants", f.admin, "POST", {
+    fullName: "Только один лицевой счёт",
+    email: "account-only@test.local",
+    phone: "+79990000991",
+    password: "account-only-test-password",
+  });
+  assert.equal(accountReader.status, 200, JSON.stringify(accountReader.body));
+  const accountReaderToken = createToken({ sub: accountReader.body.item.id }, secret);
+  const accountGrant = await call("/api/access/assignments", f.admin, "POST", {
+    userId: accountReader.body.item.id,
+    businessRole: "tenant",
+    scopeType: "account",
+    scopeId: account.id,
+    permissions: ["workspace.read", "finance.read"],
+    validFrom: "2020-01-01",
+    validTo: null,
+    retainHistory: true,
+    reason: "Проверка подписи ЛС без расширения финансовых прав договора",
+  });
+  assert.equal(accountGrant.status, 200, JSON.stringify(accountGrant.body));
+  const accountView = await call("/api/accounting", accountReaderToken);
+  assert.equal(accountView.status, 200);
+  assert.deepEqual(accountView.body.accounts.map((item) => item.id), [account.id]);
+  assert.equal(accountView.body.accounts[0].contractNumber, f.lease.contract_number);
+  assert.equal(accountView.body.accounts[0].unitNumber, f.unit.number);
+  assert.equal(accountView.body.accounts[0].propertyName, f.property.name);
+  assert.equal(Object.hasOwn(accountView.body.accounts[0], "ratePerSqm"), false);
+  assert.equal(Object.hasOwn(accountView.body.accounts[0], "deposit"), false);
+  assert.deepEqual((await call("/api/dashboard/overview", accountReaderToken)).body.leases, []);
+  assert.equal((await call(`/api/leases/${f.lease.id}/documents`, accountReaderToken)).status, 403);
   const statementPacket = {
     messageId: "statement-one",
     environment: "test",
@@ -267,6 +297,47 @@ test("HTTP business workflows persist scoped accounts, duplicate-safe packages, 
     links: [{ entityType: "tickets", entityId: ticket.id, phase: "after" }],
   });
   assert.equal(r.status, 200, JSON.stringify(r.body));
+  const beforeChecklist = (await call(`/api/tickets/${ticket.id}`)).body.item;
+  const requiredChecklist = beforeChecklist.checklistItems.filter(
+    (item) => item.required,
+  );
+  assert.ok(requiredChecklist.length > 0, "The ordinary task has required work items");
+  assert.ok(requiredChecklist.some((item) => !item.completed));
+  const beforeSubmit = (await call(`/api/tickets/${ticket.id}/workflow`)).body.item;
+  const uncheckedSubmit = await call(
+    `/api/tickets/${ticket.id}/workflow/decision`,
+    f.manager,
+    "POST",
+    { updatedAt: beforeSubmit.updatedAt, action: "submit", reason: "" },
+  );
+  assert.equal(uncheckedSubmit.status, 400, JSON.stringify(uncheckedSubmit.body));
+  assert.match(uncheckedSubmit.body.error, /чек-лист/i);
+  assert.equal(
+    (await call(`/api/tickets/${ticket.id}`)).body.item.status,
+    "in_progress",
+    "A missing required checklist item must leave the task in progress",
+  );
+  for (const item of requiredChecklist) {
+    const checked = await call(
+      `/api/tickets/${ticket.id}/checklist/${item.id}`,
+      f.manager,
+      "PUT",
+      { completed: true },
+    );
+    assert.equal(checked.status, 200, JSON.stringify(checked.body));
+  }
+  const completedChecklist = (await call(`/api/tickets/${ticket.id}`)).body.item
+    .checklistItems.filter((item) => item.required);
+  assert.equal(completedChecklist.length, requiredChecklist.length);
+  assert.ok(
+    completedChecklist.every(
+      (item) =>
+        item.completed &&
+        item.completedBy === f.manager.id &&
+        Number.isFinite(Date.parse(item.completedAt)),
+    ),
+    "Every required item persists its completion value, author and timestamp",
+  );
   for (const [actor, action] of [
     [f.manager, "submit"],
     [portal, "accept"],

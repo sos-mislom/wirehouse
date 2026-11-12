@@ -7,7 +7,7 @@ import type {
 } from "../../../../../packages/contracts/src/business-workflows";
 import type { AccountingWorkspace } from "../../../../../packages/contracts/src/accounting";
 import { useWorkspace } from "../../app/WorkspaceContext";
-import { apiRequest } from "../../api/client";
+import { ApiError, apiRequest } from "../../api/client";
 import { Button, IconButton, Input, Textarea } from "../../ui";
 import { ActionIcon } from "./ActionIcon";
 import {
@@ -88,21 +88,36 @@ export function useTicketWorkflowModel(ticketId: string) {
     w = resource.data.item;
   const execute = (action: string, reason = "") =>
     void resource.run(async () => {
-      await apiRequest(`/api/tickets/${ticketId}/workflow/decision`, {
-        token,
-        method: "POST",
-        body: { action, reason, updatedAt: w!.updatedAt },
-      });
+      try {
+        await apiRequest(`/api/tickets/${ticketId}/workflow/decision`, {
+          token,
+          method: "POST",
+          body: { action, reason, updatedAt: w!.updatedAt },
+        });
+      } catch (error) {
+        if (error instanceof ApiError && [403, 404].includes(error.status))
+          throw new Error(
+            "Задание больше недоступно: возможно, изменился исполнитель или доступ. Обновите список заданий.",
+          );
+        throw error;
+      }
       setReasonAction("");
       await refreshWorkspace();
     }, actions[action]);
   const terms = async (body: TicketTermsInput) => {
     const saved = await resource.run(async () => {
-      await apiRequest(`/api/tickets/${ticketId}/workflow/terms`, {
-        token,
-        method: "POST",
-        body,
-      });
+      try {
+        await apiRequest(`/api/tickets/${ticketId}/workflow/terms`, {
+          token,
+          method: "POST",
+          body,
+        });
+      } catch (error) {
+        // Keep the user's draft, but load current terms so a version conflict
+        // can be resolved explicitly without reloading the entire page.
+        await resource.load();
+        throw error;
+      }
       await refreshWorkspace();
     }, "Условия сохранены. Предыдущее согласование больше не действует.");
     if (saved) setTermsRevision((v) => v + 1);

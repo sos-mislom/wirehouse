@@ -238,6 +238,10 @@
   align-items: start;
   gap: 16px;
 }
+.ticket-work-panel {
+  display: grid;
+  gap: 16px;
+}
 .ticket-record .workspace-surface {
   min-width: 0;
   padding: 20px;

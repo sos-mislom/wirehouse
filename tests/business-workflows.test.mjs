@@ -175,6 +175,12 @@ test("Ticket workflow prevents approval/photo/acceptance bypass, invalidates ret
     assert.throws(() => act(f, f.worker, t.id, "start"), /фото до/);
     photo(f, f.worker, "tickets", t.id, "before");
     act(f, f.worker, t.id, "start");
+    for (const item of f.db.getTicket(t.id).checklist_items)
+      if (item.required)
+        f.db.updateTicketChecklistItem(t.id, item.id, {
+          completed: true,
+          completedBy: f.worker.id,
+        });
     assert.throws(() => act(f, f.worker, t.id, "submit"), /фото результата/);
     photo(f, f.worker, "tickets", t.id, "after");
     act(f, f.worker, t.id, "submit");

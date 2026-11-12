@@ -50,6 +50,19 @@ export const publicSource = ({ tokenHash, ...source }) => ({
   ...source,
   tokenConfigured: Boolean(tokenHash),
 });
+// Read labels belong to the account the caller may already see. They do not
+// grant access to the underlying contract's financial fields or other accounts.
+export function publicAccount(db, account) {
+  const lease = db.getById("leases", account.leaseId);
+  const unit = lease ? db.getById("units", lease.unit_id) : null;
+  const property = unit ? db.getById("properties", unit.property_id) : null;
+  return {
+    ...account,
+    contractNumber: lease?.contract_number ?? null,
+    unitNumber: unit?.number ?? null,
+    propertyName: property?.name ?? null,
+  };
+}
 export function saveSource(db, actor, id, input) {
   const body = parseDto(sourceInput, input),
     old = id
